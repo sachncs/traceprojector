@@ -127,4 +127,14 @@ describe('Projector.verifyBoundaryWeights (Section 6.3 cross-check)', () => {
     expect(res.ok).to.equal(false)
     expect(res.checks).to.have.length(0)
   })
+
+  it('reports non-finite DoF values as failures', () => {
+    const mesh = new Mesh(vertices, tetrahedra)
+    const projector = new Projector(mesh, new Whitney(mesh))
+    projector.computeBoundaryWeights()
+    projector.locator = { findTetrahedron: () => null }
+    const res = projector.verifyBoundaryWeights()
+    expect(res.ok).to.equal(false)
+    expect(res.failing).to.be.greaterThan(0)
+  })
 })

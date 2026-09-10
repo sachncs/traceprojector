@@ -95,7 +95,9 @@ export function verifyBoundaryWeights (projector, tol = 1e-6) {
     }
   }
 
-  const failing = checks.filter((c) => Math.abs(c.got - c.expected) > tol)
+  const failing = checks.filter((c) =>
+    !Number.isFinite(c.got) || !Number.isFinite(c.expected) || Math.abs(c.got - c.expected) > tol
+  )
   return {
     ok: failing.length === 0,
     passed: checks.length - failing.length,

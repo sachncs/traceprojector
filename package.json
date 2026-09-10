@@ -1,0 +1,117 @@
+{
+  "name": "traceprojector",
+  "version": "0.1.0",
+  "description": "Bounded, Commuting, Discrete-trace Preserving Projections for the 3D de Rham complex on simplicial meshes.",
+  "type": "module",
+  "main": "traceprojector/traceprojector.js",
+  "homepage": "https://github.com/sachncs/traceprojector#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sachncs/traceprojector.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sachncs/traceprojector/issues"
+  },
+  "author": "Sachin <sachncs@gmail.com>",
+  "license": "MIT",
+  "keywords": [
+    "finite-element-method",
+    "de-rham-complex",
+    "whitney-forms",
+    "simplicial-mesh",
+    "tetrahedral-mesh",
+    "projection",
+    "hodge-star",
+    "discrete-operators",
+    "scientific-computing",
+    "numerical-analysis"
+  ],
+  "module": "dist/traceprojector.esm.js",
+  "unpkg": "dist/traceprojector.umd.js",
+  "jsdelivr": "dist/traceprojector.umd.js",
+  "exports": {
+    ".": {
+      "types": "./traceprojector/traceprojector.d.ts",
+      "default": "./traceprojector/traceprojector.js"
+    },
+    "./mesh": {
+      "types": "./traceprojector/mesh.d.ts",
+      "default": "./traceprojector/mesh.js"
+    },
+    "./whitney": {
+      "types": "./traceprojector/whitney.d.ts",
+      "default": "./traceprojector/whitney.js"
+    },
+    "./quadrature": {
+      "types": "./traceprojector/quadrature.d.ts",
+      "default": "./traceprojector/quadrature.js"
+    },
+    "./utils": {
+      "types": "./traceprojector/utils.d.ts",
+      "default": "./traceprojector/utils.js"
+    },
+    "./locator": {
+      "types": "./traceprojector/locator.d.ts",
+      "default": "./traceprojector/locator.js"
+    },
+    "./generator": {
+      "types": "./traceprojector/generator.d.ts",
+      "default": "./traceprojector/generator.js"
+    }
+  },
+  "types": "traceprojector/traceprojector.d.ts",
+  "files": [
+    "traceprojector/",
+    "dist/",
+    "docs/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=26.0.0"
+  },
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "lint": "standard traceprojector/**/*.js tests/**/*.js",
+    "lint:fix": "standard --fix traceprojector/**/*.js tests/**/*.js",
+    "test": "mocha tests/**/*.test.js",
+    "test:watch": "mocha tests/**/*.test.js --watch",
+    "test:coverage": "c8 --reporter=text --reporter=html --reporter=lcov npm test",
+    "docs": "jsdoc2md --files \"traceprojector/*.js\" \"traceprojector/projectors/*.js\" > docs/api.md",
+    "build": "rollup -c rollup.dist.config.js",
+    "build:full": "npm run build && npm run docs",
+    "web:dev": "npm run -w web dev",
+    "web:build": "npm run -w web build",
+    "web:start": "npm run -w web start"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^29.0.3",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-terser": "^1.0.0",
+    "c8": "^12.0.0",
+    "chai": "^6.2.2",
+    "jsdoc-to-markdown": "^9.1.3",
+    "mocha": "^12.0.0",
+    "rollup": "^4.63.1",
+    "sinon": "^22.1.0",
+    "standard": "^17.1.2"
+  },
+  "standard": {
+    "globals": [
+      "describe",
+      "it",
+      "before",
+      "beforeEach",
+      "after",
+      "afterEach"
+    ],
+    "ignore": [
+      "dist/",
+      "coverage/",
+      "node_modules/",
+      "web/"
+    ]
+  }
+}

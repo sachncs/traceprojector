@@ -25,7 +25,7 @@ npm run web:dev       # http://localhost:3000
 ```
 
 `web/` is an npm workspace, so `import { … } from 'traceprojector'`
-inside the playground resolves directly to `../src/traceprojector/`.
+inside the playground resolves directly to `../traceprojector/`.
 No rebuild step is needed — edit the lib, hit save, the playground
 picks it up.
 

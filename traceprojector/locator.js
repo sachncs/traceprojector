@@ -207,7 +207,11 @@ export class Locator {
     }
 
     if (node.tets) {
-      for (const tIdx of node.tets) {
+      // Walk the leaf's tet list in ascending tIdx order so the returned
+      // tIdx is deterministic across runs / platforms (a shared-face point
+      // can lie in multiple tets that all pass the barycentric test).
+      const tets = node.tets.slice().sort((a, b) => a - b)
+      for (const tIdx of tets) {
         const bary = this.barycentricInTetrahedron(tIdx, point)
         if (bary) {
           return { tIdx, bary }

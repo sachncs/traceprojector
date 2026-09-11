@@ -75,4 +75,12 @@ describe('Whitney', () => {
       [[0, 1, 2, 3]]
     )).to.throw(/degenerate/)
   })
+
+  it('getBarycentric identifies Refinement-induced cache corruption', () => {
+    const mesh = new Mesh(singleTet.vertices, singleTet.tetrahedra)
+    const w = new Whitney(mesh)
+    w.tetMatrixCache[0] = undefined
+    w.tetDetCache[0] = undefined
+    expect(() => w.getBarycentric(0, [0.1, 0.1, 0.1])).to.throw(/Refinement|corruption/i)
+  })
 })

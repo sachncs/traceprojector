@@ -78,16 +78,22 @@ export class Whitney {
       )
     }
     const v = this.mesh.tetrahedra[tIdx].map((i) => this.mesh.vertices[i])
-    const T = this.tetMatrixCache[tIdx] ?? [
-      [v[0][0] - v[3][0], v[1][0] - v[3][0], v[2][0] - v[3][0]],
-      [v[0][1] - v[3][1], v[1][1] - v[3][1], v[2][1] - v[3][1]],
-      [v[0][2] - v[3][2], v[1][2] - v[3][2], v[2][2] - v[3][2]]
-    ]
+    const T = this.tetMatrixCache[tIdx]
+    const det = this.tetDetCache[tIdx]
 
-    const det = this.tetDetCache[tIdx] ?? tetDeterminant(v[3], v[0], v[1], v[2])
+    if (T === undefined || det === undefined) {
+      throw new ProjectError(
+        `Tetrahedron ${tIdx} has no cached geometry. ` +
+        'This indicates a Refinement-induced corruption: the mesh was ' +
+        'modified after Whitney was constructed.'
+      )
+    }
 
     if (Math.abs(det) < 1e-12) {
-      throw new ProjectError('Degenerate tetrahedron')
+      throw new ProjectError(
+        `Degenerate tetrahedron ${tIdx} (signedVol=${det}); ` +
+        'this is a Mesh input bug or a Refinement-induced corruption.'
+      )
     }
 
     const b = [point[0] - v[3][0], point[1] - v[3][1], point[2] - v[3][2]]

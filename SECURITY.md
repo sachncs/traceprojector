@@ -2,9 +2,24 @@
 
 ## Supported Versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+| Version | Supported          | Notes |
+| ------- | ------------------ | ----- |
+| 0.1.x   | :white_check_mark: | Active line under the current `traceprojector` name. |
+| 0.0.x   | :x:                | End-of-life; no backports. Released under the legacy `bounded-commuting-discrete-trace-preserving-projections` repo. |
+
+### Response-Time SLA
+
+Best-effort targets:
+
+- **Critical**: 30 days
+- **High**: 90 days
+- **Lower**: next regular release
+
+### Disclosure Channel
+
+For issues that cannot be reported by email, use the
+[GitHub Security Advisories](https://github.com/sachncs/traceprojector/security/advisories/new)
+tab for this repository.
 
 ## Reporting a Vulnerability
 

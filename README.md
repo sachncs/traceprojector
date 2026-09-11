@@ -257,6 +257,9 @@ Pass an options object as the third argument to `new Projector(mesh, whitney, op
 
 For users:
 
+- **[Discussions](https://github.com/sachncs/traceprojector/discussions)**
+  — Q&A, ideas, and "show and tell" — questions about the §6.3
+  boundary-weight cascade or the de Rham complex belong here.
 - **[API reference](docs/api.md)** — Auto-generated from JSDoc. The
   full list of classes, methods, and exports. Bookmark this once you
   start writing real code.

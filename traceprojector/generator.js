@@ -63,7 +63,6 @@ export function generateUnitCubeMesh (n) {
           const verts = tet.map((vi) => vertices[vi])
           const vol = tetDeterminant(verts[0], verts[1], verts[2], verts[3])
           if (vol < 0) {
-            // Reverse last two vertices to fix orientation.
             [tet[2], tet[3]] = [tet[3], tet[2]]
           }
           tetrahedra.push(tet)

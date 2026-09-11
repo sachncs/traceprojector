@@ -49,12 +49,12 @@ Thrown by linear algebra routines in `utils.js` when a matrix is singular or num
 
 | Code | Message | Meaning |
 |------|---------|---------|
-| `BWC_VERTEX_NO_STAR` | `Weight: vertex ... has no boundary-face star; skipping.` | A boundary vertex has no boundary-face star (degenerate topology). |
-| `BWC_VERTEX_BWEIGHT_FAILURE` | `Weight: failed to compute vertex weight for vertex ...` | The local bweight solve threw while building the vertex weight. |
-| `BWC_EDGE_NO_STAR` | `Weight: edge ... has no boundary-face star; skipping.` | A boundary edge has no boundary-face star. |
-| `BWC_EDGE_FAILURE` | `Weight: failed to compute edge weight for edge ...` | The local bweight solve threw while building the edge weight. |
-| `BWC_FACE_NO_STAR` | `Weight: face ... has no extended star; skipping.` | A boundary face has no extended vertex star. |
-| `BWC_FACE_FAILURE` | `Weight: failed to compute face weight for face ...` | The local bweight solve threw while building the face weight. |
+| `BWC_EDGE_FAILURE` | `Weight: failed to compute edge weight for edge ${eIdx}: ${err.message}` | See `traceprojector/weight.js` for the call site. |
+| `BWC_EDGE_NO_STAR` | `Weight: edge ${eIdx} has no boundary-face star; skipping.` | See `traceprojector/weight.js` for the call site. |
+| `BWC_FACE_FAILURE` | `Weight: failed to compute face weight for face ${fIdx}: ${err.message}` | See `traceprojector/weight.js` for the call site. |
+| `BWC_FACE_NO_STAR` | `Weight: face ${fIdx} has no extended star; skipping.` | See `traceprojector/weight.js` for the call site. |
+| `BWC_VERTEX_BWEIGHT_FAILURE` | `Weight: failed to compute vertex weight for vertex ${vIdx}: ${err.message}` | See `traceprojector/weight.js` for the call site. |
+| `BWC_VERTEX_NO_STAR` | `Weight: vertex ${vIdx} has no boundary-face star; skipping.` | See `traceprojector/weight.js` for the call site. |
 
 **Recovery**: Inspect the mesh near the reported simplex for degenerate or inverted elements.
 
@@ -64,8 +64,8 @@ Thrown by linear algebra routines in `utils.js` when a matrix is singular or num
 
 | Code | Message | Meaning |
 |------|---------|---------|
-| `HOP_BUBBLE_SOLVE_FAILED` | `Bubble: solve failed for tetrahedron ...` | The local bubble-enriched solve did not converge. |
-| `HOP_L2_SOLVE_FAILED` | `Bubble: L2 solve failed for tetrahedron ...` | The L2 enrichment solve did not converge. |
+| `HOP_BUBBLE_SOLVE_FAILED` | `Bubble: bubble solve failed for tet ${tIdx}, p=${p}: ${e.message}` | See `traceprojector/bubble.js` for the call site. |
+| `HOP_L2_SOLVE_FAILED` | `Bubble: L2 solve failed for tet ${tIdx}, p=${p}: ${e.message}` | See `traceprojector/bubble.js` for the call site. |
 
 **Recovery**: Ensure the tetrahedron has strictly positive volume.
 
@@ -75,7 +75,7 @@ Thrown by linear algebra routines in `utils.js` when a matrix is singular or num
 
 | Code | Message | Meaning |
 |------|---------|---------|
-| `LOCAL_SOLVER_ILL_CONDITIONED` | `Solver: local stiffness matrix is ill-conditioned ...` | The local stiffness matrix is numerically ill-conditioned; the solve may be inaccurate. |
+| `LOCAL_SOLVER_ILL_CONDITIONED` | `Solver: matrix is ill-conditioned (norm=...). Results may be inaccurate.` | The local stiffness matrix is numerically ill-conditioned; the solve may be inaccurate. |
 
 **Recovery**: Inspect the local star geometry for inverted or degenerate elements.
 
@@ -85,6 +85,6 @@ Thrown by linear algebra routines in `utils.js` when a matrix is singular or num
 
 | Code | Message | Meaning |
 |------|---------|---------|
-| `TRACEPROJECTOR_DEGENERATE_MESH` | `Projector: mesh contains ... degenerate or near-degenerate tetrahedra ...` | The mesh has tetrahedra with signed volume below `1e-12`. |
+| `TRACEPROJECTOR_DEGENERATE_MESH` | `Projector: mesh contains N degenerate or near-degenerate tetrahedra. Projections may fail.` | The mesh has tetrahedra with signed volume below `1e-12`. |
 
 **Recovery**: Re-mesh or repair the input mesh before computing projections.

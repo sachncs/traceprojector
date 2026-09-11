@@ -86,7 +86,9 @@
     "web:build": "npm run -w web build",
     "web:start": "npm run -w web start",
     "docs:test-count": "node scripts/test-count.mjs",
-    "docs:test-count:check": "node scripts/test-count.mjs --check"
+    "docs:test-count:check": "node scripts/test-count.mjs --check",
+    "docs:warn": "node scripts/gen-warnings-doc.mjs",
+    "docs:warn:check": "node scripts/gen-warnings-doc.mjs --check"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^29.0.3",

@@ -8,7 +8,7 @@ This repository follows a zero-config philosophy: every script is a single `npm 
 |--------|---------|---------|
 | Lint | `npm run lint` | Check StandardJS style on source and tests |
 | Lint Fix | `npm run lint:fix` | Auto-fix StandardJS violations |
-| Test | `npm test` | Run the full Mocha test suite (166 tests) |
+| Test | `npm test` | Run the full Mocha test suite (193 tests) |
 | Test Watch | `npm run test:watch` | Run tests in watch mode during development |
 | Coverage | `npm run test:coverage` | Run tests with c8; outputs text, HTML, and lcov |
 | Build | `npm run build` | Build Rollup bundles: ESM, CJS, UMD |

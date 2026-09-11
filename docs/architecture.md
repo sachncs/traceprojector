@@ -79,3 +79,20 @@ project(u, point, tIdx, boundaryFaceSet) -> value
 5. **Warning instead of throwing for local failures**: `Weight` and `Bubble` warn on singular matrices so that a single bad element does not crash the entire mesh projection.
 6. **Section 6.3 boundary-weight cascade**: `Weight` wires three duality functionals (vertex, edge, face) on the surface trace spaces via `bweight`; `boundaryVerify` cross-checks each functional against the canonical DoF.
 7. **Surface differential operators**: `Surface` exposes `grad_Γ`, `curl_Γ`, `div_Γ`, `rot_Γ` plus the barycenter tent `μ` required by the Section 6.3 cascade.
+
+## Key Encoding Limits
+
+The integer keys used for canonical edge and face lookup are computed
+as plain arithmetic on `Number` integers and are bounded by
+`Number.MAX_SAFE_INTEGER` (`2^53 − 1`):
+
+| Method | Limit on the pre-refinement vertex count | Notes |
+|--------|------------------------------------------|-------|
+| `Mesh.computeEdgeKey(a, b, vertexCount)` | `vertexCount < 2^26` (~67 M) | The product `a * vertexCount` must stay within `Number.MAX_SAFE_INTEGER`. |
+| `Mesh#faceKey(f)` | `originalVertexCount < 2^17` (~131 k) | The quadratic term `s0 * vc^2` must stay within `Number.MAX_SAFE_INTEGER`. |
+
+Both limits apply to the **pre-refinement** vertex count — refinement
+appends barycenter vertices that are not part of the canonical key
+space.  At the time of v0.1.0 the library has not been benchmarked on
+meshes larger than 100 k vertices; users planning to go larger should
+expect to encounter the face-key ceiling first.

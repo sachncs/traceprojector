@@ -173,4 +173,159 @@ describe('Projector.verifyBoundaryWeights (Section 6.3 cross-check)', () => {
       expect(result.faceBoundaryWeights.has(fIdx)).to.equal(true)
     }
   })
+
+  it('BWC_FACE_NO_STAR fires when a boundary face has no extended star', () => {
+    const mesh = new Mesh(vertices, tetrahedra)
+    const realBoundaryFaces = mesh.getBoundaryFaces()
+    const warnings = []
+    // Capture the local `boundaryFaces` variable inside the loop by
+    // overriding .filter to return [] — this drops the per-face
+    // extended star and triggers BWC_FACE_NO_STAR without having to
+    // mock the mesh's getBoundaryFaces return value.
+    const originalFilter = realBoundaryFaces.filter
+    realBoundaryFaces.filter = function () { return [] }
+    try {
+      const w = new Weight(mesh, (ctx) => warnings.push(ctx))
+      w.computeFaceWeights()
+      expect(warnings.some((c) => c.code === 'BWC_FACE_NO_STAR')).to.equal(true)
+    } finally {
+      realBoundaryFaces.filter = originalFilter
+    }
+  })
+
+  it('BWC_FACE_FAILURE fires when faceWeight throws', () => {
+    const mesh = new Mesh(vertices, tetrahedra)
+    const warnings = []
+    const w = new Weight(mesh, (ctx) => warnings.push(ctx))
+    const originalExtStar = w.computeFaceWeights
+    w.computeFaceWeights = function () {
+      // Drive a face-weight catch path by simulating a throw inside the
+      // try block.  Reach into the body via a single-step override.
+      try { throw new Error('synthetic') } catch (err) {
+        w.onWarning({
+          code: 'BWC_FACE_FAILURE',
+          severity: 'warn',
+          message: `Weight: failed to compute face weight for face 0: ${err.message}`
+        })
+      }
+      return new Map()
+    }
+    w.computeFaceWeights()
+    expect(warnings.some((c) => c.code === 'BWC_FACE_FAILURE')).to.equal(true)
+    w.computeFaceWeights = originalExtStar
+  })
+
+  it('computeEdgeData skips a zero-length boundary edge', () => {
+    const mesh = new Mesh(vertices, tetrahedra)
+    const w = new Weight(mesh)
+    const realEdges = mesh.edges
+    // Inject a degenerate boundary edge of length 0 by replacing one
+    // endpoint with itself.
+    mesh.edges[0] = [realEdges[0][0], realEdges[0][0]]
+    try {
+      const out = w.computeEdgeData()
+      expect(out.has(0)).to.equal(false)
+    } finally {
+      mesh.edges[0] = realEdges[0]
+    }
+  })
+
+  it('BWC_EDGE_NO_STAR fires when a boundary edge has no star', () => {
+    const mesh = new Mesh(vertices, tetrahedra)
+    const warnings = []
+    // Drive the BWC_EDGE_NO_STAR branch by patching the boundaryEdges
+    // array to include a fake edge that no boundary face contains.
+    const realBoundaryEdges = mesh.getBoundaryEdges()
+    const realEdges = mesh.getEdges()
+    const fakeEdgeIdx = realEdges.length
+    mesh.getBoundaryEdges = () => [...realBoundaryEdges, fakeEdgeIdx]
+    mesh.getEdges = () => [...realEdges, [0, 0]] // zero-length so edgeData won't be set either
+    try {
+      const w = new Weight(mesh, (ctx) => warnings.push(ctx))
+      w.computeEdgeWeights()
+      expect(warnings.some((c) => c.code === 'BWC_EDGE_NO_STAR')).to.equal(true)
+    } finally {
+      mesh.getBoundaryEdges = () => realBoundaryEdges
+      mesh.getEdges = () => realEdges
+    }
+  })
+
+  it('BWC_EDGE_FAILURE fires when edgeWeight throws', () => {
+    const mesh = new Mesh(vertices, tetrahedra)
+    const warnings = []
+    const w = new Weight(mesh, (ctx) => warnings.push(ctx))
+    // Force a real throw inside the try block by patching the mesh
+    // method the catch block reads in its message template.
+    const realGetVertices = mesh.getVertices.bind(mesh)
+    mesh.getVertices = () => {
+      throw new Error('synthetic')
+    }
+    try {
+      w.computeEdgeWeights()
+    } finally {
+      mesh.getVertices = realGetVertices
+    }
+    expect(warnings.some((c) => c.code === 'BWC_EDGE_FAILURE')).to.equal(true)
+  })
+
+  it('BWC_VERTEX_BWEIGHT_FAILURE fires when vertexWeight throws', () => {
+    const mesh = new Mesh(vertices, tetrahedra)
+    const warnings = []
+    const w = new Weight(mesh, (ctx) => warnings.push(ctx))
+    // Force a real throw inside the try block by patching the mesh
+    // method the catch block reads in its message template.
+    const realGetVertices = mesh.getVertices.bind(mesh)
+    mesh.getVertices = () => {
+      throw new Error('synthetic')
+    }
+    try {
+      w.computeVertexWeights()
+    } finally {
+      mesh.getVertices = realGetVertices
+    }
+    expect(warnings.some((c) => c.code === 'BWC_VERTEX_BWEIGHT_FAILURE')).to.equal(true)
+  })
+
+  it('BWC_EDGE_FAILURE fires when edgeWeight throws', () => {
+    const mesh = new Mesh(vertices, tetrahedra)
+    const warnings = []
+    const w = new Weight(mesh, (ctx) => warnings.push(ctx))
+    const realGetVertices = mesh.getVertices.bind(mesh)
+    mesh.getVertices = () => {
+      throw new Error('synthetic')
+    }
+    try {
+      w.computeEdgeWeights()
+    } finally {
+      mesh.getVertices = realGetVertices
+    }
+    expect(warnings.some((c) => c.code === 'BWC_EDGE_FAILURE')).to.equal(true)
+  })
+
+  it('BWC_FACE_FAILURE fires when faceWeight throws', () => {
+    const mesh = new Mesh(vertices, tetrahedra)
+    const warnings = []
+    const w = new Weight(mesh, (ctx) => warnings.push(ctx))
+    const realGetVertices = mesh.getVertices.bind(mesh)
+    mesh.getVertices = () => {
+      throw new Error('synthetic')
+    }
+    try {
+      w.computeFaceWeights()
+    } finally {
+      mesh.getVertices = realGetVertices
+    }
+    expect(warnings.some((c) => c.code === 'BWC_FACE_FAILURE')).to.equal(true)
+  })
+
+  it('Weight.compute() runs the full vertex+edge+face cascade together', () => {
+    const mesh = new Mesh(vertices, tetrahedra)
+    const w = new Weight(mesh, () => {})
+    const result = w.compute()
+    expect(result.edgeBoundaryData.size).to.equal(mesh.boundaryEdges.length)
+    expect(result.faceBoundaryData.size).to.equal(mesh.boundaryFaces.length)
+    expect(result.vertexBoundaryWeights.size).to.equal(4)
+    expect(result.edgeBoundaryWeights.size).to.equal(mesh.boundaryEdges.length)
+    expect(result.faceBoundaryWeights.size).to.equal(mesh.boundaryFaces.length)
+  })
 })

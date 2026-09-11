@@ -76,4 +76,29 @@ describe('Locator', () => {
     const result = locator.findTetrahedron([0.9, 0.9, 0.9])
     expect(result).to.not.equal(null)
   })
+
+  it('shared-face point returns the smallest tIdx deterministically', () => {
+    // Two tets that share face [1, 2, 3]; a point on that face lies in
+    // both, but the locator must pick one.  Both choices yield the same
+    // barycentric coordinates modulo a permutation, so the projected
+    // value at that point is the same.
+    const mesh = new Mesh(
+      [
+        [0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1],
+        [0, 0, -1]
+      ],
+      [
+        [0, 1, 2, 3],
+        [0, 1, 4, 2]
+      ]
+    )
+    const locator = new Locator(mesh)
+    const shared = [0, 0.5, 0.5]
+    const a = locator.findTetrahedron(shared)
+    const b = locator.findTetrahedron(shared)
+    expect(a).to.not.equal(null)
+    expect(b).to.not.equal(null)
+    expect(a.tIdx).to.equal(b.tIdx)
+    expect(a.tIdx).to.equal(Math.min(...mesh.tetrahedra.map((_, i) => i)))
+  })
 })

@@ -8,6 +8,7 @@
 import { subtract, norm } from './utils.js'
 import { vertexWeight, edgeWeight, faceWeight } from './bweight.js'
 import { Mesh } from './mesh.js'
+import { ProjectError } from './errors.js'
 
 /**
  * Computes boundary patch weights used by the trace-preserving projection
@@ -24,13 +25,19 @@ export class Weight {
    * @param {!Mesh} mesh
    * @param {function=} onWarning - Callback invoked with a warning context
    *   object when a local weight computation fails or is ill-conditioned.
+   * @param {!Object=} options
+   * @param {boolean=} options.strict - When true, re-throw per-simplex
+   *   failures instead of emitting a warning. Defaults to false (warn
+   *   + skip), which preserves the historical "one bad element does
+   *   not halt the whole mesh projection" trade-off.
    */
-  constructor (mesh, onWarning = console.warn) {
+  constructor (mesh, onWarning = console.warn, options = {}) {
     this.mesh = mesh
     this.onWarning =
       typeof onWarning === 'function'
         ? onWarning
         : (ctx) => console.warn(ctx.message ?? ctx)
+    this.strict = options.strict === true
   }
 
   /**
@@ -67,11 +74,13 @@ export class Weight {
       try {
         const star = boundaryFaces.filter((f) => faces[f].includes(vIdx))
         if (star.length === 0) {
-          this.onWarning({
+          const ctx = {
             code: 'BWC_VERTEX_NO_STAR',
             severity: 'warn',
             message: `Weight: vertex ${vIdx} has no boundary-face star; skipping.`
-          })
+          }
+          this.onWarning(ctx)
+          if (this.strict) throw new ProjectError(ctx.message)
           continue
         }
         const sf = star.map((f) => faces[f])
@@ -88,6 +97,10 @@ export class Weight {
         const vw = vertexWeight(localVerts, localFaces, localVIdx)
         zeta0.set(vIdx, { pair: vw.pair, integral: vw.integral, psi: vw.psi, faces: vw.faces })
       } catch (err) {
+        if (this.strict && !(err instanceof ProjectError)) {
+          throw new ProjectError(`Weight: vertex ${vIdx}: ${err.message}`)
+        }
+        if (err instanceof ProjectError) throw err
         this.onWarning({
           code: 'BWC_VERTEX_BWEIGHT_FAILURE',
           severity: 'warn',
@@ -124,11 +137,13 @@ export class Weight {
         const eKey = Mesh.computeEdgeKey(e[0], e[1], vc)
         const star = edgeToBoundaryFaces.get(eKey) || []
         if (star.length === 0) {
-          this.onWarning({
+          const ctx = {
             code: 'BWC_EDGE_NO_STAR',
             severity: 'warn',
             message: `Weight: edge ${eIdx} has no boundary-face star; skipping.`
-          })
+          }
+          this.onWarning(ctx)
+          if (this.strict) throw new ProjectError(ctx.message)
           continue
         }
         const ew = edgeWeight(this.mesh.getVertices(), star.map((f) => faces[f]), e)
@@ -139,6 +154,10 @@ export class Weight {
           eta: ew.eta
         })
       } catch (err) {
+        if (this.strict && !(err instanceof ProjectError)) {
+          throw new ProjectError(`Weight: edge ${eIdx}: ${err.message}`)
+        }
+        if (err instanceof ProjectError) throw err
         this.onWarning({
           code: 'BWC_EDGE_FAILURE',
           severity: 'warn',
@@ -160,16 +179,22 @@ export class Weight {
         // Extended star: boundary faces sharing at least one vertex with f.
         const extStar = boundaryFaces.filter((g) => face.some((v) => faces[g].includes(v)))
         if (extStar.length === 0) {
-          this.onWarning({
+          const ctx = {
             code: 'BWC_FACE_NO_STAR',
             severity: 'warn',
             message: `Weight: face ${fIdx} has no extended star; skipping.`
-          })
+          }
+          this.onWarning(ctx)
+          if (this.strict) throw new ProjectError(ctx.message)
           continue
         }
         const fw = faceWeight(this.mesh.getVertices(), extStar.map((g) => faces[g]), face)
         zeta2.set(fIdx, { face, pair: fw.pair, nBasis: fw.nBasis })
       } catch (err) {
+        if (this.strict && !(err instanceof ProjectError)) {
+          throw new ProjectError(`Weight: face ${fIdx}: ${err.message}`)
+        }
+        if (err instanceof ProjectError) throw err
         this.onWarning({
           code: 'BWC_FACE_FAILURE',
           severity: 'warn',

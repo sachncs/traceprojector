@@ -12,7 +12,7 @@ Interactive Next.js 16 + shadcn/ui playground for the
   coordinates.
 - **Convergence plot** — h-refinement L²-error curves, drawn with
   Recharts.
-- **Code export** — copy a Node 26 snippet that reproduces the current
+- **Code export** — copy a Node 24+ snippet that reproduces the current
   configuration.
 
 ## Run it

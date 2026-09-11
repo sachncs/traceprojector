@@ -55,7 +55,7 @@ export function Features() {
           </h2>
           <p className="mt-4 text-balance text-muted-foreground">
             One library, four form degrees, three trace spaces, zero
-            transpilation. The same code runs in Node 26, the browser, and the
+            transpilation. The same code runs in Node 24+, the browser, and the
             sandboxed playground below.
           </p>
         </div>

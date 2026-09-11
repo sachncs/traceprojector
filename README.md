@@ -15,6 +15,22 @@
   </p>
 </p>
 
+<p align="center">
+  <strong>Quick start:</strong>
+</p>
+
+```bash
+npm install traceprojector
+```
+
+Then in your code:
+
+```javascript
+import { Mesh, Whitney, Projector } from 'traceprojector'
+```
+
+Or skip the install and try the bundled [web playground](web/) — `npm run web:dev` opens a 3D mesh viewer, an API playground with code export, and a live convergence plot.
+
 ---
 
 ## What is this?

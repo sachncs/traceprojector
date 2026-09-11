@@ -52,7 +52,11 @@ const { Mesh, Whitney, Projector } = require('traceprojector')
 ```html
 <script src="https://cdn.jsdelivr.net/npm/traceprojector/dist/traceprojector.umd.js"></script>
 <script>
+  // The bundle exposes the canonical `window.TraceProjector` namespace and
+  // also aliases each export to `window.*` for convenience:
   const { Mesh, Whitney, Projector } = window.TraceProjector;
+  // ...or use the aliased top-level names:
+  const p = new Projector(mesh, whitney, { quadratureOrder: 3 });
 </script>
 ```
 

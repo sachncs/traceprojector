@@ -9,7 +9,6 @@
     <a href="https://www.npmjs.com/package/traceprojector"><img src="https://img.shields.io/npm/v/traceprojector" alt="npm"></a>
     <a href="https://github.com/sachncs/traceprojector/stargazers"><img src="https://img.shields.io/github/stars/sachncs/traceprojector" alt="Stars"></a>
     <a href="https://standardjs.com/"><img src="https://img.shields.io/badge/code%20style-standard-brightgreen.svg" alt="StandardJS"></a>
-    <a href="https://github.com/bcoe/c8"><img src="https://img.shields.io/badge/coverage-c8-yellow" alt="c8"></a>
   </p>
   <p align="center">
     <a href="https://github.com/sachncs/traceprojector/blob/master/CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-0.1.0-blue" alt="Changelog"></a>

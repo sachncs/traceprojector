@@ -74,7 +74,7 @@ project(u, point, tIdx, boundaryFaceSet) -> value
 
 1. **Pure ES modules**: No CommonJS in source; bundlers handle multi-format output.
 2. **Zero external runtime dependencies**: All linear algebra is native JavaScript.
-3. **Immutable mesh inputs**: `Mesh` validates and freezes topology at construction.
+3. **Immutable mesh inputs (with one caveat)**: `Mesh` validates and freezes topology at construction.  The caveat is `Refinement`: `computeAlfeldSplit()` and `computeWorseyFarinSplit()` append barycenter vertices to `mesh.vertices` and bump `mesh.vertexCount`.  Treat the mesh as immutable up to the point `Refinement` runs; treat the post-refinement mesh as the "live" mesh from that point onward.  The Refinement class stores its own copy of the split data so a second `Mesh` instance is not required.
 4. **Lazy caching**: `Whitney` caches per-tet barycentric gradients; `Projector` caches boundary weights on demand.
 5. **Warning instead of throwing for local failures**: `Weight` and `Bubble` warn on singular matrices so that a single bad element does not crash the entire mesh projection.  `Weight` accepts an optional `{ strict: true }` flag for callers who prefer fail-fast behaviour; in that mode the same per-simplex failure path re-throws a `ProjectError` instead of emitting a warning.
 6. **Section 6.3 boundary-weight cascade**: `Weight` wires three duality functionals (vertex, edge, face) on the surface trace spaces via `bweight`; `boundaryVerify` cross-checks each functional against the canonical DoF.

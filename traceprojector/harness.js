@@ -173,16 +173,21 @@ export function runConvergenceStudy (meshes, config) {
     exactVector,
     l = 0,
     p = 0,
-    quadratureOrder = 3
+    quadratureOrder = 3,
+    projectors = new WeakMap()
   } = config
 
   for (let i = 0; i < meshes.length; i++) {
     const mesh = meshes[i]
-    // Re-create Projector for each mesh since it holds mesh-specific data.
-    const w = new Whitney(mesh)
-    const b = new Projector(mesh, w, { quadratureOrder })
-    b.computeBoundaryWeights()
-    b.buildLocator()
+    let b = projectors.get(mesh)
+    if (!b) {
+      // Re-create Projector for each mesh since it holds mesh-specific data.
+      const w = new Whitney(mesh)
+      b = new Projector(mesh, w, { quadratureOrder })
+      b.computeBoundaryWeights()
+      b.buildLocator()
+      projectors.set(mesh, b)
+    }
 
     const h = estimateMeshSize(mesh)
     let l2Err

@@ -140,6 +140,23 @@ describe('Convergence Harness Utilities', () => {
     expect(results[0]).to.have.property('l2Err')
     expect(results[0].h1Err).to.equal(undefined)
   })
+
+  it('runConvergenceStudy reuses per-mesh Projector across calls', () => {
+    const meshes = [1, 2].map((n) => generateUnitCubeMesh(n))
+    const cache = new Map()
+    const config = {
+      exactScalar: (pt) => pt[0] * pt[1],
+      l: 0,
+      p: 0,
+      quadratureOrder: 3,
+      projectors: cache
+    }
+    runConvergenceStudy(meshes, config)
+    expect(cache.size).to.equal(meshes.length)
+    const first = cache.get(meshes[0])
+    runConvergenceStudy(meshes, config)
+    expect(cache.get(meshes[0])).to.equal(first)
+  })
 })
 
 // p-refinement tests on a single tet: verifies that increasing the

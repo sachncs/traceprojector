@@ -149,4 +149,28 @@ describe('Projector.verifyBoundaryWeights (Section 6.3 cross-check)', () => {
       mesh.getBoundaryFaces = () => boundaryFaces
     }
   })
+
+  it('vertex-only-adjacent boundary faces both appear in the face weight star', () => {
+    // Two tetrahedra sharing a single vertex but no edge or face:
+    // forms a T-junction boundary where the vertex-only adjacency rule
+    // is the rule of inclusion.  The §6.3 cascade should pull *both*
+    // faces into the star even though they are not edge-adjacent.
+    const mesh = new Mesh(
+      [
+        [0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1],
+        [0, 0, 2], [1, 0, 2], [0, 1, 2]
+      ],
+      [
+        [0, 1, 2, 3],
+        [3, 5, 6, 4]
+      ]
+    )
+    const w = new Weight(mesh)
+    const result = w.compute()
+    const faceFIdxs = mesh.getBoundaryFaces()
+    expect(faceFIdxs.length).to.be.greaterThanOrEqual(2)
+    for (const fIdx of faceFIdxs) {
+      expect(result.faceBoundaryWeights.has(fIdx)).to.equal(true)
+    }
+  })
 })

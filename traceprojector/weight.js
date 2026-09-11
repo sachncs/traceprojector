@@ -7,6 +7,7 @@
 
 import { subtract, norm } from './utils.js'
 import { vertexWeight, edgeWeight, faceWeight } from './bweight.js'
+import { Mesh } from './mesh.js'
 
 /**
  * Computes boundary patch weights used by the trace-preserving projection
@@ -101,13 +102,27 @@ export class Weight {
   computeEdgeWeights () {
     const zeta1 = new Map()
     const faces = this.mesh.getFaces()
-    const boundaryFaces = this.mesh.getBoundaryFaces()
+    const edges = this.mesh.getEdges()
+    const edgeToBoundaryFaces = new Map()
+    for (const fIdx of this.mesh.getBoundaryFaces()) {
+      const f = faces[fIdx]
+      const localEdges = [[f[0], f[1]], [f[1], f[2]], [f[2], f[0]]]
+      for (const [a, b] of localEdges) {
+        const eKey = Mesh.computeEdgeKey(a, b, this.mesh.getOriginalVertexCount())
+        let list = edgeToBoundaryFaces.get(eKey)
+        if (!list) {
+          list = []
+          edgeToBoundaryFaces.set(eKey, list)
+        }
+        list.push(fIdx)
+      }
+    }
+    const vc = this.mesh.getOriginalVertexCount()
     for (const eIdx of this.mesh.getBoundaryEdges()) {
-      const e = this.mesh.getEdges()[eIdx]
+      const e = edges[eIdx]
       try {
-        const star = boundaryFaces.filter(
-          (f) => faces[f].includes(e[0]) && faces[f].includes(e[1])
-        )
+        const eKey = Mesh.computeEdgeKey(e[0], e[1], vc)
+        const star = edgeToBoundaryFaces.get(eKey) || []
         if (star.length === 0) {
           this.onWarning({
             code: 'BWC_EDGE_NO_STAR',

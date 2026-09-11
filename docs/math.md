@@ -76,6 +76,34 @@ face barycenter and `0` on every face boundary. The L2-dual representative is
 `eta = M^{-1} d`, with `d` the intrinsic DoF moment vector and `M` the mass
 matrix of the boundary trace space on the (possibly extended) star.
 
+#### Extended star definition
+
+For a boundary simplex `sigma` the **extended star** `es_d(sigma)` used by
+the §6.3 cascade is defined by the rule implemented in
+`traceprojector/weight.js`:
+
+- **Vertex weights (`sigma = v`)**: boundary faces that include `v`
+  (`star = boundaryFaces.filter(f => faces[f].includes(vIdx))`).
+- **Edge weights (`sigma = e`)**: boundary faces that contain *both*
+  endpoints of `e`. The lookup is precomputed once per call via
+  `edgeToBoundaryFaces` so the per-edge cost is O(1).
+- **Face weights (`sigma = f`)**: boundary faces that share *at least
+  one vertex* with `f`. This is the most permissive of the three
+  rules — it intentionally captures T-junction meshes where two
+  boundary faces meet at a single vertex without sharing an edge,
+  because such a meeting still contributes a non-zero basis field
+  to the face mass matrix. The implementation lives in
+  `Weight.computeFaceWeights` and is the formula referenced by the
+  implementation comment "boundary faces sharing at least one vertex
+  with `f`".
+
+On meshes where the boundary is an actual surface (a manifold 2D
+sheet), the three rules collapse to the same set: every boundary
+face sharing at least one vertex with `f` also shares one of `f`'s
+edges with `f`. The permissive vertex-only rule matters only for
+non-manifold "T-junction" boundaries, which the library accepts but
+does not specifically optimise for.
+
 The projectors keep the exact boundary DoFs (`u(v)`, `int_e u . t_e`,
 `int_f u . n_f`) for arbitrary inputs, and the weights above are wired in as a
 checked cross-check: `Projector.verifyBoundaryWeights()` applies each weight

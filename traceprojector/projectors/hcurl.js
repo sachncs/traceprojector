@@ -6,6 +6,7 @@
 
 import { dot, subtract } from '../utils.js'
 import { lineQuadrature } from '../quadrature.js'
+import { Mesh } from '../mesh.js'
 
 /**
  * Lowest-order H(curl) (l=1) edge-based projector implementing Pi^1.
@@ -47,7 +48,7 @@ export class Hcurl {
     for (let e = 0; e < 6; e++) {
       const [i, j] = localEdges[e]
       const globalEdge = [tet[i], tet[j]]
-      const eKey = this.edgeKey(globalEdge)
+      const eKey = Mesh.computeEdgeKey(globalEdge[0], globalEdge[1], this.mesh.getOriginalVertexCount())
       const eIdx = this.mesh.getEdgeIndex(eKey)
       const sigma = this.mesh.getTetEdgeSign(tIdx, e)
 
@@ -115,7 +116,7 @@ export class Hcurl {
     for (let e = 0; e < 6; e++) {
       const [i, j] = localEdges[e]
       const globalEdge = [tet[i], tet[j]]
-      const eKey = this.edgeKey(globalEdge)
+      const eKey = Mesh.computeEdgeKey(globalEdge[0], globalEdge[1], this.mesh.getOriginalVertexCount())
       const eIdx = this.mesh.getEdgeIndex(eKey)
       if (boundaryEdgeSet.has(eIdx)) {
         continue
@@ -149,7 +150,7 @@ export class Hcurl {
     for (let e = 0; e < 6; e++) {
       const [i, j] = localEdges[e]
       const globalEdge = [tet[i], tet[j]]
-      const eKey = this.edgeKey(globalEdge)
+      const eKey = Mesh.computeEdgeKey(globalEdge[0], globalEdge[1], this.mesh.getOriginalVertexCount())
       const eIdx = this.mesh.getEdgeIndex(eKey)
       const sigma = this.mesh.getTetEdgeSign(tIdx, e)
       if (!boundaryEdgeSet.has(eIdx) || !boundaryData.has(eIdx)) {
@@ -161,16 +162,5 @@ export class Hcurl {
       result[2] += coefficient * edgeBasis[e][2]
     }
     return result
-  }
-
-  /**
-   * @param {!Array<number>} e
-   * @return {number}
-   */
-  edgeKey (e) {
-    const a = e[0]
-    const b = e[1]
-    const vc = this.mesh.getOriginalVertexCount()
-    return a < b ? a * vc + b : b * vc + a
   }
 }

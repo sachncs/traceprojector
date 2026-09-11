@@ -17,9 +17,9 @@ const COLUMNS = [
     title: "Documentation",
     links: [
       { label: "README", href: "https://github.com/sachncs/traceprojector#readme" },
-      { label: "API reference", href: "https://github.com/sachncs/traceprojector/blob/main/docs/api.md" },
-      { label: "Math background", href: "https://github.com/sachncs/traceprojector/blob/main/docs/math.md" },
-      { label: "Architecture", href: "https://github.com/sachncs/traceprojector/blob/main/docs/architecture.md" },
+      { label: "API reference", href: "https://github.com/sachncs/traceprojector/blob/master/docs/api.md" },
+      { label: "Math background", href: "https://github.com/sachncs/traceprojector/blob/master/docs/math.md" },
+      { label: "Architecture", href: "https://github.com/sachncs/traceprojector/blob/master/docs/architecture.md" },
     ],
   },
   {
@@ -31,7 +31,7 @@ const COLUMNS = [
       },
       {
         label: "Changelog",
-        href: "https://github.com/sachncs/traceprojector/blob/main/CHANGELOG.md",
+        href: "https://github.com/sachncs/traceprojector/blob/master/CHANGELOG.md",
       },
       {
         label: "Roadmap",
@@ -39,16 +39,16 @@ const COLUMNS = [
       },
       {
         label: "Contributing",
-        href: "https://github.com/sachncs/traceprojector/blob/main/CONTRIBUTING.md",
+        href: "https://github.com/sachncs/traceprojector/blob/master/CONTRIBUTING.md",
       },
     ],
   },
   {
     title: "Legal",
     links: [
-      { label: "MIT License", href: "https://github.com/sachncs/traceprojector/blob/main/LICENSE" },
-      { label: "Security", href: "https://github.com/sachncs/traceprojector/blob/main/SECURITY.md" },
-      { label: "Code of Conduct", href: "https://github.com/sachncs/traceprojector/blob/main/CODE_OF_CONDUCT.md" },
+      { label: "MIT License", href: "https://github.com/sachncs/traceprojector/blob/master/LICENSE" },
+      { label: "Security", href: "https://github.com/sachncs/traceprojector/blob/master/SECURITY.md" },
+      { label: "Code of Conduct", href: "https://github.com/sachncs/traceprojector/blob/master/CODE_OF_CONDUCT.md" },
     ],
   },
 ];

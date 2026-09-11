@@ -27,7 +27,7 @@ npm install
 npm test
 ```
 
-You should see all tests pass (205 tests as of v0.1.0).
+You should see all tests pass (214 tests as of v0.1.0).
 
 ## Usage in a Project
 

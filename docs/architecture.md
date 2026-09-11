@@ -76,7 +76,7 @@ project(u, point, tIdx, boundaryFaceSet) -> value
 2. **Zero external runtime dependencies**: All linear algebra is native JavaScript.
 3. **Immutable mesh inputs**: `Mesh` validates and freezes topology at construction.
 4. **Lazy caching**: `Whitney` caches per-tet barycentric gradients; `Projector` caches boundary weights on demand.
-5. **Warning instead of throwing for local failures**: `Weight` and `Bubble` warn on singular matrices so that a single bad element does not crash the entire mesh projection.
+5. **Warning instead of throwing for local failures**: `Weight` and `Bubble` warn on singular matrices so that a single bad element does not crash the entire mesh projection.  `Weight` accepts an optional `{ strict: true }` flag for callers who prefer fail-fast behaviour; in that mode the same per-simplex failure path re-throws a `ProjectError` instead of emitting a warning.
 6. **Section 6.3 boundary-weight cascade**: `Weight` wires three duality functionals (vertex, edge, face) on the surface trace spaces via `bweight`; `boundaryVerify` cross-checks each functional against the canonical DoF.
 7. **Surface differential operators**: `Surface` exposes `grad_Γ`, `curl_Γ`, `div_Γ`, `rot_Γ` plus the barycenter tent `μ` required by the Section 6.3 cascade.
 

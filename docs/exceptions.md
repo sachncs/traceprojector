@@ -45,7 +45,7 @@ Thrown by linear algebra routines in `utils.js` when a matrix is singular or num
 
 ## Weight Warnings
 
-`Weight` logs warnings via an injected `warn` function rather than throwing, because per-vertex failures should not halt the entire computation.
+`Weight` logs warnings via an injected `warn` function rather than throwing, because per-vertex failures should not halt the entire computation.  Construct with `{ strict: true }` to opt into fail-fast behaviour: in that mode the same per-simplex failure path re-throws a `ProjectError` instead of emitting a warning.
 
 | Code | Message | Meaning |
 |------|---------|---------|

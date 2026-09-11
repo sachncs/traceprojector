@@ -137,4 +137,16 @@ describe('Projector.verifyBoundaryWeights (Section 6.3 cross-check)', () => {
     expect(res.ok).to.equal(false)
     expect(res.failing).to.be.greaterThan(0)
   })
+
+  it('strict mode re-throws on a boundary vertex with no star', () => {
+    const mesh = new Mesh(vertices, tetrahedra)
+    const w = new Weight(mesh, () => {}, { strict: true })
+    const boundaryFaces = mesh.getBoundaryFaces()
+    mesh.getBoundaryFaces = () => []
+    try {
+      expect(() => w.computeVertexWeights()).to.throw(/BWC_VERTEX_NO_STAR|no boundary-face star/)
+    } finally {
+      mesh.getBoundaryFaces = () => boundaryFaces
+    }
+  })
 })

@@ -60,8 +60,10 @@ It implements the construction from
 
 ## What's new in 0.1.0
 
-- **Node 26 only.** Dropped Babel, dropped Node 20/22 from the
-  matrix, bumped every dev dep to current latest.
+- **Node 24+ supported, Node 26 recommended.** Dropped Babel, dropped
+  Node 20/22 from the matrix, bumped every dev dep to current latest.
+  The library pins \`engines.node\` to \`>=24.0.0\`, with a \`.nvmrc\` at
+  \`26\` for the recommended version.
 - **New file layout.** The package now ships from a top-level
   `traceprojector/` directory — no more `src/lib/` wrapper.
 - **New `web/` playground.** A Next.js 16 + shadcn/ui app that
@@ -88,8 +90,9 @@ You, even if:
   students — the bundled [web playground](web/) has 3D mesh
   visualisation, a convergence plot, and a code exporter.
 
-If you can install Node 26 and type commands into a terminal, you can
-use traceprojector.
+If you can install Node 24 (or later) and type commands into a
+terminal, you can use traceprojector.  The recommended version is
+Node 26 (pinned in \`.nvmrc\`).
 
 ---
 
@@ -121,14 +124,15 @@ use traceprojector.
 
 ## Before you start
 
-You'll need **Node.js 26 or newer** installed on your computer.
+You'll need **Node.js 24 or newer** installed on your computer (Node 26
+is recommended — \`.nvmrc\` pins `26`).
 
 1. Open a terminal (on macOS: `Cmd + Space`, type "Terminal"; on
    Windows: open "PowerShell"; on Linux: open your usual terminal).
 2. Type `node --version` and press Enter.
-3. If you see a version number starting with `26`, you're set.
-4. If you see "command not found" or an older version, install Node
-   26 via [fnm](https://github.com/Schniz/fnm),
+3. If you see a version number starting with `24` (or `26`), you're set.
+4. If you see "command not found" or an older version, install Node 24+
+   via [fnm](https://github.com/Schniz/fnm),
    [nvm](https://github.com/nvm-sh/nvm), or the
    [official installer](https://nodejs.org/).
 
@@ -182,7 +186,7 @@ npm run build
 
 ## Your first run — Node.js
 
-Open a Node 26 REPL (`node` in your terminal) and try this:
+Open a Node 24+ REPL (`node` in your terminal) and try this:
 
 ```javascript
 import { Mesh, Whitney, Projector, generateUnitCubeMesh } from 'traceprojector'

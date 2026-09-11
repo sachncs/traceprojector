@@ -425,7 +425,7 @@ export default function PlaygroundPage() {
                 <CardHeader>
                   <CardTitle>Reproducible snippet</CardTitle>
                   <CardDescription>
-                    Copy this code into a Node 26 script to reproduce the
+                    Copy this code into a Node 24+ script to reproduce the
                     current configuration.
                   </CardDescription>
                 </CardHeader>

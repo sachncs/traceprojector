@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Node.js >= 26
+- Node.js >= 24 (Node 26 recommended; pinned in `.nvmrc`)
 - npm >= 11
 
 ## Installation

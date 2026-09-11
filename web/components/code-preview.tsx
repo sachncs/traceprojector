@@ -10,7 +10,7 @@ const TABS = [
   {
     id: "install",
     label: "Install",
-    code: `# Node 26+
+    code: `# Node 24+ (Node 26 recommended)
 npm install traceprojector`,
   },
   {
@@ -71,7 +71,7 @@ export function CodePreview() {
             </h2>
             <p className="mt-4 text-muted-foreground">
               No build step, no transpiler, no peer-dep negotiation. Drop the
-              lib into any Node 26 project and call{" "}
+              lib into any Node 24+ project and call{" "}
               <code className="font-mono text-foreground">projectH1</code>,{" "}
               <code className="font-mono text-foreground">projectHcurl</code>,{" "}
               <code className="font-mono text-foreground">projectHdiv</code>,

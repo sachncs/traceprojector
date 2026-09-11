@@ -180,4 +180,14 @@ describe('Projector Projections', () => {
     expect(proj[1]).to.be.closeTo(gradU[1], Math.pow(10, -1))
     expect(proj[2]).to.be.closeTo(gradU[2], Math.pow(10, -1))
   })
+
+  it('extractBoundaryDofs is cached across repeated project() calls', () => {
+    const u = (pt) => pt[0] + pt[1] + pt[2]
+    const a = traceProjector.extractBoundaryDofs(u, 0)
+    const b = traceProjector.extractBoundaryDofs(u, 0)
+    expect(b).to.equal(a)
+    traceProjector.computeBoundaryWeights()
+    const c = traceProjector.extractBoundaryDofs(u, 0)
+    expect(c).to.not.equal(a)
+  })
 })

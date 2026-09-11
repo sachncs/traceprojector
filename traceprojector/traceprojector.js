@@ -63,6 +63,8 @@ export class Projector {
   edgeSet
   /** @type {!Set<number>} */
   faceSet
+  /** @type {!WeakMap<object, !Map<number, !Map<number, number>>>} */
+  boundaryDofCache
 
   /**
    * @param {!Mesh} mesh
@@ -86,6 +88,7 @@ export class Projector {
 
     this.edgeSet = new Set(this.mesh.getBoundaryEdges())
     this.faceSet = new Set(this.mesh.getBoundaryFaces())
+    this.boundaryDofCache = new WeakMap()
 
     this.bubble = new Bubble(
       this.mesh,
@@ -176,6 +179,7 @@ export class Projector {
     this.vertexBoundaryWeights = weights.vertexBoundaryWeights
     this.edgeBoundaryWeights = weights.edgeBoundaryWeights
     this.faceBoundaryWeights = weights.faceBoundaryWeights
+    this.boundaryDofCache = new WeakMap()
   }
 
   /**
@@ -322,7 +326,7 @@ export class Projector {
     }
 
     // Step 1: Extract boundary DoFs (nodal values, line integrals, or fluxes).
-    const boundaryData = this.extractBoundaryDofs(u, l)
+    const boundaryData = this.getBoundaryDofs(u, l)
 
     // Step 2: Pi_partial^l — discrete extension of boundary data into the element.
     const partial = this.extendBoundary(boundaryData, point, tIdx, l)
@@ -360,11 +364,44 @@ export class Projector {
 
   /**
    * Extracts the boundary degrees of freedom for a given function.
+   * Computed values are cached per `(u, l)` until the next
+   * {@link computeBoundaryWeights} invalidates the cache, so repeated
+   * `project()` calls on the same `(mesh, u, l)` triple reuse the
+   * boundary DoFs instead of redoing the per-simplex quadrature.
    * @param {function(!Array<number>): (number|!Array<number>)} u
    * @param {number} l
    * @return {!Map<number, number>}
    */
   extractBoundaryDofs (u, l) {
+    return this.getBoundaryDofs(u, l)
+  }
+
+  /**
+   * Returns the cached boundary DoFs for `(u, l)`, computing them on
+   * the first call and re-using them on subsequent calls.  The cache
+   * is keyed by `u` (via WeakMap) and by `l` (per-u map), so two
+   * distinct functions never share an entry.
+   * @param {function(!Array<number>): (number|!Array<number>)} u
+   * @param {number} l
+   * @return {!Map<number, number>}
+   */
+  getBoundaryDofs (u, l) {
+    let perL = this.boundaryDofCache.get(u)
+    if (!perL) {
+      perL = new Map()
+      this.boundaryDofCache.set(u, perL)
+    }
+    let cached = perL.get(l)
+    if (cached) return cached
+    cached = this.computeBoundaryDofs(u, l)
+    perL.set(l, cached)
+    return cached
+  }
+
+  /**
+   * @private
+   */
+  computeBoundaryDofs (u, l) {
     const result = new Map()
     if (l === 0) {
       for (const vIdx of this.mesh.getBoundaryNodes()) {

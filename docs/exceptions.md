@@ -49,10 +49,14 @@ Thrown by linear algebra routines in `utils.js` when a matrix is singular or num
 
 | Code | Message | Meaning |
 |------|---------|---------|
-| `BWC_ZERO_STAR_AREA` | `Vertex ... has zero star area; skipping weight computation` | The vertex patch has no geometric area, likely due to a degenerate mesh. |
-| `BWC_VERTEX_FAILURE` | `Failed to compute weights for vertex ...` | An unexpected error occurred during the local solve for this vertex. |
+| `BWC_VERTEX_NO_STAR` | `Weight: vertex ... has no boundary-face star; skipping.` | A boundary vertex has no boundary-face star (degenerate topology). |
+| `BWC_VERTEX_BWEIGHT_FAILURE` | `Weight: failed to compute vertex weight for vertex ...` | The local bweight solve threw while building the vertex weight. |
+| `BWC_EDGE_NO_STAR` | `Weight: edge ... has no boundary-face star; skipping.` | A boundary edge has no boundary-face star. |
+| `BWC_EDGE_FAILURE` | `Weight: failed to compute edge weight for edge ...` | The local bweight solve threw while building the edge weight. |
+| `BWC_FACE_NO_STAR` | `Weight: face ... has no extended star; skipping.` | A boundary face has no extended vertex star. |
+| `BWC_FACE_FAILURE` | `Weight: failed to compute face weight for face ...` | The local bweight solve threw while building the face weight. |
 
-**Recovery**: Inspect the mesh near the reported vertex for degenerate or inverted elements.
+**Recovery**: Inspect the mesh near the reported simplex for degenerate or inverted elements.
 
 ## Bubble Warnings
 
@@ -60,7 +64,27 @@ Thrown by linear algebra routines in `utils.js` when a matrix is singular or num
 
 | Code | Message | Meaning |
 |------|---------|---------|
-| `HOP_SINGULAR_MASS` | `Singular mass matrix for bubble projection ...` | The bubble mass matrix is singular; bubble coefficients are skipped. |
-| `HOP_SINGULAR_L2` | `Singular L2 mass matrix ...` | The L2 mass matrix is singular (often zero volume); coefficients fall back to the cell mean (constant polynomial), never a silent zero. |
+| `HOP_BUBBLE_SOLVE_FAILED` | `Bubble: solve failed for tetrahedron ...` | The local bubble-enriched solve did not converge. |
+| `HOP_L2_SOLVE_FAILED` | `Bubble: L2 solve failed for tetrahedron ...` | The L2 enrichment solve did not converge. |
 
 **Recovery**: Ensure the tetrahedron has strictly positive volume.
+
+## Solver Warnings
+
+`Solver` warns on ill-conditioned local solves rather than throwing.
+
+| Code | Message | Meaning |
+|------|---------|---------|
+| `LOCAL_SOLVER_ILL_CONDITIONED` | `Solver: local stiffness matrix is ill-conditioned ...` | The local stiffness matrix is numerically ill-conditioned; the solve may be inaccurate. |
+
+**Recovery**: Inspect the local star geometry for inverted or degenerate elements.
+
+## Projector Warnings
+
+`Projector` warns at construction if the mesh contains degenerate or near-degenerate tetrahedra.
+
+| Code | Message | Meaning |
+|------|---------|---------|
+| `TRACEPROJECTOR_DEGENERATE_MESH` | `Projector: mesh contains ... degenerate or near-degenerate tetrahedra ...` | The mesh has tetrahedra with signed volume below `1e-12`. |
+
+**Recovery**: Re-mesh or repair the input mesh before computing projections.

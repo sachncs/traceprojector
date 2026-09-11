@@ -56,7 +56,10 @@ export class Hdiv {
 
   /**
    * Computes the exact face DoF for H(div): ∫_f u·n dA.
-   * For scalar u, this integrates grad(u)·n over the face.
+   * For scalar u, this integrates grad(u)·n over the face via central
+   * differences (utils.numericalGradient with h = 1e-6, i.e. ~6 extra
+   * u-evaluations per quadrature point).  Callers with an analytic
+   * gradient should use {@link computeFaceDofAnalytic} instead.
    * @param {function(!Array<number>): (number|!Array<number>)} u
    * @param {number} fIdx
    * @return {number}
@@ -75,6 +78,40 @@ export class Hdiv {
       if (isScalar) {
         const grad = numericalGradient(u, pt)
         integral += weights[q] * dot(grad, normal)
+      } else {
+        integral += weights[q] * dot(u(pt), normal)
+      }
+    }
+    return integral * area
+  }
+
+  /**
+   * Analytic-gradient variant of {@link computeFaceDof}.  When the
+   * caller knows the gradient analytically they can supply it as
+   * `gradU` and skip the central-difference step entirely.  This is
+   * exact (no FD error) and ~6× faster per quadrature point on the
+   * default order-3 quadrature.
+   *
+   * `u` may still be scalar or vector; the `gradU` argument is used
+   * only in the scalar branch.
+   * @param {function(!Array<number>): (number|!Array<number>)} u
+   * @param {function(!Array<number>): !Array<number>} gradU
+   * @param {number} fIdx
+   * @return {number}
+   */
+  computeFaceDofAnalytic (u, gradU, fIdx) {
+    const f = this.mesh.getFaces()[fIdx]
+    const verts = f.map((i) => this.mesh.getVertices()[i])
+    const normal = this.mesh.getFaceOutwardNormal(fIdx)
+    const area = triangleArea(verts[0], verts[1], verts[2])
+    const { bary, weights } = triangleQuadrature(this.quadratureOrder)
+
+    const isScalar = typeof u(verts[0]) === 'number'
+    let integral = 0
+    for (let q = 0; q < bary.length; q++) {
+      const pt = barycentricToCartesian(verts, bary[q])
+      if (isScalar) {
+        integral += weights[q] * dot(gradU(pt), normal)
       } else {
         integral += weights[q] * dot(u(pt), normal)
       }

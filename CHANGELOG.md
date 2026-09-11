@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project follows [Semantic Versioning](https://semver.org/).
 
+> **Note:** Pre-0.1.0 history (releases `0.0.1` through `0.0.7`) lives
+> at [`sachncs/bounded-commuting-discrete-trace-preserving-projections`](https://github.com/sachncs/bounded-commuting-discrete-trace-preserving-projections).
+> The current canonical repository is
+> [`sachncs/traceprojector`](https://github.com/sachncs/traceprojector).
+
 ## [Unreleased]
 
 ## [0.1.0] — 2026-09-03

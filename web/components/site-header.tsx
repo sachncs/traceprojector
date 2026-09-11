@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { label: "Playground", href: "/playground" },
   { label: "Docs", href: "https://github.com/sachncs/traceprojector#readme" },
-  { label: "Math", href: "https://github.com/sachncs/traceprojector/blob/main/docs/math.md" },
-  { label: "Changelog", href: "https://github.com/sachncs/traceprojector/blob/main/CHANGELOG.md" },
+  { label: "Math", href: "https://github.com/sachncs/traceprojector/blob/master/docs/math.md" },
+  { label: "Changelog", href: "https://github.com/sachncs/traceprojector/blob/master/CHANGELOG.md" },
 ];
 
 export function SiteHeader() {

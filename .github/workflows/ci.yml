@@ -21,6 +21,34 @@ jobs:
       - run: npm test
       - run: npm run test:coverage
       - run: npm run build
+      - name: Smoke-test the built ESM bundle
+        run: |
+          node --input-type=module -e "
+            import { Mesh, Whitney, Projector } from './dist/traceprojector.esm.js'
+            const mesh = new Mesh([[0,0,0],[1,0,0],[0,1,0],[0,0,1]], [[0,1,2,3]])
+            const w = new Whitney(mesh)
+            new Projector(mesh, w, { quadratureOrder: 3 }).computeBoundaryWeights()
+            console.log('ESM bundle OK')
+          "
+      - name: Smoke-test the built CJS bundle
+        run: |
+          node -e "
+            const lib = require('./dist/traceprojector.cjs.js')
+            if (!lib.Mesh || !lib.Whitney || !lib.Projector) {
+              throw new Error('CJS bundle missing exports')
+            }
+            console.log('CJS bundle OK')
+          "
+      - name: Smoke-test the built UMD bundle
+        run: |
+          node -e "
+            const fs = require('node:fs')
+            const code = fs.readFileSync('./dist/traceprojector.umd.js', 'utf8')
+            if (!code.includes('TraceProjector')) {
+              throw new Error('UMD bundle missing TraceProjector global')
+            }
+            console.log('UMD bundle OK')
+          "
 
   web:
     runs-on: ubuntu-latest

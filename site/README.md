@@ -1,50 +1,62 @@
-# traceprojector web playground
+# site/
 
-Interactive Next.js 16 + shadcn/ui playground for the
-[`traceprojector`](../) library.
+Product landing page and live playground for **traceprojector**.
 
-## What it does
+This is the source for the public marketing site (GitHub Pages). It is a
+Next.js 16 + shadcn/ui + Three.js app that consumes the library via the
+root npm workspace and ships as a fully static export.
 
-- **3D viewer** — renders the unit-cube tetrahedral mesh with `three.js`,
-  colored by the value the projector returns at each tet centroid.
-- **API playground** — type a point, pick a function and a form degree,
-  see the projected value, the tet it lands in, and the barycentric
-  coordinates.
-- **Convergence plot** — h-refinement L²-error curves, drawn with
-  Recharts.
-- **Code export** — copy a Node 24+ snippet that reproduces the current
-  configuration.
+## Structure
 
-## Run it
-
-From the **repository root** (not from `web/`):
-
-```bash
-npm install           # installs the lib and the playground in one shot
-npm run web:dev       # http://localhost:3000
+```
+site/
+  app/
+    layout.tsx            Root layout, fonts, metadata
+    page.tsx              Composed product landing page
+    globals.css           Design system (tokens, utilities, motion)
+    playground/page.tsx   Interactive playground (3D viewer + convergence)
+  components/
+    hero.tsx              Cinematic hero with live 3D mesh
+    hero-mesh.tsx         Three.js procedural tetrahedral mesh
+    features.tsx          Capability grid
+    code-preview.tsx      Tabbed code sample with light syntax tint
+    math-section.tsx      Architecture: master equation, cascade, commutativity
+    playground-showcase.tsx  Embedded live mesh on the landing page
+    api-glance.tsx        Six-method API surface
+    metrics-strip.tsx     Credibility metrics
+    final-cta.tsx         Closing CTA
+    site-header.tsx       Sticky, scroll-aware header
+    site-footer.tsx       Site footer with project links
+    logo.tsx              Brand mark + wordmark
+    motion/reveal.tsx     Scroll-triggered reveal primitives
+    mesh-viewer.tsx       Playground mesh viewer (3D)
+    convergence-chart.tsx Playground L² convergence plot
+    code-preview.tsx      Playground code export
+    ui/                   shadcn/ui primitives
+  lib/
+    functions.ts          Test functions (scalar, vector)
+    trace-bridge.ts       Adapter for the traceprojector library
+    format.ts             Number formatting + code snippet generator
+    utils.ts              `cn` helper
+  public/                 Favicon and static assets
+  next.config.ts          Static export config
 ```
 
-`web/` is an npm workspace, so `import { … } from 'traceprojector'`
-inside the playground resolves directly to `../traceprojector/`.
-No rebuild step is needed — edit the lib, hit save, the playground
-picks it up.
+## Develop
 
-## Build for production
+From the repo root:
 
 ```bash
-npm run web:build
-npm run web:start
+npm run site:dev     # http://localhost:3000
+npm run site:build   # static export into site/out
 ```
 
-## Tech stack
+The library is symlinked into this workspace as `"traceprojector": "file:.."`
+from the root `package.json` `workspaces` field, so changes in
+`traceprojector/` show up here without a rebuild.
 
-- [Next.js 16](https://nextjs.org/) (App Router, Server Components)
-- [React 19](https://react.dev/)
-- [Tailwind CSS 4](https://tailwindcss.com/)
-- [shadcn/ui](https://ui.shadcn.com/) (Radix primitives + Tailwind
-  variants)
-- [three.js](https://threejs.org/) + [@react-three/fiber](https://r3f.docs.pmnd.rs/)
-  + [@react-three/drei](https://drei.docs.pmnd.rs/)
-- [Recharts](https://recharts.org/)
-- [Lucide](https://lucide.dev/) icons
-- [sonner](https://sonner.emilkowal.ski/) toasts
+## Deploy
+
+The `.github/workflows/pages.yml` workflow runs `npm ci && npm run
+site:build` on every push to `master`, then uploads `site/out` to GitHub
+Pages.

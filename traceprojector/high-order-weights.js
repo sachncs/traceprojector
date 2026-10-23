@@ -323,15 +323,7 @@ export class HighOrderWeights {
     const space = new AgSpace(base.vertices, base.tetrahedra,
         {degree: this.degree});
     const size = space.size(l);
-    // mu on a sub-cell: the barycentric coordinate of the centroid.
-    const mu = splitSpace.complex.cells.map((corners, s) => {
-      const {gradients, points} = splitSpace.complex.geometry(s);
-      const at = corners.indexOf(centroids[s >> 2]);
-      const g = gradients[at];
-      // lambda_i(x) = g_i . (x - p0) + [i = 0]
-      return affine((at === 0 ? 1 : 0) -
-        g.reduce((acc, q, i) => acc + q * points[0][i], 0), g);
-    });
+    const mu = this.bubbleWeights(splitSpace, centroids);
     const rule = (s) => tetrahedronRule(
         splitSpace.complex.geometry(s).points, 2 * this.r + 5);
     const entries = Array.from({length: size}, () => new Map());
@@ -406,6 +398,22 @@ export class HighOrderWeights {
       if (l === 0) return scaleForm(divergence(weighted), -1);
       if (l === 1) return curl(weighted);
       return scaleForm(differential(weighted, 0), -1);
+    });
+  }
+
+  /**
+   * The cell bubble mu on every sub-cell of a split patch: the barycentric
+   * coordinate of the cell's centroid, one at the centroid and zero on the
+   * faces of the original cell.
+   */
+  bubbleWeights(splitSpace, centroids) {
+    return splitSpace.complex.cells.map((corners, s) => {
+      const {gradients, points} = splitSpace.complex.geometry(s);
+      const at = corners.indexOf(centroids[s >> 2]);
+      const g = gradients[at];
+      // lambda_i(x) = g_i . (x - p0) + [i = 0]
+      return affine((at === 0 ? 1 : 0) -
+        g.reduce((acc, q, i) => acc + q * points[0][i], 0), g);
     });
   }
 

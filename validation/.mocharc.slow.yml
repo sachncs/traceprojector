@@ -1,0 +1,4 @@
+spec:
+  - validation/slow/**/*.test.js
+timeout: 7200000
+ui: bdd

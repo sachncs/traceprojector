@@ -8,14 +8,14 @@
  * `LocalWeights`.
  */
 import {expect} from 'chai';
-import {generateUnitCubeMesh} from '../traceprojector/generator.js';
-import {HighOrderWeights} from '../traceprojector/high-order-weights.js';
-import {LocalWeights} from '../traceprojector/local-weights.js';
-import {AgSpace} from '../traceprojector/ag-space.js';
+import {generateUnitCubeMesh} from '../../traceprojector/generator.js';
+import {HighOrderWeights} from '../../traceprojector/high-order-weights.js';
+import {LocalWeights} from '../../traceprojector/local-weights.js';
+import {AgSpace} from '../../traceprojector/ag-space.js';
 import {
   differential,
   evaluateForm,
-} from '../traceprojector/physical-forms.js';
+} from '../../traceprojector/physical-forms.js';
 
 const cube = generateUnitCubeMesh(4);
 const vertices = cube.getVertices();

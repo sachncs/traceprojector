@@ -1,6 +1,6 @@
 import {expect} from 'chai';
-import {HigherOrderProjector} from '../traceprojector/higher-order-projector.js';
-import {generateUnitCubeMesh} from '../traceprojector/generator.js';
+import {HigherOrderProjector} from '../../traceprojector/higher-order-projector.js';
+import {generateUnitCubeMesh} from '../../traceprojector/generator.js';
 
 const cube = generateUnitCubeMesh(2);
 const vertices = cube.getVertices();

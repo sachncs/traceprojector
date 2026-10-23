@@ -4,11 +4,11 @@
  * correction Q_r. Slow (minutes): the weights are dense local solves.
  */
 import {expect} from 'chai';
-import {generateUnitCubeMesh} from '../traceprojector/generator.js';
-import {HigherOrderProjector} from '../traceprojector/higher-order-projector.js';
-import {tetrahedronRule} from '../traceprojector/simplicial-complex.js';
-import {fitSlope} from './support/statistics.js';
-import {tolerances} from './support/tolerances.js';
+import {generateUnitCubeMesh} from '../../traceprojector/generator.js';
+import {HigherOrderProjector} from '../../traceprojector/higher-order-projector.js';
+import {tetrahedronRule} from '../../traceprojector/simplicial-complex.js';
+import {fitSlope} from '../support/statistics.js';
+import {tolerances} from '../support/tolerances.js';
 
 /** The cell whose centroid is nearest the centre of the unit cube. */
 function centralCell(projector) {

@@ -318,8 +318,16 @@ case.
 
 - The paper's weight-based boundary operator `Π_∂` is not implemented, so
   boundary roughness is not covered and commuting outside `V_tr,p` is open.
-- Higher order (`p > 0`) for the stable operators needs the operators `Q_p`
-  of Arnold–Guzmán (2021), not yet read.
+- Higher order (`p > 0`) for the stable operators: Arnold–Guzmán (2021,
+  ESAIM M2AN 55, doi 10.1051/m2an/2021054) was read. Their projection is
+  `π_r = P_r + Q_r (I - P_r)` (eq. 5.2), where `P_r` is the lowest-order
+  stable operator of this library (their Thm 4.3) and `Q_r` projects onto
+  `M_r = (I - Π_1) P_r^- Λ^k`. Building `Q_r` needs, none of which exists
+  here: bases of the full `P_r^- Λ^k` spaces for k = 0..3; the dofs
+  `<<tr_τ w, y>>_τ` of eq. 5.8; the discrete extensions `E_σ` (eq. 5.10) on
+  `G_r^k(σ)`; and weights `Z_r^k(σ)` of every degree. Their commuting and
+  stability claims (Thm 3.1) rest on their Assumption 2.4 (uniformly bounded
+  Bogovskii constants on extended stars), which they do not prove in general.
 - Performance: local problems use iterative solvers on stars of up to several
   rings; the whole `n = 4` mesh takes minutes. Limits are not yet measured.
 - Stability constants (growth under refinement) are not yet measured.

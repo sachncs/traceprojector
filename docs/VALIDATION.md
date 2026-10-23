@@ -318,6 +318,15 @@ case.
 
 - The paper's weight-based boundary operator `Π_∂` is not implemented, so
   boundary roughness is not covered and commuting outside `V_tr,p` is open.
+  The paper's central identity (Thm 2.1) is `Π = mΠ (I - Π_∂) + Π_∂`, where
+  `mΠ` is the zero-trace projection, which `ZeroTraceProjector` already
+  implements. What is missing is `Π_∂`, which must preserve traces on
+  `V_tr,p`, commute with `d` up to traces, vanish at interior simplices, and
+  be locally bounded. Built so far (internal, tested): the Worsey–Farin split
+  (`worsey-farin.js`) and the oriented boundary surface with its Alfeld split
+  (`boundary-surface.js`). Still to build: the finite element spaces over the
+  split meshes with their boundary degrees of freedom, the star-wise weight
+  problems on the surface, and the extensions `Y` into the bulk.
 - Higher order (`p > 0`) for the stable operators: Arnold–Guzmán (2021,
   ESAIM M2AN 55, doi 10.1051/m2an/2021054) was read. Their projection is
   `π_r = P_r + Q_r (I - P_r)` (eq. 5.2), where `P_r` is the lowest-order

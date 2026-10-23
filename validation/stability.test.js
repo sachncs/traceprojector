@@ -17,6 +17,7 @@ import {
   Whitney,
   Projector,
   StableProjector,
+  BoundedCommutingProjector,
 } from '../traceprojector/traceprojector.js';
 import {generateUnitCubeMesh} from '../traceprojector/generator.js';
 import {tetrahedronRule} from '../traceprojector/simplicial-complex.js';
@@ -42,15 +43,16 @@ const bumpNormSquaredPerCube = (() => {
 })();
 const bumpNorm = (delta) => Math.sqrt(bumpNormSquaredPerCube * delta ** 3);
 
-/** Mesh vertex nearest the cube centre, and the cells within `rings` rings of
- * it. */
-function centreOf(mesh, rings) {
+/**
+ * The mesh vertex nearest `target` (default: the cube centre), and the cells
+ * within `rings` rings of it.
+ */
+function centreOf(mesh, rings, target = [0.5, 0.5, 0.5]) {
   const vertices = mesh.getVertices();
+  const distance = (v) =>
+    Math.hypot(v[0] - target[0], v[1] - target[1], v[2] - target[2]);
   const centre = vertices.reduce(
-      (best, v, i) =>
-      Math.hypot(v[0] - 0.5, v[1] - 0.5, v[2] - 0.5) < best.d ?
-        {i, d: Math.hypot(v[0] - 0.5, v[1] - 0.5, v[2] - 0.5)} :
-        best,
+      (best, v, i) => (distance(v) < best.d ? {i, d: distance(v)} : best),
       {i: -1, d: Infinity},
   );
   let touching = new Set([centre.i]);
@@ -143,5 +145,38 @@ describe('Stability of the projections on narrow bumps', function() {
     expect(growthPerHalving).to.be.at.most(
         tolerances.stableOperator.stability.maxGrowthPerHalvingOfH,
     );
+  });
+
+  it('the bounded commuting projection is stable on bumps at the boundary', () => {
+    const sizes = [4, 6, 8, 10];
+    const logH = [];
+    const logC = [];
+    for (const n of sizes) {
+      const base = generateUnitCubeMesh(n);
+      const mesh = new Mesh(base.getVertices(), base.getTetrahedra());
+      const bounded = new BoundedCommutingProjector(
+          mesh.getVertices(), mesh.getTetrahedra(), {quadratureOrder: 4});
+      const h = 1 / n;
+      // A vertex in the middle of the face y = 0: the boundary cuts the bump.
+      const {point, cells} = centreOf(mesh, 3, [0.5, 0, 0.5]);
+      let worst = 0;
+      for (const delta of [h, h / 2]) {
+        const u = bump(point, delta);
+        const ratio =
+          projectedNorm(mesh, cells, (x, c) => bounded.project(u, x, c, 0)) /
+          // Half of the bump lies outside the cube.
+          Math.sqrt(0.5 * bumpNormSquaredPerCube * delta ** 3);
+        worst = Math.max(worst, ratio);
+      }
+      console.log(`      n = ${n}: largest ratio at the boundary ${worst.toFixed(3)}`);
+      logH.push(Math.log(h));
+      logC.push(Math.log(worst));
+      expect(worst).to.be.below(50);
+    }
+    const fit = fitSlope(logH, logC);
+    const growth = 2 ** -fit.slope;
+    console.log(`      growth per halving of h = ${growth.toFixed(3)}`);
+    expect(growth).to.be.at.most(
+        tolerances.stableOperator.stability.maxGrowthPerHalvingOfH);
   });
 });

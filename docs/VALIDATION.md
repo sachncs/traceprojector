@@ -237,6 +237,12 @@ vertex, `‖Πu‖ / ‖u‖` in L² is a lower bound for the stability constant
   meshes of 4, 6, 8 and 10 cells per side; fitted growth is `h^(-0.010)`, i.e.
   1.007 per halving of `h`, against the pre-registered limit of 1.10.
 
+- **The bounded commuting projection is stable at the boundary too.** For a
+  bump centred at a vertex in the middle of a face of the cube (half of the
+  bump lies outside the domain) the largest ratio is 0.856 on meshes of 4, 6,
+  8 and 10 cells per side, with growth 1.000 per halving of `h`. Unlike the
+  trace-preserving variant it needs no finite boundary values.
+
 Not covered: the pre-registered four mesh-quality levels (shape regularity),
 bumps near the boundary, and the second part of the singular-field criterion
 (change between mesh sizes against the smooth-field change). The stability

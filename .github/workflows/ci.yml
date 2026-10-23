@@ -9,29 +9,34 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [24, 26]
     steps:
       - uses: actions/checkout@v7
-      - name: Use Node.js 26
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v7
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+      - run: npm ci
+      - name: Lint, test, build, and check the package as a consumer sees it
+        run: npm run verify
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=moderate
+
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 26
           cache: 'npm'
       - run: npm ci
-      - run: npm run lint
-      - run: npm test
-      - run: npm run test:coverage
-      - run: npm run build
-      - name: Smoke-test the built ESM bundle
-        run: |
-          node --input-type=module -e "
-            import { Mesh, Whitney, Projector } from './dist/traceprojector.esm.js'
-            const mesh = new Mesh([[0,0,0],[1,0,0],[0,1,0],[0,0,1]], [[0,1,2,3]])
-            const w = new Whitney(mesh)
-            new Projector(mesh, w, { quadratureOrder: 3 }).computeBoundaryWeights()
-            console.log('ESM bundle OK')
-          "
-      - name: Check ESM, CJS and UMD bundles export the same names
-        run: node scripts/check-dist-exports.mjs
+      - name: Numerical validation against the pre-registered tolerances
+        run: npm run validate
 
   web:
     runs-on: ubuntu-latest

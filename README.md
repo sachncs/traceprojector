@@ -50,16 +50,25 @@ It follows the decomposition `Π^l = Π_∂^l + Π_ring^l (I − Π_∂^l)` of
 
 > *Ern, Guzmán, Potu (2026) — [arXiv:2604.28103v1](https://arxiv.org/abs/2604.28103).*
 
-> **Not the paper's stable operator.** In this library both `Π_∂^l` and
-> `Π_ring^l` use *canonical* degrees of freedom (point values, edge
-> integrals, face fluxes of the input field). The paper's boundary weights
-> (Section 6.3) are computed and used by `verifyBoundaryWeights()` to
-> cross-check those degrees of freedom, but they do not enter the
-> projection. The paper's stability results (bounds in the graph norm for
-> rough fields) therefore do **not** apply: the input must have well-defined
-> point values, edge integrals and face fluxes, and a non-finite value
-> raises `ProjectError`. Commuting and trace preservation hold for fields
-> with such degrees of freedom.
+> **Two operators.** `Projector` uses *canonical* degrees of freedom (point
+> values, edge integrals, face fluxes of the input). The paper's boundary
+> weights (Section 6.3) are computed there only to cross-check those degrees
+> of freedom, so the paper's stability results do **not** apply to it: the
+> input must have well-defined point values, edge integrals and face fluxes,
+> and a non-finite value raises `ProjectError`.
+>
+> `StableProjector` (lowest order, `p = 0`) implements the locally
+> L²-bounded interior part of the construction (Ern, Guzmán, Potu, Vohralík,
+> [arXiv:2502.03601](https://arxiv.org/abs/2502.03601)): interior coefficients
+> are integrals against local weight functions, so an input that is unbounded
+> at an interior mesh vertex is projected stably. Its boundary part still uses
+> canonical degrees of freedom, so it needs finite boundary values, and it
+> commutes with the exterior derivative for fields with a piecewise
+> polynomial trace (the class for which the paper's proof applies). The
+> paper's weight-based boundary operator is not implemented. It is slower
+> (iterative local solves on stars of up to several mesh rings) and is meant
+> for validation-scale meshes. `ZeroTraceProjector` is its zero-trace interior
+> part.
 
 > **Disclaimer:** I am not an author of the paper above. This
 > repository is an independent JavaScript implementation of the

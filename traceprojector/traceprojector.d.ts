@@ -208,3 +208,5 @@ export { H1 } from './projectors/h1.js';
 export { Hcurl } from './projectors/hcurl.js';
 export { Hdiv } from './projectors/hdiv.js';
 export { L2 } from './projectors/l2.js';
+export { ZeroTraceProjector } from './zero-trace-projector.js';
+export { StableProjector } from './stable-projector.js';

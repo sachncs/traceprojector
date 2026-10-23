@@ -1,32 +1,34 @@
 #!/usr/bin/env node
 // Regenerates docs/exceptions.md from the `code: '...'` string
 // literals in traceprojector/**/*.js.  Each entry's message template
-// is the next string literal on the same `onWarning({ code, ..., message: '...' })`
+// is the next string literal on the same `onWarning({ code, ..., message: '...'
+// })`
 // call.  Run with `--check` to exit non-zero if the docs are stale.
-import { execSync } from 'node:child_process'
-import { readFileSync, writeFileSync } from 'node:fs'
+import {execSync} from 'node:child_process';
+import {readFileSync, writeFileSync} from 'node:fs';
 
-const CHECK = process.argv.includes('--check')
+const CHECK = process.argv.includes('--check');
 
-function collectEntries () {
-  const files = execSync(
-    "rg --files traceprojector/ --glob '*.js'",
-    { encoding: 'utf8' }
-  ).trim().split('\n')
+function collectEntries() {
+  const files = execSync('rg --files traceprojector/ --glob \'*.js\'', {
+    encoding: 'utf8',
+  })
+      .trim()
+      .split('\n');
 
-  const entries = []
+  const entries = [];
   for (const file of files) {
-    const src = readFileSync(file, 'utf8')
-    const re = /code:\s*'([A-Z_0-9]+)'[,\s\S]*?message:\s*(`[^`]+`|'[^']+')/g
-    let m
+    const src = readFileSync(file, 'utf8');
+    const re = /code:\s*'([A-Z_0-9]+)'[,\s\S]*?message:\s*(`[^`]+`|'[^']+')/g;
+    let m;
     while ((m = re.exec(src)) !== null) {
-      let msg = m[2]
-      if (msg.startsWith('`')) msg = msg.slice(1, -1)
-      else msg = msg.slice(1, -1)
-      entries.push({ code: m[1], message: msg, file })
+      let msg = m[2];
+      if (msg.startsWith('`')) msg = msg.slice(1, -1);
+      else msg = msg.slice(1, -1);
+      entries.push({code: m[1], message: msg, file});
     }
   }
-  return entries.sort((a, b) => a.code.localeCompare(b.code))
+  return entries.sort((a, b) => a.code.localeCompare(b.code));
 }
 
 const HEADER = `# Error Taxonomy
@@ -60,7 +62,8 @@ Thrown by \`Projector\` and projector classes when arguments are invalid or oper
 | Point outside mesh | \`Point ... not found in mesh\` |
 | Unimplemented higher-order vector projection | \`Higher-order vector projection (l=1 or l=2, p>0) is not yet implemented\` |
 
-**Recovery**: Validate inputs before calling projection methods; ensure the point locator is built for global queries.
+**Recovery**: Validate inputs before calling projection methods; ensure the
+* point locator is built for global queries.
 
 ## SingularError
 
@@ -72,9 +75,10 @@ Thrown by linear algebra routines in \`utils.js\` when a matrix is singular or n
 | Zero determinant in \`inverse3x3\` | \`Singular matrix encountered\` |
 | Zero determinant in \`solve3x3\` | \`Singular matrix encountered\` |
 
-**Recovery**: Check mesh validity (degenerate elements cause singular Jacobians) or verify the input matrix.
+**Recovery**: Check mesh validity (degenerate elements cause singular Jacobians)
+* or verify the input matrix.
 
-`
+`;
 
 const FOOTER = `
 **Recovery**: Ensure the tetrahedron has strictly positive volume.
@@ -87,7 +91,8 @@ const FOOTER = `
 |------|---------|---------|
 | \`LOCAL_SOLVER_ILL_CONDITIONED\` | \`Solver: matrix is ill-conditioned (norm=...). Results may be inaccurate.\` | The local stiffness matrix is numerically ill-conditioned; the solve may be inaccurate. |
 
-**Recovery**: Inspect the local star geometry for inverted or degenerate elements.
+**Recovery**: Inspect the local star geometry for inverted or degenerate
+* elements.
 
 ## Projector Warnings
 
@@ -98,50 +103,53 @@ const FOOTER = `
 | \`TRACEPROJECTOR_DEGENERATE_MESH\` | \`Projector: mesh contains N degenerate or near-degenerate tetrahedra. Projections may fail.\` | The mesh has tetrahedra with signed volume below \`1e-12\`. |
 
 **Recovery**: Re-mesh or repair the input mesh before computing projections.
-`
+`;
 
-function escapeBackticks (s) {
-  return s.replace(/`/g, '\\`')
+function escapeBackticks(s) {
+  return s.replace(/`/g, '\\`');
 }
 
-function buildDoc (entries) {
-  let doc = HEADER
+function buildDoc(entries) {
+  let doc = HEADER;
 
-  doc += '## Weight Warnings\n\n'
-  doc += '`Weight` logs warnings via an injected `warn` function rather than throwing, because per-vertex failures should not halt the entire computation.  Construct with `{ strict: true }` to opt into fail-fast behaviour: in that mode the same per-simplex failure path re-throws a `ProjectError` instead of emitting a warning.\n\n'
-  doc += '| Code | Message | Meaning |\n'
-  doc += '|------|---------|---------|\n'
+  doc += '## Weight Warnings\n\n';
+  doc +=
+    '`Weight` logs warnings via an injected `warn` function rather than throwing, because per-vertex failures should not halt the entire computation.  Construct with `{ strict: true }` to opt into fail-fast behaviour: in that mode the same per-simplex failure path re-throws a `ProjectError` instead of emitting a warning.\n\n';
+  doc += '| Code | Message | Meaning |\n';
+  doc += '|------|---------|---------|\n';
   for (const e of entries.filter((e) => e.code.startsWith('BWC_'))) {
-    doc += `| \`${e.code}\` | \`${escapeBackticks(e.message)}\` | See \`${e.file}\` for the call site. |\n`
+    doc += `| \`${e.code}\` | \`${escapeBackticks(e.message)}\` | See \`${e.file}\` for the call site. |\n`;
   }
-  doc += '\n**Recovery**: Inspect the mesh near the reported simplex for degenerate or inverted elements.\n\n'
+  doc +=
+    '\n**Recovery**: Inspect the mesh near the reported simplex for degenerate or inverted elements.\n\n';
 
-  doc += '## Bubble Warnings\n\n'
-  doc += '`Bubble` also warns rather than throwing for singular mass matrices.\n\n'
-  doc += '| Code | Message | Meaning |\n'
-  doc += '|------|---------|---------|\n'
+  doc += '## Bubble Warnings\n\n';
+  doc +=
+    '`Bubble` also warns rather than throwing for singular mass matrices.\n\n';
+  doc += '| Code | Message | Meaning |\n';
+  doc += '|------|---------|---------|\n';
   for (const e of entries.filter((e) => e.code.startsWith('HOP_'))) {
-    doc += `| \`${e.code}\` | \`${escapeBackticks(e.message)}\` | See \`${e.file}\` for the call site. |\n`
+    doc += `| \`${e.code}\` | \`${escapeBackticks(e.message)}\` | See \`${e.file}\` for the call site. |\n`;
   }
-  doc += FOOTER
-  return doc
+  doc += FOOTER;
+  return doc;
 }
 
-const entries = collectEntries()
-const want = buildDoc(entries)
-const have = readFileSync('docs/exceptions.md', 'utf8')
+const entries = collectEntries();
+const want = buildDoc(entries);
+const have = readFileSync('docs/exceptions.md', 'utf8');
 
 if (CHECK) {
   if (want !== have) {
-    console.error('docs/exceptions.md: stale (would update)')
-    process.exit(2)
+    console.error('docs/exceptions.md: stale (would update)');
+    process.exit(2);
   }
-  console.log('docs/exceptions.md: in sync')
+  console.log('docs/exceptions.md: in sync');
 } else {
   if (want !== have) {
-    writeFileSync('docs/exceptions.md', want)
-    console.log('docs/exceptions.md: regenerated')
+    writeFileSync('docs/exceptions.md', want);
+    console.log('docs/exceptions.md: regenerated');
   } else {
-    console.log('docs/exceptions.md: already in sync')
+    console.log('docs/exceptions.md: already in sync');
   }
 }

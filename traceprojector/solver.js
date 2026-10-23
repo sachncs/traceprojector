@@ -3,8 +3,16 @@
  * weight computation.
  */
 
-import { dot, cross, subtract, norm, zeros, luSolve, infinityNorm } from './utils.js'
-import { SingularError } from './errors.js'
+import {
+  dot,
+  cross,
+  subtract,
+  norm,
+  zeros,
+  luSolve,
+  infinityNorm,
+} from './utils.js';
+import {SingularError} from './errors.js';
 
 /**
  * Static utility for assembling surface-patch stiffness matrices and solving
@@ -21,22 +29,22 @@ export class Solver {
    * @param {!Array<!Array<number>>} triangles
    * @return {!Array<!Array<number>>}
    */
-  static assembleSurfaceStiffness (vertices, triangles) {
-    const n = vertices.length
-    const K = zeros(n, n)
+  static assembleSurfaceStiffness(vertices, triangles) {
+    const n = vertices.length;
+    const K = zeros(n, n);
 
     triangles.forEach((tri) => {
-      const v = tri.map((i) => vertices[i])
-      const ke = Solver.triangleStiffness(v)
+      const v = tri.map((i) => vertices[i]);
+      const ke = Solver.triangleStiffness(v);
 
       for (let i = 0; i < 3; i++) {
         for (let j = 0; j < 3; j++) {
-          K[tri[i]][tri[j]] += ke[i][j]
+          K[tri[i]][tri[j]] += ke[i][j];
         }
       }
-    })
+    });
 
-    return K
+    return K;
   }
 
   /**
@@ -45,27 +53,33 @@ export class Solver {
    * @return {!Array<!Array<number>>}
    * @private
    */
-  static triangleStiffness (v) {
-    const v1 = subtract(v[1], v[0])
-    const v2 = subtract(v[2], v[0])
+  static triangleStiffness(v) {
+    const v1 = subtract(v[1], v[0]);
+    const v2 = subtract(v[2], v[0]);
 
-    const c = cross(v1, v2)
-    const area = 0.5 * norm(c)
+    const c = cross(v1, v2);
+    const area = 0.5 * norm(c);
 
-    const longest = Math.max(norm(v1), norm(v2), norm(subtract(v[2], v[1])))
+    const longest = Math.max(norm(v1), norm(v2), norm(subtract(v[2], v[1])));
     if (!(area > 1e-10 * longest * longest)) {
-      throw new SingularError(`Degenerate triangle in stiffness assembly: area=${area}`)
+      throw new SingularError(
+          `Degenerate triangle in stiffness assembly: area=${area}`,
+      );
     }
 
-    const G = [subtract(v[2], v[1]), subtract(v[0], v[2]), subtract(v[1], v[0])]
+    const G = [
+      subtract(v[2], v[1]),
+      subtract(v[0], v[2]),
+      subtract(v[1], v[0]),
+    ];
 
-    const ke = zeros(3, 3)
+    const ke = zeros(3, 3);
     for (let i = 0; i < 3; i++) {
       for (let j = 0; j < 3; j++) {
-        ke[i][j] = dot(G[i], G[j]) / (4 * area)
+        ke[i][j] = dot(G[i], G[j]) / (4 * area);
       }
     }
-    return ke
+    return ke;
   }
 
   /**
@@ -87,35 +101,35 @@ export class Solver {
    *   object when the matrix is ill-conditioned.
    * @return {!Array<number>}
    */
-  static solveWithConstraint (K, b, onWarning = console.warn) {
-    const n = K.length
+  static solveWithConstraint(K, b, onWarning = console.warn) {
+    const n = K.length;
     if (n === 0) {
-      return []
+      return [];
     }
-    const A = K.map((row) => [...row, 1.0])
-    const last = new Array(n + 1).fill(1.0)
-    last[n] = 0.0
-    A.push(last)
-    const rhs = [...b, 0.0]
+    const A = K.map((row) => [...row, 1.0]);
+    const last = new Array(n + 1).fill(1.0);
+    last[n] = 0.0;
+    A.push(last);
+    const rhs = [...b, 0.0];
 
-    const normEst = infinityNorm(A)
+    const normEst = infinityNorm(A);
     if (normEst > 1e12) {
       onWarning({
         code: 'LOCAL_SOLVER_ILL_CONDITIONED',
         severity: 'warn',
         message:
           `Solver: matrix is ill-conditioned (norm=${normEst}). ` +
-          'Results may be inaccurate.'
-      })
+          'Results may be inaccurate.',
+      });
     }
 
     try {
-      return luSolve(A, rhs).slice(0, n)
+      return luSolve(A, rhs).slice(0, n);
     } catch (e) {
       throw new SingularError(
-        `Solver: constrained solve failed (${e.message}). ` +
-          'Patch matrix may be singular or ill-conditioned.'
-      )
+          `Solver: constrained solve failed (${e.message}). ` +
+          'Patch matrix may be singular or ill-conditioned.',
+      );
     }
   }
 }

@@ -1,8 +1,8 @@
-import resolve from '@rollup/plugin-node-resolve'
-import commonjs from '@rollup/plugin-commonjs'
-import terser from '@rollup/plugin-terser'
+import resolve from '@rollup/plugin-node-resolve';
+import commonjs from '@rollup/plugin-commonjs';
+import terser from '@rollup/plugin-terser';
 
-const pkgName = 'traceprojector'
+const pkgName = 'traceprojector';
 
 export default [
   {
@@ -10,12 +10,9 @@ export default [
     output: {
       file: `dist/${pkgName}.esm.js`,
       format: 'esm',
-      sourcemap: true
+      sourcemap: true,
     },
-    plugins: [
-      resolve(),
-      commonjs()
-    ]
+    plugins: [resolve(), commonjs()],
   },
   {
     input: './traceprojector/traceprojector.js',
@@ -24,12 +21,9 @@ export default [
       format: 'umd',
       name: 'TraceProjector',
       sourcemap: true,
-      outro: 'if(typeof window!=="undefined"){for(const _e of["Mesh","Whitney","Projector","Locator","Refinement","Weight","Bubble","Solver","ValidateError","ProjectError","SingularError","H1","Hcurl","Hdiv","L2","ZeroTraceProjector","StableProjector"]){if(typeof TraceProjector[_e]!=="undefined"&&typeof window[_e]==="undefined"){window[_e]=TraceProjector[_e];}}}'
+      outro:
+        'if(typeof window!=="undefined"){for(const _e of["Mesh","Whitney","Projector","Locator","Refinement","Weight","Bubble","Solver","ValidateError","ProjectError","SingularError","H1","Hcurl","Hdiv","L2","ZeroTraceProjector","StableProjector"]){if(typeof TraceProjector[_e]!=="undefined"&&typeof window[_e]==="undefined"){window[_e]=TraceProjector[_e];}}}',
     },
-    plugins: [
-      resolve(),
-      commonjs(),
-      terser()
-    ]
-  }
-]
+    plugins: [resolve(), commonjs(), terser()],
+  },
+];

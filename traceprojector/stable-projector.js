@@ -18,51 +18,60 @@
  * the boundary of the domain.
  */
 
-import { ZeroTraceProjector } from './zero-trace-projector.js'
-import { tetrahedronRule, dot } from './simplicial-complex.js'
-import { ProjectError } from './errors.js'
+import {ZeroTraceProjector} from './zero-trace-projector.js';
+import {tetrahedronRule, dot} from './simplicial-complex.js';
+import {ProjectError} from './errors.js';
 
-/** Quadrature order for the overlap of weights and boundary Whitney forms (degree 2). */
-const OVERLAP_ORDER = 3
+/** Quadrature order for the overlap of weights and boundary Whitney forms
+ * (degree 2). */
+const OVERLAP_ORDER = 3;
 
 export class StableProjector {
   /**
    * @param {!Array<!Array<number>>} vertices
    * @param {!Array<!Array<number>>} tetrahedra
-   * @param {{quadratureOrder: (number|undefined), interior: (ZeroTraceProjector|undefined)}=} options -
+   * @param {{quadratureOrder: (number|undefined), interior:
+   *     (ZeroTraceProjector|undefined)}=} options -
    *   `quadratureOrder`: Gauss points per direction for the weight integrals
    *   and boundary degrees of freedom (default 4). `interior`: an existing
    *   zero-trace projector on the same mesh, to share its computed weights.
    */
-  constructor (vertices, tetrahedra, options = {}) {
-    this.interior = options.interior ?? new ZeroTraceProjector(vertices, tetrahedra, options)
-    this.weights = this.interior.weights
-    this.complex = this.weights.base
-    this.quadratureOrder = this.interior.quadratureOrder
-    this.overlaps = [new Map(), new Map(), new Map(), new Map()]
-    this.degreeCache = new WeakMap()
+  constructor(vertices, tetrahedra, options = {}) {
+    this.interior =
+      options.interior ?? new ZeroTraceProjector(vertices, tetrahedra, options);
+    this.weights = this.interior.weights;
+    this.complex = this.weights.base;
+    this.quadratureOrder = this.interior.quadratureOrder;
+    this.overlaps = [new Map(), new Map(), new Map(), new Map()];
+    this.degreeCache = new WeakMap();
   }
 
   /**
    * Canonical degree of freedom of u on a boundary entity.
    * @private
    */
-  boundaryDegreeOfFreedom (u, l, entity) {
-    let perDegree = this.degreeCache.get(u)
+  boundaryDegreeOfFreedom(u, l, entity) {
+    let perDegree = this.degreeCache.get(u);
     if (!perDegree) {
-      perDegree = [new Map(), new Map(), new Map(), new Map()]
-      this.degreeCache.set(u, perDegree)
+      perDegree = [new Map(), new Map(), new Map(), new Map()];
+      this.degreeCache.set(u, perDegree);
     }
-    const cache = perDegree[l]
-    if (cache.has(entity)) return cache.get(entity)
-    const value = this.complex.degreeOfFreedom(l, entity, u, this.quadratureOrder)
+    const cache = perDegree[l];
+    if (cache.has(entity)) return cache.get(entity);
+    const value = this.complex.degreeOfFreedom(
+        l,
+        entity,
+        u,
+        this.quadratureOrder,
+    );
     if (!Number.isFinite(value)) {
       throw new ProjectError(
-        `the degree of freedom of boundary entity ${entity} (degree ${l}) is not finite; ` +
-        'the stable projection needs finite point values, edge integrals and face fluxes on the boundary')
+          `the degree of freedom of boundary entity ${entity} (degree ${l}) is not finite; ` +
+          'the stable projection needs finite point values, edge integrals and face fluxes on the boundary',
+      );
     }
-    cache.set(entity, value)
-    return value
+    cache.set(entity, value);
+    return value;
   }
 
   /**
@@ -70,28 +79,32 @@ export class StableProjector {
    * the support of the weight of the interior entity sigma.
    * @private
    */
-  overlap (l, sigma) {
-    const cache = this.overlaps[l]
-    if (cache.has(sigma)) return cache.get(sigma)
-    const weight = this.weights.weight(l, sigma)
-    const totals = new Map()
+  overlap(l, sigma) {
+    const cache = this.overlaps[l];
+    if (cache.has(sigma)) return cache.get(sigma);
+    const weight = this.weights.weight(l, sigma);
+    const totals = new Map();
     for (const s of weight.cells) {
-      const c = s >> 2
-      const entities = this.complex.cellEntities(c, l)
-      if (!entities.some((e) => this.weights.isBoundary(l, e))) continue
-      for (const { x, weight: w } of tetrahedronRule(this.weights.split.geometry(s).points, OVERLAP_ORDER)) {
-        const z = this.weights.evaluate(l, weight.dofs, s, x)
-        const basis = this.complex.whitney(c, l, x)
+      const c = s >> 2;
+      const entities = this.complex.cellEntities(c, l);
+      if (!entities.some((e) => this.weights.isBoundary(l, e))) continue;
+      for (const {x, weight: w} of tetrahedronRule(
+          this.weights.split.geometry(s).points,
+          OVERLAP_ORDER,
+      )) {
+        const z = this.weights.evaluate(l, weight.dofs, s, x);
+        const basis = this.complex.whitney(c, l, x);
         entities.forEach((e, k) => {
-          if (!this.weights.isBoundary(l, e)) return
-          const value = w * (typeof z === 'number' ? z * basis[k] : dot(z, basis[k]))
-          totals.set(e, (totals.get(e) ?? 0) + value)
-        })
+          if (!this.weights.isBoundary(l, e)) return;
+          const value =
+            w * (typeof z === 'number' ? z * basis[k] : dot(z, basis[k]));
+          totals.set(e, (totals.get(e) ?? 0) + value);
+        });
       }
     }
-    const result = [...totals]
-    cache.set(sigma, result)
-    return result
+    const result = [...totals];
+    cache.set(sigma, result);
+    return result;
   }
 
   /**
@@ -101,13 +114,15 @@ export class StableProjector {
    * @param {number} entity
    * @return {number}
    */
-  coefficient (u, l, entity) {
-    if (this.weights.isBoundary(l, entity)) return this.boundaryDegreeOfFreedom(u, l, entity)
-    let total = this.interior.coefficient(u, l, entity)
-    for (const [boundaryEntity, value] of this.overlap(l, entity)) {
-      total -= this.boundaryDegreeOfFreedom(u, l, boundaryEntity) * value
+  coefficient(u, l, entity) {
+    if (this.weights.isBoundary(l, entity)) {
+      return this.boundaryDegreeOfFreedom(u, l, entity);
     }
-    return total
+    let total = this.interior.coefficient(u, l, entity);
+    for (const [boundaryEntity, value] of this.overlap(l, entity)) {
+      total -= this.boundaryDegreeOfFreedom(u, l, boundaryEntity) * value;
+    }
+    return total;
   }
 
   /**
@@ -115,19 +130,25 @@ export class StableProjector {
    * @param {function(!Array<number>): (number|!Array<number>)} u
    * @param {!Array<number>} point
    * @param {number} cell
-   * @param {number} l - Form degree: 0 and 3 take a scalar field, 1 and 2 a vector field.
+   * @param {number} l - Form degree: 0 and 3 take a scalar field, 1 and 2 a
+   *     vector field.
    * @return {(number|!Array<number>)}
    */
-  project (u, point, cell, l) {
-    const entities = this.complex.cellEntities(cell, l)
-    const basis = this.complex.whitney(cell, l, point)
-    let total = l === 0 || l === 3 ? 0 : [0, 0, 0]
+  project(u, point, cell, l) {
+    const entities = this.complex.cellEntities(cell, l);
+    const basis = this.complex.whitney(cell, l, point);
+    let total = l === 0 || l === 3 ? 0 : [0, 0, 0];
     entities.forEach((entity, k) => {
-      const c = this.coefficient(u, l, entity)
-      total = typeof total === 'number'
-        ? total + c * basis[k]
-        : [total[0] + c * basis[k][0], total[1] + c * basis[k][1], total[2] + c * basis[k][2]]
-    })
-    return total
+      const c = this.coefficient(u, l, entity);
+      total =
+        typeof total === 'number' ?
+          total + c * basis[k] :
+          [
+            total[0] + c * basis[k][0],
+            total[1] + c * basis[k][1],
+            total[2] + c * basis[k][2],
+          ];
+    });
+    return total;
   }
 }

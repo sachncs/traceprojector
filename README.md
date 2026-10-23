@@ -8,7 +8,7 @@
     <a href="https://github.com/sachncs/traceprojector/actions"><img src="https://img.shields.io/github/actions/workflow/status/sachncs/traceprojector/ci.yml?branch=master" alt="CI"></a>
     <a href="https://www.npmjs.com/package/traceprojector"><img src="https://img.shields.io/npm/v/traceprojector" alt="npm"></a>
     <a href="https://github.com/sachncs/traceprojector/stargazers"><img src="https://img.shields.io/github/stars/sachncs/traceprojector" alt="Stars"></a>
-    <a href="https://standardjs.com/"><img src="https://img.shields.io/badge/code%20style-standard-brightgreen.svg" alt="StandardJS"></a>
+    <a href="https://google.github.io/styleguide/jsguide.html"><img src="https://img.shields.io/badge/code%20style-google-blue.svg" alt="Google JavaScript Style"></a>
   </p>
   <p align="center">
     <a href="https://github.com/sachncs/traceprojector/blob/master/CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-0.1.0-blue" alt="Changelog"></a>
@@ -406,9 +406,9 @@ dist/                          — Rollup bundles: ESM, CJS, UMD
 | Category | Technology |
 |---|---|
 | Language | JavaScript (ES2024, pure ESM) |
-| Runtime | Node.js ≥ 26 |
-| Build | [Rollup](https://rollupjs.org/) (ESM + CJS + UMD) |
-| Lint | [StandardJS](https://standardjs.com/) |
+| Runtime | Node.js ≥ 24 |
+| Build | [Rollup](https://rollupjs.org/) (ESM + UMD) |
+| Lint | [ESLint](https://eslint.org/) with the [Google JavaScript Style Guide](https://google.github.io/styleguide/jsguide.html) rules |
 | Testing | [Mocha](https://mochajs.org/) + [Chai](https://www.chaijs.com/) |
 | Coverage | [c8](https://github.com/bcoe/c8) |
 | Docs | [jsdoc-to-markdown](https://github.com/jsdoc2md/jsdoc-to-markdown) |

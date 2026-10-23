@@ -1,9 +1,10 @@
-import { readFileSync } from 'node:fs'
+import {readFileSync} from 'node:fs';
 
-const raw = JSON.parse(readFileSync(
-  new URL('../tolerances.json', import.meta.url), 'utf8'))
+const raw = JSON.parse(
+    readFileSync(new URL('../tolerances.json', import.meta.url), 'utf8'),
+);
 
-export const tolerances = raw
+export const tolerances = raw;
 
 /**
  * Pre-registered roundoff bound for an identity residual.
@@ -11,7 +12,7 @@ export const tolerances = raw
  * @param {number} scale - max(1, max |field|).
  * @return {number}
  */
-export function identityTolerance (rho, scale) {
-  const { c, nOps } = raw.identity
-  return c * nOps * raw.machineEpsilon * rho * Math.max(1, scale)
+export function identityTolerance(rho, scale) {
+  const {c, nOps} = raw.identity;
+  return c * nOps * raw.machineEpsilon * rho * Math.max(1, scale);
 }

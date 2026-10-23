@@ -39,6 +39,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Code style follows the Google JavaScript Style Guide (ESLint with
+  `eslint-config-google`) instead of StandardJS. The reformat is mechanical:
+  the unit tests and the bit-exact determinism output are unchanged.
 - The package is ESM-only (`sideEffects: false`). The CommonJS bundle was
   never reachable through the `exports` map and is no longer built; on
   Node 22.12 and later `require('traceprojector')` loads the ESM entry.

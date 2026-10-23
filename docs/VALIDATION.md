@@ -158,6 +158,46 @@ Two things came out of writing these:
   The negative weight also means the cell average is not a monotone
   positive-weight quadrature. The default was not changed here.
 
+## Convergence (A4)
+
+`validation/convergence.test.js`, meshes of 4 to 24 cells per side. The target
+orders are those of classical Whitney interpolation theory; the papers prove
+quasi-optimality, not a rate. Rule (pre-registered): the lower 95% confidence
+bound of the fitted log-log slope is at least the target minus 0.1.
+
+| Quantity | Target | Observed slope | Lower 95% bound |
+|---|---:|---:|---:|
+| `Π⁰`, L² error | 2 | 1.956 | 1.926 |
+| `Π⁰`, H¹ seminorm error | 1 | 0.977 | 0.961 |
+| `Π¹`, L² error | 1 | 0.996 | 0.993 |
+| `Π²`, L² error | 1 | 0.997 | 0.995 |
+| `Π³`, L² error | 1 | 0.986 | 0.976 |
+
+A first design failed the rule (`Π⁰` L² slope 1.42, lower bound 1.09): it used
+one wavelength across the cube on meshes of 2 to 12 cells per side, so most of
+the fit was in the pre-asymptotic range (successive-pair orders 0.87, 1.63,
+1.90). The library was not at fault: `projectH1` equals plain nodal
+interpolation exactly. The field and mesh range were changed to reach the
+asymptotic regime; the threshold was not.
+
+## Stability (A5)
+
+`validation/stability.test.js`. For a smooth bump of width `δ` centred at a mesh
+vertex, `‖Πu‖ / ‖u‖` in L² is a lower bound for the stability constant.
+
+- **Canonical `Π⁰` is not stable.** `Π⁰u` is the vertex hat function however
+  narrow the bump, so the ratio grows like `δ^(-3/2)`: from `δ = h/2` to
+  `δ = h/32` it grows by a factor of 64, which is exactly the predicted
+  `16^(3/2)`.
+- **The stable interior projection is.** The largest ratio is 0.858 to 0.866 on
+  meshes of 4, 6, 8 and 10 cells per side; fitted growth is `h^(-0.010)`, i.e.
+  1.007 per halving of `h`, against the pre-registered limit of 1.10.
+
+Not covered: the pre-registered four mesh-quality levels (shape regularity),
+bumps near the boundary, and the second part of the singular-field criterion
+(change between mesh sizes against the smooth-field change). The stability
+statement holds for the interior part only.
+
 ## Known gaps
 
 - The paper's weight-based boundary operator `Π_∂` is not implemented, so

@@ -1,0 +1,37 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "command",
+  "mutate": [
+    "traceprojector/*.js",
+    "traceprojector/projectors/*.js",
+    "!traceprojector/local-weights.js",
+    "!traceprojector/stable-projector.js",
+    "!traceprojector/zero-trace-projector.js",
+    "!traceprojector/harness.js"
+  ],
+  "coverageAnalysis": "off",
+  "reporters": [
+    "clear-text",
+    "json",
+    "html"
+  ],
+  "jsonReporter": {
+    "fileName": "reports/mutation/mutation.json"
+  },
+  "htmlReporter": {
+    "fileName": "reports/mutation/index.html"
+  },
+  "incremental": true,
+  "incrementalFile": "reports/mutation/stryker-incremental.json",
+  "thresholds": {
+    "high": 85,
+    "low": 70,
+    "break": 70
+  },
+  "timeoutMS": 20000,
+  "tempDirName": ".stryker-tmp",
+  "commandRunner": {
+    "command": "npx mocha"
+  },
+  "concurrency": 5
+}

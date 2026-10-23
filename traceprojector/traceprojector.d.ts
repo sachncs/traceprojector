@@ -209,4 +209,5 @@ export { Hcurl } from './projectors/hcurl.js';
 export { Hdiv } from './projectors/hdiv.js';
 export { L2 } from './projectors/l2.js';
 export { ZeroTraceProjector } from './zero-trace-projector.js';
+export { BoundedCommutingProjector } from './bounded-commuting-projector.js';
 export { StableProjector } from './stable-projector.js';

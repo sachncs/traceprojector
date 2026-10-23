@@ -3,6 +3,9 @@ import {generateUnitCubeMesh} from '../traceprojector/generator.js';
 import {LocalWeights} from '../traceprojector/local-weights.js';
 import {ZeroTraceProjector} from '../traceprojector/zero-trace-projector.js';
 import {StableProjector} from '../traceprojector/stable-projector.js';
+import {
+  BoundedCommutingProjector,
+} from '../traceprojector/bounded-commuting-projector.js';
 import {SimplicialComplex} from '../traceprojector/simplicial-complex.js';
 import {
   ProjectError,
@@ -220,3 +223,35 @@ function complexEdgeNear(weights) {
   const edges = weights.base.cellEdges[centreCell];
   return edges.find((e) => !weights.isBoundary(1, e));
 }
+
+describe('bounded commuting projection (no boundary condition)', function() {
+  this.timeout(60000);
+  const bounded = new BoundedCommutingProjector(vertices, cells);
+  const cornerCell = cells.findIndex((t) =>
+    t.some((v) => vertices[v].every((q) => q === 0)));
+
+  it('reproduces fields with nonzero trace in a corner cell', () => {
+    const u = (x) => 0.4 * x[0] - 1.1 * x[1] + 2.5 * x[2] + 0.3;
+    const x = centroid(cornerCell);
+    expect(Math.abs(bounded.project(u, x, cornerCell, 0) - u(x)))
+        .to.be.below(1e-10);
+    const value = bounded.project(() => [0.5, -0.25, 1.5], x, cornerCell, 2);
+    value.forEach((v, k) =>
+      expect(Math.abs(v - [0.5, -0.25, 1.5][k])).to.be.below(1e-10));
+  });
+
+  it('is finite for a field unbounded at a boundary vertex', () => {
+    const singular = (x) => Math.hypot(x[0], x[1], x[2]) ** -0.4;
+    expect(Number.isFinite(
+        bounded.project(singular, centroid(cornerCell), cornerCell, 0)))
+        .to.equal(true);
+  });
+
+  it('has a weight for boundary entities, which the zero-trace one lacks', () => {
+    const boundaryVertex = cells[cornerCell].find((v) =>
+      vertices[v].every((q) => q === 0));
+    expect(bounded.weights.weight(0, boundaryVertex)).to.not.equal(null);
+    expect(new ZeroTraceProjector(vertices, cells).weights
+        .weight(0, boundaryVertex)).to.equal(null);
+  });
+});

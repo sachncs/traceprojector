@@ -69,6 +69,12 @@ It follows the decomposition `Π^l = Π_∂^l + Π_ring^l (I − Π_∂^l)` of
 > (iterative local solves on stars of up to several mesh rings) and is meant
 > for validation-scale meshes. `ZeroTraceProjector` is its zero-trace interior
 > part.
+>
+> `BoundedCommutingProjector` (lowest order) is the same construction without
+> any boundary condition (arXiv:2502.03601, Thm 5.1): it is locally
+> L²-bounded and commutes with the exterior derivative for **every** input,
+> boundary included, because it takes no point values, edge integrals or face
+> fluxes. It does **not** preserve traces.
 
 > **Disclaimer:** I am not an author of the paper above. This
 > repository is an independent JavaScript implementation of the

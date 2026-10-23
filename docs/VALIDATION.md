@@ -26,6 +26,7 @@ Run everything with `npm run validate` (the unit tests run with `npm test`).
 | `Projector` | `Π = Π_∂ + Π_ring (I − Π_∂)` with **canonical** degrees of freedom throughout | Commutes and preserves traces for fields with well-defined point values, edge integrals and face fluxes. Not bounded: the paper's boundary weights only cross-check the degrees of freedom. |
 | `ZeroTraceProjector` | `Π̊` of Paper 2, `p = 0` | Projection onto the zero-trace Whitney space, commuting, finite for rough input. |
 | `StableProjector` | `Π_∂^canonical + Π̊ (I − Π_∂^canonical)` | Stable for interior roughness. Boundary part canonical, so boundary data must be finite. |
+| `BoundedCommutingProjector` | Paper 2, Thm 5.1, `p = 0`: a weight for every entity, no boundary condition | Locally L²-bounded and commuting for every input, boundary included. **Does not preserve traces.** |
 
 ## Claims
 
@@ -100,6 +101,28 @@ entities, so supports nest). The weights stay valid (all identities below
 hold) but the supports are larger than one ring near the cube edges, which is
 a departure from the paper's one-ring supports. Boundedness constants for
 those stars are not proved.
+
+## The bounded commuting projection (no boundary condition)
+
+`BoundedCommutingProjector` computes the weights of Paper 2 Theorem 5.1 for
+every entity, with the zero-flux condition on the whole boundary of every
+star. It is the one operator here that is bounded **and** commutes for every
+input, boundary included, because it never takes a point value, edge integral
+or face flux and imposes no trace condition. It does not preserve traces.
+
+- The star assumption holds at radius one everywhere (no escalation): the
+  difficulty on cube meshes came entirely from the boundary patches of the
+  trace-preserving variants. All 125 + 604 + 864 + 384 entities of the `n = 4`
+  mesh solve, in about half a minute.
+- `validation/bounded-commuting.test.js` (pre-registered tolerance):
+  `⟨Z(σ), W_ρ⟩ = δ` for every pair of entities of the sampled stars, all four
+  degrees; `Πu = u` for discrete fields **with nonzero trace**; and
+  `grad Π⁰ = Π¹ grad`, `curl Π¹ = Π² curl`, `div Π² = Π³ div` at the
+  coefficient level for generic cubic polynomial fields, which have
+  nonzero boundary values and are **not** in `V_tr,p`. This is where the
+  trace-preserving operator fails (see "Commuting" above).
+- A field in `H¹` that is unbounded at a *boundary* vertex gives finite
+  output for all four degrees; the canonical operator returns `Infinity`.
 
 ## Results so far (cube mesh `n = 4`, 384 cells)
 

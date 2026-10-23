@@ -71,12 +71,19 @@ export class LocalWeights {
   /**
    * @param {!Array<!Array<number>>} vertices
    * @param {!Array<!Array<number>>} tetrahedra
-   * @param {{dense: (boolean|undefined)}=} options - `dense` selects the dense
+   * @param {{dense: (boolean|undefined),
+   *   boundaryConditions: (boolean|undefined)}=} options -
+   *   `boundaryConditions: false` computes the weights of the projection
+   *   without boundary conditions (arXiv:2502.03601, Thm 5.1): every entity,
+   *   boundary ones included, gets a weight, and all of the star boundary
+   *   carries the zero-flux condition. The default is the zero-trace
+   *   projection (Thm 6.1). `dense` selects the dense
    *   direct solvers, a slow reference used to check the default sparse
    *   conjugate-gradient solvers.
    */
   constructor(vertices, tetrahedra, options = {}) {
     this.dense = options.dense === true;
+    this.boundaryConditions = options.boundaryConditions !== false;
     this.base = new SimplicialComplex(vertices, tetrahedra);
     const count = vertices.length;
     const splitVertices = vertices.concat(
@@ -109,6 +116,7 @@ export class LocalWeights {
 
   /** Whether the entity of degree l lies on the boundary of the domain. */
   isBoundary(l, index) {
+    if (!this.boundaryConditions) return false;
     if (l === 0) return this.boundaryVertices.has(index);
     if (l === 1) return this.boundaryEdges.has(index);
     if (l === 2) return this.base.isBoundaryFace(index);
@@ -309,7 +317,9 @@ export class LocalWeights {
       for (const f of this.base.cellFaces[c]) {
         const inside = this.base.faceCells[f].filter((x) => set.has(x)).length;
         if (inside !== 1) continue;
-        (this.base.isBoundaryFace(f) ? gamma : gammaC).push(f);
+        const onDomainBoundary =
+          this.boundaryConditions && this.base.isBoundaryFace(f);
+        (onDomainBoundary ? gamma : gammaC).push(f);
       }
     }
     return {

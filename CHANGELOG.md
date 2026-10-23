@@ -20,6 +20,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
   so an input unbounded at an interior mesh vertex is projected stably. The
   boundary part still uses canonical degrees of freedom; see
   `docs/VALIDATION.md` for what is and is not established.
+- `BoundedCommutingProjector` (lowest order): the projection of
+  arXiv:2502.03601 Thm 5.1 without boundary condition. Locally L²-bounded and
+  commuting for every input, boundary included; does not preserve traces.
 - `docs/VALIDATION.md` and a `validation/` suite with tolerances fixed before
   the first run (`validation/tolerances.json`).
 - `npm run verify`: lint, tests, build, export parity, types parity (`tsd` and

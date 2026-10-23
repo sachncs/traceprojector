@@ -13,7 +13,7 @@ export class ZeroTraceProjector {
   constructor(
     vertices: number[][],
     tetrahedra: number[][],
-    options?: { quadratureOrder?: number },
+    options?: { quadratureOrder?: number; boundaryConditions?: boolean },
   );
 
   /**

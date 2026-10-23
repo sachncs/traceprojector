@@ -17,11 +17,15 @@ export class ZeroTraceProjector {
   /**
    * @param {!Array<!Array<number>>} vertices
    * @param {!Array<!Array<number>>} tetrahedra
-   * @param {{quadratureOrder: (number|undefined)}=} options - Gauss points per
-   *   direction for the weight integrals (default 4).
+   * @param {{quadratureOrder: (number|undefined), boundaryConditions:
+   *   (boolean|undefined)}=} options - `quadratureOrder`: Gauss points per
+   *   direction for the weight integrals (default 4). `boundaryConditions`:
+   *   false drops the zero-trace condition (see {@link LocalWeights}).
    */
   constructor(vertices, tetrahedra, options = {}) {
-    this.weights = new LocalWeights(vertices, tetrahedra);
+    this.weights = new LocalWeights(vertices, tetrahedra, {
+      boundaryConditions: options.boundaryConditions,
+    });
     this.quadratureOrder = options.quadratureOrder ?? 4;
     this.coefficientCache = new WeakMap();
   }

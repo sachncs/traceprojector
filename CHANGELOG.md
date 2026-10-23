@@ -23,6 +23,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - `BoundedCommutingProjector` (lowest order): the projection of
   arXiv:2502.03601 Thm 5.1 without boundary condition. Locally L²-bounded and
   commuting for every input, boundary included; does not preserve traces.
+- `refineTetrahedra` and `Projector.refine` (conforming longest-edge
+  bisection), `Projector.sampler` (point location cached across time
+  steps) and `projectInParallel` (Node worker threads).
 - `CanonicalProjector`: canonical interpolation onto `P_r^- Λ^k` of any
   degree for all form degrees (Lagrange, Nédélec, Raviart–Thomas, DG), with
   the polynomial form spaces and the reference-element degrees of freedom it

@@ -438,28 +438,27 @@ dist/                          — Rollup bundles: ESM, CJS, UMD
 
 ---
 
-## Roadmap
+## Beyond the basics
 
-### High priority
-
-- **Adaptive mesh refinement support** — integrate `Refinement` APIs
-  into `Projector` so boundary weights can be recomputed
-  incrementally as the mesh refines.
-
-### Medium priority
-
-- **Web Worker parallelization** — offload per-tet projection and
-  boundary weight solves to workers for large meshes.
-- **WASM acceleration** — port the dense linear-algebra routines
-  (`luSolve`, `inverse3x3`) to WebAssembly for a 2-5× speedup.
-
-### Low priority / Research
-
-- **Anisotropic mesh support** — generalize the point locator and
-  quadrature to handle highly stretched tets without loss of
-  precision.
-- **Time-dependent projections** — cache-friendly APIs for projecting
-  fields that evolve between time steps.
+- **Higher order and vector-valued spaces.** `CanonicalProjector` projects
+  onto Lagrange, Nédélec, Raviart–Thomas and discontinuous spaces of any
+  degree (`degree: p`).
+- **Adaptive refinement.** `refineTetrahedra(vertices, tetrahedra, marked)`
+  bisects the marked cells by longest edge and keeps the mesh conforming;
+  `projector.refine(marked)` returns a projector on the refined mesh. Its
+  boundary weights are recomputed, not updated incrementally.
+- **Time-dependent fields.** `projector.sampler(points, l, p)` locates the
+  points once and returns a function that projects each new field.
+- **Worker threads (Node.js).** `projectInParallel` from
+  `traceprojector/parallel` projects one field at many points on several
+  threads; the field is given as a module URL because functions cannot be
+  sent to a thread. Browsers are not covered.
+- **Stretched meshes.** Point location and projection are tested on cubes
+  stretched by 10⁴; an aspect ratio beyond about 10⁵ is rejected by the
+  relative-volume floor with a `ValidateError`.
+- **WebAssembly.** Not pursued: profiling a projection on a 3,072-cell mesh
+  puts the dense solver at 19% of the time, so even an infinitely fast one
+  would speed the whole up by at most 1.24×.
 
 ---
 

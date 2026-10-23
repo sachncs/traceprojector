@@ -26,9 +26,13 @@ export function triangleFrame (verts) {
   const e2 = [verts[2][0] - verts[0][0], verts[2][1] - verts[0][1], verts[2][2] - verts[0][2]]
   const areaNormal = cross(e1, e2)
   const area = 0.5 * norm(areaNormal)
-  const normal = area < 1e-14 ? [0, 0, 1] : areaNormal.map((x) => x / (2 * area))
+  if (!(area > 0)) {
+    throw new ValidateError('Degenerate triangle with zero area')
+  }
+  const normal = areaNormal.map((x) => x / (2 * area))
   let t1 = [areaNormal[1], -areaNormal[0], 0]
-  if (norm(t1) < 1e-14) {
+  // Fall back to another axis when the first choice is nearly parallel to the normal (scale-free test).
+  if (norm(t1) < 1e-8 * (2 * area)) {
     t1 = [areaNormal[2], 0, -areaNormal[0]]
   }
   t1 = t1.map((x) => x / norm(t1))

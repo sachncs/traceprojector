@@ -94,6 +94,29 @@ All at the pre-registered identity tolerance, `10 · 1000 · ε · ρ · scale`.
 - Classical Whitney identities of the oriented complex (de Rham map,
   `d∘d = 0`, partition of unity, Stokes-compatible degrees of freedom): pass.
 
+## Floating-point policy for geometry (A9)
+
+Absolute thresholds made acceptance depend on the unit system. With the old
+code, a mesh scaled to edges of 0.5e-4 was rejected as degenerate
+(`signedVol 1.25e-13 < 1e-12`), the point locator returned nothing on it, face
+normals below 1e-12 were silently replaced by `[0, 0, 1]`, and small 3x3
+systems were declared singular. A double-precision determinant also had the
+wrong sign for 1,069 of 100,000 nearly flat tetrahedra.
+
+Policy now: a tetrahedron is degenerate when its volume determinant divided by
+the cube of its longest edge is below `MIN_RELATIVE_VOLUME = 1e-10`. The
+determinant of a tetrahedron with coordinates of size one carries a rounding
+error of a few times 1e-16, so above the floor the sign is reliable, and the
+barycentric gradients keep roughly six digits. The floor is a design
+parameter chosen from that error analysis, not tuned to a test outcome.
+
+Evidence (`validation/geometry.test.js`, `tests/scale_invariance.test.js`):
+unit cubes scaled by 10^-6 to 10^6 are accepted, projected exactly, and pass
+the boundary-weight verification; translations to 10^8 are accepted; over
+100,000 random nearly flat tetrahedra no tetrahedron called valid or inverted
+disagrees with the exact predicate of `robust-predicates`, and none clearly
+above the floor is called degenerate.
+
 ## Known gaps
 
 - The paper's weight-based boundary operator `Π_∂` is not implemented, so

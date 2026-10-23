@@ -12,6 +12,42 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `ZeroTraceProjector` and `StableProjector` (lowest order): locally
+  L²-bounded projections built from the local weight functions of
+  arXiv:2502.03601. Interior coefficients are integrals against the weights,
+  so an input unbounded at an interior mesh vertex is projected stably. The
+  boundary part still uses canonical degrees of freedom; see
+  `docs/VALIDATION.md` for what is and is not established.
+- `docs/VALIDATION.md` and a `validation/` suite with tolerances fixed before
+  the first run (`validation/tolerances.json`).
+- `npm run verify`: lint, tests, build, export parity, types parity (`tsd` and
+  a JS-versus-declaration check), `publint`, `attw`, and a consumer test that
+  installs the packed tarball into an empty directory.
+
+### Fixed
+
+- Projections returned `Infinity` or `NaN` silently when the input field was
+  not finite at a degree of freedom; they now throw `ProjectError`.
+- Geometry depended on the unit system. Meshes with edges below about 0.1 mm
+  (in metres) were rejected as degenerate, point location failed on them, face
+  normals were silently replaced by `[0, 0, 1]`, and small 3x3 systems were
+  declared singular. Degeneracy is now judged by the volume relative to the
+  longest edge cubed (`MIN_RELATIVE_VOLUME`, 1e-10), and a degenerate surface
+  triangle raises an error instead of inventing a normal.
+
+### Changed
+
+- The package is ESM-only (`sideEffects: false`). The CommonJS bundle was
+  never reachable through the `exports` map and is no longer built; on
+  Node 22.12 and later `require('traceprojector')` loads the ESM entry.
+- The README and package description no longer claim that `Projector` is
+  bounded: it uses canonical degrees of freedom, and the paper's boundary
+  weights only cross-check them.
+- CI runs on Node 24 and 26, audits production dependencies, and builds the
+  site; the `web:build` script reference is now `site:build`.
+
 ## [0.1.0] — 2026-09-03
 
 The first release under the **traceprojector** name on Node 26. Adds

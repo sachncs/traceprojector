@@ -4,6 +4,8 @@
  * Recursively partitions the mesh bounding box to achieve O(log N) search.
  */
 
+import { relativeVolume, MIN_RELATIVE_VOLUME } from './utils.js'
+
 /**
  * Axis-aligned bounding box (AABB) tree for O(log N) point-in-tetrahedron
  * queries.
@@ -167,11 +169,7 @@ export class Locator {
     const det = det3(e0, e1, e2)
     // Relative tolerance: reject only if det is tiny compared to the product
     // of edge lengths, allowing very small but geometrically valid tets.
-    const e0Sq = e0[0] * e0[0] + e0[1] * e0[1] + e0[2] * e0[2]
-    const e1Sq = e1[0] * e1[0] + e1[1] * e1[1] + e1[2] * e1[2]
-    const e2Sq = e2[0] * e2[0] + e2[1] * e2[1] + e2[2] * e2[2]
-    const scale = Math.sqrt(e0Sq * e1Sq * e2Sq)
-    if (Math.abs(det) < 1e-12 * Math.max(1, scale)) {
+    if (!(Math.abs(relativeVolume(v)) >= MIN_RELATIVE_VOLUME)) {
       return null
     }
 

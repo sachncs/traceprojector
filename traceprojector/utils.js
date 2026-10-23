@@ -45,6 +45,43 @@ export function tetDeterminant (v0, v1, v2, v3) {
 }
 
 /**
+ * Smallest accepted ratio of a tetrahedron's volume determinant to the cube of
+ * its longest edge. The determinant of a tetrahedron with coordinates of
+ * size one carries a rounding error of a few times 1e-16, so above this floor
+ * its sign (the orientation) is reliable, and the barycentric gradients
+ * (which scale like the inverse of the height) keep about six digits. The
+ * ratio does not depend on the unit system, unlike an absolute volume.
+ * @const {number}
+ */
+export const MIN_RELATIVE_VOLUME = 1e-10
+
+/**
+ * Length of the longest edge of a tetrahedron.
+ * @param {!Array<!Array<number>>} vertices - The four vertices.
+ * @return {number}
+ */
+export function longestEdge (vertices) {
+  let longest = 0
+  for (let i = 0; i < 4; i++) {
+    for (let j = i + 1; j < 4; j++) {
+      longest = Math.max(longest, norm(subtract(vertices[i], vertices[j])))
+    }
+  }
+  return longest
+}
+
+/**
+ * Signed volume determinant divided by the cube of the longest edge: a
+ * dimensionless measure of how far a tetrahedron is from flat.
+ * @param {!Array<!Array<number>>} vertices - The four vertices.
+ * @return {number}
+ */
+export function relativeVolume (vertices) {
+  const edge = longestEdge(vertices)
+  return edge === 0 ? 0 : tetDeterminant(vertices[0], vertices[1], vertices[2], vertices[3]) / edge ** 3
+}
+
+/**
  * Computes the geometric volume of a tetrahedron.
  * @param {!Array<number>} v0
  * @param {!Array<number>} v1
@@ -189,7 +226,7 @@ export function luSolve (a, b) {
 
   // Tolerance relative to the scaled matrix.
   const normEst = infinityNorm(aug.map((row) => row.slice(0, n)))
-  const tol = EPSILON * Math.max(1, normEst) * n
+  const tol = EPSILON * normEst * n
 
   for (let col = 0; col < n; col++) {
     let maxRow = col
@@ -201,7 +238,7 @@ export function luSolve (a, b) {
         maxRow = row
       }
     }
-    if (maxVal < tol) {
+    if (!(maxVal > tol)) {
       throw new SingularError('Singular or near-singular matrix')
     }
     if (maxRow !== col) {
@@ -228,6 +265,17 @@ export function luSolve (a, b) {
 }
 
 /**
+ * Product of the Euclidean norms of the rows of a 3x3 matrix: an upper bound
+ * on |det| (Hadamard), so comparing a determinant with a fraction of it is
+ * independent of the scale of the matrix.
+ * @param {!Array<!Array<number>>} m
+ * @return {number}
+ */
+function hadamardBound (m) {
+  return m.reduce((product, row) => product * Math.hypot(row[0], row[1], row[2]), 1)
+}
+
+/**
  * Computes the inverse of a 3x3 matrix.
  * @param {!Array<!Array<number>>} m
  * @return {!Array<!Array<number>>}
@@ -237,7 +285,7 @@ export function inverse3x3 (m) {
     m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) -
     m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
     m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
-  if (Math.abs(det) < EPSILON) {
+  if (!(Math.abs(det) > EPSILON * hadamardBound(m))) {
     throw new SingularError('Singular 3x3 matrix')
   }
   const invDet = 1 / det
@@ -271,7 +319,7 @@ export function solve3x3 (a, b) {
     a[0][0] * (a[1][1] * a[2][2] - a[1][2] * a[2][1]) -
     a[0][1] * (a[1][0] * a[2][2] - a[1][2] * a[2][0]) +
     a[0][2] * (a[1][0] * a[2][1] - a[1][1] * a[2][0])
-  if (Math.abs(det) < EPSILON) {
+  if (!(Math.abs(det) > EPSILON * hadamardBound(a))) {
     throw new SingularError('Singular 3x3 matrix')
   }
 

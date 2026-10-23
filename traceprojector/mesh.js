@@ -8,7 +8,9 @@
  * Worsey-Farin split) live in a separate {@link Refinement} class.
  */
 
-import { triangleArea, tetDeterminant, tetVolume } from './utils.js'
+import {
+  triangleArea, tetDeterminant, tetVolume, relativeVolume, MIN_RELATIVE_VOLUME
+} from './utils.js'
 import { ValidateError } from './errors.js'
 
 /**
@@ -134,9 +136,10 @@ export class Mesh {
       const v2 = vertices[t[2]]
       const v3 = vertices[t[3]]
       const signedVol = tetDeterminant(v0, v1, v2, v3)
-      if (signedVol <= 1e-12) {
+      if (!(relativeVolume([v0, v1, v2, v3]) >= MIN_RELATIVE_VOLUME)) {
         throw new ValidateError(
-          `Tetrahedron ${i} has non-positive or degenerate volume (signedVol=${signedVol}). ` +
+          `Tetrahedron ${i} has non-positive or degenerate volume (signedVol=${signedVol}, ` +
+            `relative volume ${relativeVolume([v0, v1, v2, v3])} < ${MIN_RELATIVE_VOLUME}). ` +
             'Reorder vertices to satisfy the right-hand rule, or check for collinear/coplanar vertices.'
         )
       }
@@ -229,8 +232,8 @@ export class Mesh {
     }
 
     const len = Math.sqrt(n[0] * n[0] + n[1] * n[1] + n[2] * n[2])
-    if (len < 1e-12) {
-      return [0, 0, 1]
+    if (!(len > 0)) {
+      throw new ValidateError(`Face ${fIdx} has a zero-length normal`)
     }
     return [n[0] / len, n[1] / len, n[2] / len]
   }

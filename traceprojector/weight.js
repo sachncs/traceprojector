@@ -212,7 +212,7 @@ export class Weight {
       const e = this.mesh.edges[eIdx]
       const edgeVec = subtract(this.mesh.vertices[e[1]], this.mesh.vertices[e[0]])
       const edgeLen = norm(edgeVec)
-      if (edgeLen < 1e-12) {
+      if (!(edgeLen > 0)) {
         continue
       }
       zeta1Edge.set(eIdx, {

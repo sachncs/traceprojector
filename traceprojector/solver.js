@@ -52,7 +52,8 @@ export class Solver {
     const c = cross(v1, v2)
     const area = 0.5 * norm(c)
 
-    if (area < 1e-12) {
+    const longest = Math.max(norm(v1), norm(v2), norm(subtract(v[2], v[1])))
+    if (!(area > 1e-10 * longest * longest)) {
       throw new SingularError(`Degenerate triangle in stiffness assembly: area=${area}`)
     }
 

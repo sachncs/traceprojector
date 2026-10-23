@@ -5,6 +5,7 @@
  */
 
 import { integrateTetrahedron } from '../quadrature.js'
+import { relativeVolume, MIN_RELATIVE_VOLUME } from '../utils.js'
 import { ProjectError } from '../errors.js'
 
 /**
@@ -35,7 +36,7 @@ export class L2 {
     const tet = this.mesh.getTetrahedra()[tIdx]
     const verts = tet.map((i) => this.mesh.getVertices()[i])
     const vol = this.mesh.getVolume(tIdx)
-    if (vol < 1e-12) {
+    if (!(Math.abs(relativeVolume(verts)) >= MIN_RELATIVE_VOLUME)) {
       throw new ProjectError(
         `Cannot perform L2 projection on degenerate tetrahedron ${tIdx}`
       )

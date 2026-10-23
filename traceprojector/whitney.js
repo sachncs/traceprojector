@@ -2,7 +2,9 @@
  * Whitney forms and barycentric coordinate utilities on a tetrahedral mesh.
  */
 
-import { cross, inverse3x3, tetDeterminant } from './utils.js'
+import {
+  cross, inverse3x3, tetDeterminant, relativeVolume, MIN_RELATIVE_VOLUME
+} from './utils.js'
 import { ProjectError } from './errors.js'
 
 /**
@@ -48,7 +50,7 @@ export class Whitney {
       this.tetDetCache[tIdx] = det
       this.tetMatrixCache[tIdx] = T
 
-      if (Math.abs(det) >= 1e-12) {
+      if (Math.abs(relativeVolume(v)) >= MIN_RELATIVE_VOLUME) {
         const Tinv = inverse3x3(T)
         const g0 = [Tinv[0][0], Tinv[0][1], Tinv[0][2]]
         const g1 = [Tinv[1][0], Tinv[1][1], Tinv[1][2]]
@@ -89,7 +91,7 @@ export class Whitney {
       )
     }
 
-    if (Math.abs(det) < 1e-12) {
+    if (!(Math.abs(relativeVolume(v)) >= MIN_RELATIVE_VOLUME)) {
       throw new ProjectError(
         `Degenerate tetrahedron ${tIdx} (signedVol=${det}); ` +
         'this is a Mesh input bug or a Refinement-induced corruption.'

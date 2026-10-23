@@ -11,7 +11,7 @@
  * rough fields therefore do not apply.
  */
 
-import { numericalGradient } from './utils.js'
+import { numericalGradient, relativeVolume, MIN_RELATIVE_VOLUME } from './utils.js'
 import { verifyBoundaryWeights as runVerifyBoundaryWeights } from './boundaryVerify.js'
 import { ProjectError } from './errors.js'
 import { Weight } from './weight.js'
@@ -121,8 +121,8 @@ export class Projector {
   validateMesh () {
     let degenerateCount = 0
     for (let tIdx = 0; tIdx < this.mesh.tetrahedronCount; tIdx++) {
-      const vol = this.mesh.getVolume(tIdx)
-      if (vol < 1e-12) {
+      const corners = this.mesh.getTetrahedra()[tIdx].map((i) => this.mesh.getVertices()[i])
+      if (!(Math.abs(relativeVolume(corners)) >= MIN_RELATIVE_VOLUME)) {
         degenerateCount++
       }
     }

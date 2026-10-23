@@ -32,7 +32,7 @@ function choose(n, k) {
 }
 
 /** Exponent tuples of m variables with total degree at most d. */
-function monomials(m, d) {
+export function monomials(m, d) {
   if (m === 0) return [[]];
   const out = [];
   const walk = (prefix, left, slots) => {
@@ -47,7 +47,7 @@ function monomials(m, d) {
 }
 
 /** Quadrature on the reference simplex of dimension m (weights sum 1/m!). */
-function referenceRule(m, order) {
+export function referenceRule(m, order) {
   if (m === 0) return [{s: [], weight: 1}];
   if (m === 1) {
     const {nodes, weights} = gaussLegendre(order);
@@ -112,10 +112,33 @@ export function countOn(carrier, k) {
 export function moments(k, carrier, points, u, order) {
   const {dimension: m, degree} = carrier;
   const corners = carrier.vertices.map((v) => points[v]);
-  const tangents = corners.slice(1).map((c) => sub(c, corners[0]));
   const tests = monomials(m, degree);
   const count = components(m, k);
   const out = new Array(count * tests.length).fill(0);
+  const pull = pullback(k, corners);
+  for (const {s, weight} of referenceRule(m, order)) {
+    const pulled = pull(s, u);
+    tests.forEach((a, t) => {
+      const monomial = a.reduce((acc, e, i) => acc * s[i] ** e, 1);
+      pulled.forEach((q, c) => {
+        out[c * tests.length + t] += weight * q * monomial;
+      });
+    });
+  }
+  return out;
+}
+
+/**
+ * The pull-back of a k-form to the simplex with the given corners, in the
+ * parameters s of x = c0 + sum s_i (c_i - c0).
+ * @param {number} k Form degree.
+ * @param {number[][]} corners The m + 1 corners (m <= 3).
+ * @return {function(number[], function(number[]): (number|number[])):
+ *     number[]} Maps (s, field) to the components of the pulled-back form.
+ */
+export function pullback(k, corners) {
+  const m = corners.length - 1;
+  const tangents = corners.slice(1).map((c) => sub(c, corners[0]));
   let detJ = 1;
   let inverse = null;
   if (m === 3 && k >= 2) {
@@ -127,30 +150,18 @@ export function moments(k, carrier, points, u, order) {
       cross(tangents[0], tangents[1]),
     ].map((row) => row.map((q) => q / detJ));
   }
-  for (const {s, weight} of referenceRule(m, order)) {
+  return (s, u) => {
     const x = corners[0].map((q, i) => q +
       tangents.reduce((acc, t, j) => acc + s[j] * t[i], 0));
     const value = u(x);
-    let pulled;
-    if (k === 0) {
-      pulled = [value];
-    } else if (k === 1) {
-      pulled = tangents.map((t) => dot(value, t));
-    } else if (k === 2 && m === 2) {
-      pulled = [dot(value, cross(tangents[0], tangents[1]))];
-    } else if (k === 2) {
-      pulled = inverse.map((row) => detJ * dot(row, value));
-    } else {
-      pulled = [detJ * value];
+    if (k === 0) return [value];
+    if (k === 1) return tangents.map((t) => dot(value, t));
+    if (k === 2 && m === 2) {
+      return [dot(value, cross(tangents[0], tangents[1]))];
     }
-    tests.forEach((a, t) => {
-      const monomial = a.reduce((acc, e, i) => acc * s[i] ** e, 1);
-      pulled.forEach((q, c) => {
-        out[c * tests.length + t] += weight * q * monomial;
-      });
-    });
-  }
-  return out;
+    if (k === 2) return inverse.map((row) => detJ * dot(row, value));
+    return [detJ * value];
+  };
 }
 
 /** Evaluates a polynomial form (scalar or triple) at x. */
@@ -200,7 +211,7 @@ export function referenceBasis(r, k) {
 }
 
 /** Gauss-Jordan inverse of a dense square matrix with partial pivoting. */
-function invert(a) {
+export function invert(a) {
   const n = a.length;
   const work = a.map((row, i) => {
     const r = new Float64Array(2 * n);
@@ -230,7 +241,7 @@ function invert(a) {
 }
 
 /** Linear combination of polynomial forms. */
-function combine(space, weights, k) {
+export function combine(space, weights, k) {
   const zero = () => Polynomial.zero();
   const vector = k === 1 || k === 2;
   let out = vector ? [zero(), zero(), zero()] : zero();

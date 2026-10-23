@@ -7,13 +7,13 @@ Measured with `node --expose-gc validation/limits.mjs` on a unit-cube mesh
 
 | Cells | Build (ms) | Boundary weights (ms) | Locator build (ms) | One located projection (ms) | Heap (MB) |
 |---:|---:|---:|---:|---:|---:|
-| 48 | 4 | 17 | 1 | 0.002 | 2.5 |
-| 1,296 | 17 | 92 | 3 | 0.005 | 13 |
-| 10,368 | 68 | 394 | 29 | 0.003 | 48 |
-| 48,000 | 321 | 1,617 | 179 | 0.008 | ≈ 230 |
+| 48 | 4 | 20 | 1 | 0.002 | 2.5 |
+| 1,296 | 19 | 95 | 3 | 0.005 | 13 |
+| 10,368 | 69 | 405 | 29 | 0.003 | 48 |
+| 48,000 | 453 | 1,757 | 182 | 0.008 | ≈ 235 |
 
 - **Time** for building the mesh, the boundary weights and the locator grows
-  roughly linearly with the number of cells (fitted exponents 0.8 over the last
+  roughly linearly with the number of cells (fitted exponents 0.8-0.9 over the last
   six sizes, which includes fixed overheads). A located projection takes a
   few microseconds, independent of mesh size.
 - **Memory** is about 5 KB per cell. A 512 MB heap holds roughly 100,000 cells;

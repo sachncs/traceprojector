@@ -305,8 +305,106 @@ export class HigherOrderProjector {
     return typeof a === 'number' ? a + b : a.map((q, i) => q + b[i]);
   }
 
-  /** Value of pi_r u at a point of a cell. */
-  project(u, x, c, l) {
-    return this.evaluate(this.coefficients(u, l), x, c, l);
+  /**
+   * Lazy, cell-by-cell evaluation of pi_r u: only the coefficients that a
+   * cell needs are computed, so a value at one point costs the weights and
+   * bubble forms of the entities around that cell, not of the whole mesh.
+   * @param {function(number[]): (number|number[])} u An L2 field.
+   * @param {number} l Form degree.
+   * @return {{value: function(number[], number): (number|number[]),
+   *     derivative: function(number[], number): (number|number[])}} Value of
+   *     pi_r u, and of its exterior derivative (gradient, curl or divergence),
+   *     at a point of a cell.
+   */
+  local(u, l) {
+    const lowest = new Map();
+    const lowestOf = (sigma) => {
+      if (!lowest.has(sigma)) {
+        lowest.set(sigma, this.weights.pair(l, sigma, (x) => u(x)));
+      }
+      return lowest.get(sigma);
+    };
+    const entities = (c, degree) => this.base.cellEntities(c, degree);
+    const whitney = (x, c) => {
+      const basis = this.base.whitney(c, l, x);
+      let total = l === 0 || l === 3 ? 0 : [0, 0, 0];
+      entities(c, l).forEach((sigma, i) => {
+        const w = lowestOf(sigma);
+        total = typeof total === 'number' ? total + w * basis[i] :
+          total.map((q, a) => q + w * basis[i][a]);
+      });
+      return total;
+    };
+    const residual = (x, c) => {
+      const part = whitney(x, c);
+      const value = u(x);
+      return typeof value === 'number' ? value - part :
+        value.map((q, i) => q - part[i]);
+    };
+    const corrections = new Map();
+    const correctionOf = (dof, m, entity) => {
+      if (!corrections.has(dof)) {
+        const item = this.bubbleForms(l, m, entity).find((i) => i.dof === dof);
+        let sum = 0;
+        for (const {cell, points, form} of item.pieces) {
+          for (const {x, weight} of tetrahedronRule(points, this.order)) {
+            sum += weight * dot(evaluateForm(form, x), residual(x, cell));
+          }
+        }
+        corrections.set(dof, sum);
+      }
+      return corrections.get(dof);
+    };
+    const scratch = new Float64Array(this.space.size(l));
+    const cellCorrection = (c) => {
+      const {entries, carriers, offsets} = this.space.element(l);
+      const dofs = this.space.cellDofs(c, l);
+      const touched = [];
+      carriers.forEach((carrier, ci) => {
+        const m = carrier.dimension;
+        const entity = this.space.entityOf(c, carrier);
+        for (let e = offsets[ci]; e < offsets[ci + 1]; e++) {
+          const kind = entries[e].kind;
+          if (kind === 'closed' || kind === 'coclosed') {
+            scratch[dofs[e]] = correctionOf(dofs[e], m, entity);
+            touched.push(dofs[e]);
+          }
+        }
+      });
+      return touched;
+    };
+    const withCorrection = (c, evaluate) => {
+      const touched = cellCorrection(c);
+      const out = evaluate();
+      touched.forEach((a) => (scratch[a] = 0));
+      return out;
+    };
+    return {
+      value: (x, c) => {
+        const a = whitney(x, c);
+        const b = withCorrection(
+            c, () => this.space.evaluate(scratch, x, c, l));
+        return typeof a === 'number' ? a + b : a.map((q, i) => q + b[i]);
+      },
+      derivative: (x, c) => {
+        // d of the Whitney part: the coboundary of its coefficients.
+        const upper = this.base.cellEntities(c, l + 1);
+        const basis = this.base.whitney(c, l + 1, x);
+        let total = l === 2 ? 0 : [0, 0, 0];
+        upper.forEach((entity, i) => {
+          let w = 0;
+          for (const {entity: sigma, sign} of this.base.boundary(l + 1,
+              entity)) {
+            w += sign * lowestOf(sigma);
+          }
+          total = typeof total === 'number' ? total + w * basis[i] :
+            total.map((q, a) => q + w * basis[i][a]);
+        });
+        const b = withCorrection(c, () => this.space.derivative(
+            scratch, x, c, l));
+        return typeof total === 'number' ? total + b : total.map(
+            (q, i) => q + b[i]);
+      },
+    };
   }
 }

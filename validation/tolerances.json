@@ -12,10 +12,44 @@
     "delta": 0.1,
     "minRefinements": 4
   },
-  "stability": { "maxGrowthPerHalvingOfH": 1.10, "minQualityLevels": 4 },
-  "metamorphic": { "runsPerProperty": 1000 },
-  "fuzz": { "cases": 10000, "timeoutMs": 10000, "heapCeilingMb": 512 },
-  "geometry": { "scaleExponents": [-6, 6], "nearDegenerateTets": 100000 },
-  "mutation": { "breakThresholdPercent": 70 },
-  "coverage": { "branchBaselinePercent": 93.59 }
+  "stability": {
+    "maxGrowthPerHalvingOfH": 1.1,
+    "minQualityLevels": 4
+  },
+  "metamorphic": {
+    "runsPerProperty": 1000
+  },
+  "fuzz": {
+    "cases": 10000,
+    "timeoutMs": 10000,
+    "heapCeilingMb": 512
+  },
+  "geometry": {
+    "scaleExponents": [
+      -6,
+      6
+    ],
+    "nearDegenerateTets": 100000
+  },
+  "mutation": {
+    "breakThresholdPercent": 70
+  },
+  "coverage": {
+    "branchBaselinePercent": 93.59
+  },
+  "stableOperator": {
+    "_comment": "Added before any Stage S code or test existed. Same identity rule as 'identity'.",
+    "identityRule": "same as identity.rule, with nOps = 1000 because each DoF is an exact local-solve sum over an extended star",
+    "nOps": 1000,
+    "localSolveResidual": "relative residual of every local constraint (div eta = rhs, curl eta = rhs, grad eta = rhs) <= c * machineEpsilon * condition estimate, with c = 100; larger residual means the star violates the paper's assumptions and must raise SingularError",
+    "stability": {
+      "maxGrowthPerHalvingOfH": 1.1,
+      "minRefinements": 3,
+      "fieldNote": "bound ||Pi u||_L2(tau) <= C ||u||_L2(ES(tau)) estimated over a fixed set of test fields"
+    },
+    "singularField": {
+      "exponent": -0.4,
+      "requirement": "finite output; change between mesh sizes n=2 and n=4 bounded by 10 times the smooth-field change"
+    }
+  }
 }

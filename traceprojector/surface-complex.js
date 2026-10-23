@@ -83,4 +83,51 @@ export class SurfaceComplex {
           scale(gradients[b], lambda[a]), scale(gradients[a], lambda[b]));
     });
   }
+
+  /** The coboundary of vertex values: the change along each edge [a, b]. */
+  gradient(values) {
+    return this.edges.map(([a, b]) => values[b] - values[a]);
+  }
+
+  /**
+   * The coboundary of edge circulations: for each triangle, the signed sum of
+   * its edge circulations taken along its orientation.
+   */
+  curl(circulations) {
+    return this.triangles.map((triangle, t) => {
+      let sum = 0;
+      for (let k = 0; k < 3; k++) {
+        const from = triangle[k];
+        const to = triangle[(k + 1) % 3];
+        const e = this.triangleEdges[t].find((i) => {
+          const [a, b] = this.edges[i];
+          return (a === from && b === to) || (a === to && b === from);
+        });
+        sum += this.edges[e][0] === from ? circulations[e] : -circulations[e];
+      }
+      return sum;
+    });
+  }
+
+  /** Triangles containing the vertex (l = 0), edge (l = 1) or itself (2). */
+  star(l, index) {
+    if (l === 2) return [index];
+    if (l === 1) return this.edgeTriangles[index].slice();
+    const found = [];
+    this.triangles.forEach((triangle, t) => {
+      if (triangle.includes(index)) found.push(t);
+    });
+    return found;
+  }
+
+  /** Triangles that share a vertex with a triangle of the star. */
+  extendedStar(l, index) {
+    const corners = new Set(this.star(l, index).flatMap(
+        (t) => this.triangles[t]));
+    const found = [];
+    this.triangles.forEach((triangle, t) => {
+      if (triangle.some((v) => corners.has(v))) found.push(t);
+    });
+    return found;
+  }
 }

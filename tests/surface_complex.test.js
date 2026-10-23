@@ -88,3 +88,56 @@ describe('surface complex', () => {
     }
   });
 });
+
+describe('surface exterior derivative and stars', () => {
+  it('the coboundary of a vertex field is the circulation along each edge', () => {
+    const u = complex.vertices.map((p) => p[0] + 2 * p[1] - p[2]);
+    const du = complex.gradient(u);
+    complex.edges.forEach(([a, b], e) => {
+      expect(du[e]).to.be.closeTo(u[b] - u[a], 1e-12);
+    });
+  });
+
+  it('curl of the gradient vanishes', () => {
+    const u = complex.vertices.map((p) => Math.sin(p[0]) + p[1] * p[2]);
+    const curl = complex.curl(complex.gradient(u));
+    expect(Math.max(...curl.map(Math.abs))).to.be.below(1e-12);
+  });
+
+  it('curl of an edge field is its signed circulation round each triangle', () => {
+    const w = complex.edges.map((_, e) => Math.cos(e));
+    const curl = complex.curl(w);
+    complex.triangles.forEach((triangle, t) => {
+      const [a, b, c] = triangle;
+      const edge = (p, q) => {
+        const e = complex.triangleEdges[t].find((i) => {
+          const [x, y] = complex.edges[i];
+          return (x === p && y === q) || (x === q && y === p);
+        });
+        return complex.edges[e][0] === p ? w[e] : -w[e];
+      };
+      expect(curl[t]).to.be.closeTo(
+          edge(a, b) + edge(b, c) + edge(c, a), 1e-12);
+    });
+  });
+
+  it('the star of a vertex is the triangles that contain it', () => {
+    const v = split.vertices.length - 1;
+    expect(complex.star(0, v).length).to.equal(3);
+    complex.star(0, 0).forEach((t) =>
+      expect(complex.triangles[t]).to.include(0));
+  });
+
+  it('the extended star contains the star and every triangle touching it', () => {
+    for (const [l, index] of [[0, 3], [1, 5], [2, 7]]) {
+      const star = new Set(complex.star(l, index));
+      const extended = new Set(complex.extendedStar(l, index));
+      star.forEach((t) => expect(extended.has(t)).to.equal(true));
+      const corners = new Set([...star].flatMap((t) => complex.triangles[t]));
+      complex.triangles.forEach((triangle, t) => {
+        const touches = triangle.some((v) => corners.has(v));
+        expect(extended.has(t)).to.equal(touches);
+      });
+    }
+  });
+});

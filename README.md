@@ -1,6 +1,6 @@
 <p align="center">
   <h1 align="center">traceprojector</h1>
-  <p align="center">Bounded, Commuting, Discrete-trace Preserving Projections for the 3D de Rham complex on simplicial meshes.</p>
+  <p align="center">Commuting, Discrete-trace Preserving Projections for the 3D de Rham complex on simplicial meshes.</p>
   <p align="center">
     <a href="#installation"><img src="https://img.shields.io/badge/node-%E2%89%A526.0.0-43853d" alt="Node 26+"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
@@ -35,22 +35,31 @@ Or skip the install and try the bundled [web playground](site/) — `npm run sit
 
 ## What is this?
 
-**traceprojector** is a pure-JavaScript implementation of the
-**Bounded, Commuting, Discrete-trace Preserving Projections** `Π^l`
+**traceprojector** is a pure-JavaScript library of
+**Commuting, Discrete-trace Preserving Projections** `Π^l`
 for the discrete 3D de Rham complex. It builds, for `l = 0, 1, 2, 3`,
 the projection operators that
 
-> 1. are **bounded** in the natural `H^1`, `H(curl)`, `H(div)`, `L^2`
->    norms,
-> 2. **commute** with the exterior derivative `d^l` (`grad Π^0 =
+> 1. **commute** with the exterior derivative `d^l` (`grad Π^0 =
 >    Π^1 grad`, `curl Π^1 = Π^2 curl`, `div Π^2 = Π^3 div`),
-> 3. **preserve discrete traces** on the boundary: vertex values,
+> 2. **preserve discrete traces** on the boundary: vertex values,
 >    edge tangential integrals, and face normal fluxes are reproduced
->    exactly.
+>    exactly (to roundoff).
 
-It implements the construction from
+It follows the decomposition `Π^l = Π_∂^l + Π_ring^l (I − Π_∂^l)` of
 
 > *Ern, Guzmán, Potu (2026) — [arXiv:2604.28103v1](https://arxiv.org/abs/2604.28103).*
+
+> **Not the paper's stable operator.** In this library both `Π_∂^l` and
+> `Π_ring^l` use *canonical* degrees of freedom (point values, edge
+> integrals, face fluxes of the input field). The paper's boundary weights
+> (Section 6.3) are computed and used by `verifyBoundaryWeights()` to
+> cross-check those degrees of freedom, but they do not enter the
+> projection. The paper's stability results (bounds in the graph norm for
+> rough fields) therefore do **not** apply: the input must have well-defined
+> point values, edge integrals and face fluxes, and a non-finite value
+> raises `ProjectError`. Commuting and trace preservation hold for fields
+> with such degrees of freedom.
 
 > **Disclaimer:** I am not an author of the paper above. This
 > repository is an independent JavaScript implementation of the

@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     template: "%s — traceprojector",
   },
   description:
-    "Bounded, commuting, discrete-trace preserving projections Π⁰, Π¹, Π², Π³ for the 3D de Rham complex on simplicial meshes. Pure JavaScript, zero runtime dependencies, MIT.",
+    "Commuting, discrete-trace preserving projections Π⁰, Π¹, Π², Π³ for the 3D de Rham complex on simplicial meshes. Pure JavaScript, zero runtime dependencies, MIT.",
   keywords: [
     "finite element method",
     "de Rham complex",
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     type: "website",
     title: "traceprojector",
     description:
-      "Bounded, commuting, discrete-trace preserving projections Π⁰, Π¹, Π², Π³ for the 3D de Rham complex.",
+      "Commuting, discrete-trace preserving projections Π⁰, Π¹, Π², Π³ for the 3D de Rham complex.",
     siteName: "traceprojector",
     locale: "en_US",
   },
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "traceprojector",
     description:
-      "Bounded, commuting, discrete-trace preserving projections Π⁰, Π¹, Π², Π³ for the 3D de Rham complex.",
+      "Commuting, discrete-trace preserving projections Π⁰, Π¹, Π², Π³ for the 3D de Rham complex.",
     creator: "@sachncs",
   },
   robots: {

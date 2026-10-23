@@ -89,7 +89,7 @@ export function MathSection() {
               <p className="mt-3 max-w-xl text-center text-sm text-muted-foreground">
                 Π_∂ˡ prescribes the boundary data exactly. Π_ringˡ is the
                 interior projector with vanishing trace. Together they form a
-                single, commuting, bounded operator.
+                single, commuting operator.
               </p>
             </div>
           </div>

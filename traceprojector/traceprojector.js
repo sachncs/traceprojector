@@ -1,8 +1,14 @@
 /**
- * TRACEPROJECTOR: Bounded, Commuting, Discrete-trace Preserving Projections.
+ * TRACEPROJECTOR: Commuting, Discrete-trace Preserving Projections.
  *
  * Implements the de Rham projection operators Pi^l for l = 0,1,2,3 on
  * tetrahedral meshes with boundary-aware trace preservation.
+ *
+ * Both the boundary part and the interior part of Pi^l use canonical degrees
+ * of freedom (point values, edge integrals, face fluxes).  The Section 6.3
+ * boundary weights are computed only to cross-check those degrees of freedom
+ * ({@link Projector#verifyBoundaryWeights}); the paper's stability bounds for
+ * rough fields therefore do not apply.
  */
 
 import { numericalGradient } from './utils.js'
@@ -18,10 +24,16 @@ import { Hdiv } from './projectors/hdiv.js'
 import { L2 } from './projectors/l2.js'
 
 /**
- * TRACEPROJECTOR: Bounded, Commuting, Discrete-trace Preserving Projections.
+ * TRACEPROJECTOR: Commuting, Discrete-trace Preserving Projections.
  *
  * Implements the de Rham projection operators Pi^l for l = 0,1,2,3 on
  * tetrahedral meshes with boundary-aware trace preservation.
+ *
+ * Both the boundary part and the interior part of Pi^l use canonical degrees
+ * of freedom (point values, edge integrals, face fluxes).  The Section 6.3
+ * boundary weights are computed only to cross-check those degrees of freedom
+ * ({@link Projector#verifyBoundaryWeights}); the paper's stability bounds for
+ * rough fields therefore do not apply.
  *
  * **Coupling note:** This class accesses mesh data through the {@link Mesh}
  * public API (getters for vertices, faces, edges, boundary flags, orientation
@@ -152,6 +164,30 @@ export class Projector {
     }
   }
 
+  /**
+   * Throws if a projected value is not finite.  The projection reads the
+   * input field at degrees of freedom (vertex values, edge and face
+   * integrals); a field that is infinite or NaN there, for example an H^1
+   * field that is unbounded at a mesh vertex, would otherwise be returned
+   * silently as Infinity or NaN.
+   * @param {(number|!Array<number>)} value
+   * @param {string} name - Public method that produced the value.
+   * @return {(number|!Array<number>)} The same value.
+   * @private
+   */
+  static requireFinite (value, name) {
+    const finite = typeof value === 'number'
+      ? Number.isFinite(value)
+      : value.every(Number.isFinite)
+    if (!finite) {
+      throw new ProjectError(
+        `${name} produced a non-finite value (${JSON.stringify(value)}); ` +
+        'the input field is not finite at a degree of freedom of the mesh'
+      )
+    }
+    return value
+  }
+
   /** @private */
   static validatePoint (point) {
     if (!Array.isArray(point) || point.length !== 3 ||
@@ -192,7 +228,7 @@ export class Projector {
   projectH1 (u, point, tIdx) {
     Projector.validatePoint(point)
     this.validateTetIdx(tIdx)
-    return this.h1.project(u, point, tIdx)
+    return Projector.requireFinite(this.h1.project(u, point, tIdx), 'projectH1')
   }
 
   /**
@@ -207,7 +243,8 @@ export class Projector {
   projectHcurl (u, point, tIdx) {
     Projector.validatePoint(point)
     this.validateTetIdx(tIdx)
-    return this.hcurl.project(u, point, tIdx, this.edgeSet)
+    return Projector.requireFinite(
+      this.hcurl.project(u, point, tIdx, this.edgeSet), 'projectHcurl')
   }
 
   /**
@@ -222,7 +259,8 @@ export class Projector {
   projectHdiv (u, point, tIdx) {
     Projector.validatePoint(point)
     this.validateTetIdx(tIdx)
-    return this.hdiv.project(u, point, tIdx, this.faceSet)
+    return Projector.requireFinite(
+      this.hdiv.project(u, point, tIdx, this.faceSet), 'projectHdiv')
   }
 
   /**
@@ -233,7 +271,7 @@ export class Projector {
    */
   projectL2 (u, tIdx) {
     this.validateTetIdx(tIdx)
-    return this.l2.project(u, tIdx)
+    return Projector.requireFinite(this.l2.project(u, tIdx), 'projectL2')
   }
 
   /**
@@ -271,11 +309,11 @@ export class Projector {
         p,
         u
       )
-      return this.bubble.evaluateL2Projection(
+      return Projector.requireFinite(this.bubble.evaluateL2Projection(
         coeffs,
         bary,
         p
-      )
+      ), 'projectHp')
     }
 
     if (l === 3) {
@@ -285,11 +323,11 @@ export class Projector {
         p,
         u
       )
-      return this.bubble.evaluateL2Projection(
+      return Projector.requireFinite(this.bubble.evaluateL2Projection(
         coeffs,
         bary,
         p
-      )
+      ), 'projectHp')
     }
 
     throw new ProjectError(
@@ -353,13 +391,13 @@ export class Projector {
 
     // Step 4: Combine: Pi^l = Pi_partial^l + Pi_ring^l(I - Pi_partial^l).
     if (typeof ring === 'number') {
-      return ring + partial
+      return Projector.requireFinite(ring + partial, 'project')
     }
-    return [
+    return Projector.requireFinite([
       ring[0] + partial[0],
       ring[1] + partial[1],
       ring[2] + partial[2]
-    ]
+    ], 'project')
   }
 
   /**

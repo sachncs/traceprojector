@@ -2,7 +2,7 @@ import type {Mesh} from './mesh.js';
 import type {Whitney} from './whitney.js';
 
 /**
- * TRACEPROJECTOR: Bounded, Commuting, Discrete-trace Preserving Projections.
+ * TRACEPROJECTOR: Commuting, Discrete-trace Preserving Projections.
  *
  * Implements the de Rham projection operators Pi^l for l = 0,1,2,3 on
  * tetrahedral meshes with boundary-aware trace preservation.

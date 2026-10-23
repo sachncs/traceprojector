@@ -27,7 +27,7 @@ On a simplicial mesh, the lowest-order finite-element spaces that form a discret
 
 ## Projection Operators
 
-The library implements bounded, commuting, discrete-trace preserving projections `Pi^l` for `l = 0,1,2,3`.
+The library implements commuting, discrete-trace preserving projections `Pi^l` for `l = 0,1,2,3`. Both parts of the decomposition below use canonical degrees of freedom (point values, edge integrals, face fluxes); the boundary weights of Section 6.3 are computed to cross-check those degrees of freedom and do not enter the projection, so the stability bounds proved in the paper for its weight-based operator do not apply to this implementation.
 
 ### Decomposition
 

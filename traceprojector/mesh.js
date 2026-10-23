@@ -9,7 +9,8 @@
  */
 
 import {
-  triangleArea, tetDeterminant, tetVolume, relativeVolume, MIN_RELATIVE_VOLUME
+  triangleArea, tetDeterminant, tetVolume, relativeVolume, MIN_RELATIVE_VOLUME,
+  norm, subtract, cross, dot
 } from './utils.js'
 import { ValidateError } from './errors.js'
 
@@ -91,6 +92,7 @@ export class Mesh {
     this.tetBarycenterCache = []
 
     this.buildTopology()
+    this.validateConformity()
     this.computeOrientationSigns()
     this.precomputeGeometry()
   }
@@ -391,6 +393,11 @@ export class Mesh {
 
     let fIdx = 0
     for (const [key, data] of faceMap.entries()) {
+      if (data.tets.length > 2) {
+        throw new ValidateError(
+          `Face [${data.verts}] is shared by ${data.tets.length} tetrahedra (${data.tets}); ` +
+          'a conforming mesh has at most two per face')
+      }
       this.faces.push(data.verts)
       this.faceToTets.push(data.tets)
       this.faceKeyToIndex.set(key, fIdx)
@@ -452,6 +459,64 @@ export class Mesh {
     for (let eIdx = 0; eIdx < this.edges.length; eIdx++) {
       for (const v of this.edges[eIdx]) {
         this.vertexToEdges[v].push(eIdx)
+      }
+    }
+  }
+
+  /**
+   * Rejects a non-conforming mesh: a vertex lying on a boundary face it does
+   * not belong to (a hanging node) means two cells meet without sharing the
+   * face, so the discrete spaces would not be conforming. Boundary faces are
+   * hashed on a uniform grid, so the check is close to linear in their number.
+   * @private
+   */
+  validateConformity () {
+    const faces = this.boundaryFaces
+    if (faces.length === 0) return
+    const points = (fIdx) => this.faces[fIdx].map((v) => this.vertices[v])
+    let size = 0
+    let low = [Infinity, Infinity, Infinity]
+    for (const fIdx of faces) {
+      const p = points(fIdx)
+      size += Math.max(norm(subtract(p[0], p[1])), norm(subtract(p[1], p[2])), norm(subtract(p[2], p[0])))
+      for (const q of p) low = low.map((x, k) => Math.min(x, q[k]))
+    }
+    const cell = size / faces.length
+    const key = (c) => `${c[0]},${c[1]},${c[2]}`
+    const index = (q) => q.map((x, k) => Math.floor((x - low[k]) / cell))
+    const grid = new Map()
+    for (const fIdx of faces) {
+      const p = points(fIdx)
+      const lo = index([0, 1, 2].map((k) => Math.min(p[0][k], p[1][k], p[2][k])))
+      const hi = index([0, 1, 2].map((k) => Math.max(p[0][k], p[1][k], p[2][k])))
+      for (let i = lo[0]; i <= hi[0]; i++) {
+        for (let j = lo[1]; j <= hi[1]; j++) {
+          for (let k = lo[2]; k <= hi[2]; k++) {
+            const bucket = grid.get(key([i, j, k]))
+            if (bucket) bucket.push(fIdx)
+            else grid.set(key([i, j, k]), [fIdx])
+          }
+        }
+      }
+    }
+    for (const v of this.boundaryNodes) {
+      const q = this.vertices[v]
+      for (const fIdx of grid.get(key(index(q))) ?? []) {
+        const f = this.faces[fIdx]
+        if (f.includes(v)) continue
+        const [a, b, c] = points(fIdx)
+        const n = cross(subtract(b, a), subtract(c, a))
+        const area2 = norm(n)
+        const length = Math.max(norm(subtract(a, b)), norm(subtract(b, c)), norm(subtract(c, a)))
+        if (Math.abs(dot(n, subtract(q, a))) / area2 > 1e-9 * length) continue
+        // Barycentric coordinates of the projection onto the face plane.
+        const w0 = dot(cross(subtract(c, b), subtract(q, b)), n) / (area2 * area2)
+        const w1 = dot(cross(subtract(a, c), subtract(q, c)), n) / (area2 * area2)
+        const w2 = 1 - w0 - w1
+        if (w0 >= -1e-9 && w1 >= -1e-9 && w2 >= -1e-9) {
+          throw new ValidateError(
+            `Vertex ${v} lies on boundary face [${f}] without belonging to it: the mesh is non-conforming (hanging node)`)
+        }
       }
     }
   }

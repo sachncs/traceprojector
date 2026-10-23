@@ -60,9 +60,10 @@ export class AgSpace extends CanonicalProjector {
 
   /**
    * All degrees of freedom of a field.
-   * @param {function(number[]): (number|number[])} u
+   * @param {function(number[], number): (number|number[])} u The field at a
+   *     point of a cell (the second argument is the cell number).
    * @param {number} l Form degree.
-   * @param {?function(number[]): (number|number[])=} du Its derivative
+   * @param {?function(number[], number): (number|number[])=} du Its derivative
    *     (gradient, curl or divergence); needed unless l = 3 or r = 1.
    * @return {Float64Array}
    */
@@ -80,7 +81,7 @@ export class AgSpace extends CanonicalProjector {
         done[base] = 1;
         const corners = carrier.vertices.map((v) => points[v]);
         if (m === 0) {
-          out[base] = u(corners[0]);
+          out[base] = u(corners[0], c);
           return;
         }
         const family = bubbleFamily(this.r, m)[l];
@@ -95,9 +96,11 @@ export class AgSpace extends CanonicalProjector {
               if (!du) {
                 throw new ValidateError('the derivative of u is needed');
               }
-              sum += weight * dot(pullD(s, du), item.derivative(s));
+              sum += weight * dot(
+                  pullD(s, (x) => du(x, c)), item.derivative(s));
             } else {
-              sum += weight * dot(pull(s, u), item.value(s));
+              sum += weight * dot(
+                  pull(s, (x) => u(x, c)), item.value(s));
             }
           }
           out[base + t] = sum;

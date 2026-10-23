@@ -3,6 +3,12 @@
  * stars: compressed sparse rows and conjugate gradients, matrix-free.
  */
 
+import {
+  cholesky,
+  choleskySolveInPlace,
+  solveSemidefinite,
+} from './dense-linear-algebra.js';
+
 /**
  * Compressed sparse row matrix.
  */
@@ -287,4 +293,116 @@ export function minimumNormSolveSparse(constraints, mass, r) {
     residualNorm = norm;
   }
   return {x, residual: residualNorm, scale: rNorm, iterations};
+}
+
+/** Solves L y = b in place for a lower-triangular row-major L. */
+function forwardSubstitute(l, n, b) {
+  for (let i = 0; i < n; i++) {
+    let sum = b[i];
+    const row = i * n;
+    for (let k = 0; k < i; k++) sum -= l[row + k] * b[k];
+    b[i] = sum / l[row + i];
+  }
+}
+
+/** Solves L^T x = y in place for a lower-triangular row-major L. */
+function backwardSubstitute(l, n, b) {
+  for (let i = n - 1; i >= 0; i--) {
+    let sum = b[i];
+    for (let k = i + 1; k < n; k++) sum -= l[k * n + i] * b[k];
+    b[i] = sum / l[i * n + i];
+  }
+}
+
+/**
+ * Minimum-norm solution of C x = r in the metric M by dense linear algebra:
+ * M is factored by Cholesky, and the smaller of the two equivalent systems
+ * (the m x m Gram system C M^-1 C^T, or the n x n normal equations of
+ * C L^-T, with M = L L^T) is solved by a pivoted semidefinite Cholesky.
+ * Exact up to rounding, at O(n^3) cost; use for a few thousand unknowns.
+ *
+ * @param {!SparseMatrix} constraints - C, m x n.
+ * @param {!SparseMatrix} mass - M, n x n, symmetric positive definite.
+ * @param {!Float64Array} r - Length m, in the range of C.
+ * @return {{x: !Float64Array, residual: number, scale: number}}
+ */
+export function minimumNormSolveDense(constraints, mass, r) {
+  const n = mass.rows;
+  const m = constraints.rows;
+  const dense = new Float64Array(n * n);
+  for (let i = 0; i < n; i++) {
+    for (let k = mass.offsets[i]; k < mass.offsets[i + 1]; k++) {
+      dense[i * n + mass.indices[k]] += mass.values[k];
+    }
+  }
+  const factor = cholesky(dense, n);
+  const unit = (j, size) => {
+    const e = new Float64Array(size);
+    e[j] = 1;
+    return e;
+  };
+  let x;
+  if (m <= n) {
+    // Columns of M^-1 C^T.
+    const lifted = [];
+    for (let j = 0; j < m; j++) {
+      const column = constraints.multiplyTranspose(unit(j, m),
+          new Float64Array(n));
+      choleskySolveInPlace(factor, n, column);
+      lifted.push(column);
+    }
+    const gram = new Float64Array(m * m);
+    for (let j = 0; j < m; j++) {
+      const image = constraints.multiply(lifted[j]);
+      for (let i = 0; i < m; i++) gram[i * m + j] = image[i];
+    }
+    for (let i = 0; i < m; i++) {
+      for (let j = i + 1; j < m; j++) {
+        const avg = 0.5 * (gram[i * m + j] + gram[j * m + i]);
+        gram[i * m + j] = avg;
+        gram[j * m + i] = avg;
+      }
+    }
+    const lambda = solveSemidefinite(gram, m, r, 1e-13).x;
+    x = new Float64Array(n);
+    for (let j = 0; j < m; j++) {
+      if (lambda[j] === 0) continue;
+      for (let i = 0; i < n; i++) x[i] += lambda[j] * lifted[j][i];
+    }
+  } else {
+    // A = L^-1 (C^T C) L^-T, b = L^-1 C^T r; x = L^-T y with A y = b.
+    const columns = [];
+    for (let j = 0; j < n; j++) {
+      const column = constraints.multiplyTranspose(
+          constraints.multiply(unit(j, n)), new Float64Array(n));
+      forwardSubstitute(factor, n, column);
+      columns.push(column);
+    }
+    const a = new Float64Array(n * n);
+    // columns[j] = L^-1 B e_j, so X[i][j] = columns[j][i]; A = L^-1 X^T.
+    for (let i = 0; i < n; i++) {
+      const row = Float64Array.from(columns, (c) => c[i]);
+      forwardSubstitute(factor, n, row);
+      for (let j = 0; j < n; j++) a[j * n + i] = row[j];
+    }
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const avg = 0.5 * (a[i * n + j] + a[j * n + i]);
+        a[i * n + j] = avg;
+        a[j * n + i] = avg;
+      }
+    }
+    const b = constraints.multiplyTranspose(r, new Float64Array(n));
+    forwardSubstitute(factor, n, b);
+    x = Float64Array.from(solveSemidefinite(a, n, b, 1e-13).x);
+    backwardSubstitute(factor, n, x);
+  }
+  const cx = constraints.multiply(x);
+  let residual = 0;
+  let scale = 0;
+  for (let i = 0; i < m; i++) {
+    residual += (r[i] - cx[i]) ** 2;
+    scale += r[i] ** 2;
+  }
+  return {x, residual: Math.sqrt(residual), scale: Math.sqrt(scale)};
 }

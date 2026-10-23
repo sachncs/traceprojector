@@ -248,6 +248,42 @@ bumps near the boundary, and the second part of the singular-field criterion
 (change between mesh sizes against the smooth-field change). The stability
 statement holds for the interior part only.
 
+## Mutation testing (A12)
+
+Stryker (`stryker.config.json`) with its generic `command` runner: Stryker's
+mocha runner imports `mocha/lib/cli/run-helpers`, which mocha 12 no longer has,
+so the plugin does not load. The kill signal is the fast unit suite (`npx mocha`,
+about a second); the slower `validation/` suite is not run per mutant, so
+mutants only that suite would kill are counted as survivors.
+
+| Run | Scope | Mutants | Killed (incl. timeouts) | Score |
+|---|---|---:|---:|---:|
+| 1 | 22 files, suite as of the start of the run | 4,445 | 3,065 | **68.95%**, below the pre-registered 70% |
+| 2 | `simplicial-complex.js` only, current suite | 310 | 288 | 92.9% |
+| Combined | run 1 without `simplicial-complex.js`, plus run 2 | 4,446 | 3,353 | **75.42%** |
+
+Run 1 scored `simplicial-complex.js` at 0%: Stryker copies the project when it
+starts, and the unit tests that exercise that module were written after the
+copy. Run 2 re-measures it with the tests that now exist. The other files were
+measured before the Google-style reformat, which changed no behaviour. The
+modules `local-weights.js`, `zero-trace-projector.js`, `stable-projector.js`
+and `bounded-commuting-projector.js` were not mutated: the fast suite tests
+them only lightly, and the validation suite is too slow to run per mutant.
+
+Survivors in run 1 (1,380 of 4,445), by kind: arithmetic operators 371,
+conditional expressions 275, equality operators 188, array declarations 120,
+block statements 110, string literals 86 (mostly error-message text, which
+no test asserts), logical operators 47, calls 38, and others 105. Weakest
+files: `refinement.js` 50%, `errors.js` 50%, `traceprojector.js` 55%,
+`surface.js` 59%, `l2.js` 64%, `sparse-linear-algebra.js` 66%, `locator.js`
+68%, `bubble.js` 68%.
+
+**Not done:** the plan asks that survivors in `bweight.js`, `bubble.js` and
+`projectors/` get a killing test. Those files have 78, 87 and 43 survivors
+(`bweight.js` 83%, `bubble.js` 68%, projectors 83%) and no killing tests were
+added, so that part of the criterion is open. `bubble.js`, the higher-order
+code, is the weakest of the three.
+
 ## Known gaps
 
 - The paper's weight-based boundary operator `Π_∂` is not implemented, so

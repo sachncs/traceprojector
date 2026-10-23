@@ -39,7 +39,7 @@ Status is the strongest evidence added here beyond the paper's own proof:
 | K1 | `Πu = u` on the discrete space (P1 Thm 3.1) | identity | `identities.test.js` (canonical), `stable-operator.test.js` (stable), `bounded-commuting.test.js` (bounded, nonzero trace) |
 | K2 | `tr Πu = tr u` for `u ∈ V_tr,p` (P1 Thm 3.1) | identity | same files |
 | K3 | `dΠu = Πdu` (P1 Thm 3.1) | identity: holds for **every** `u` for `BoundedCommutingProjector`; **narrowed to `V_tr,p`** for the trace-preserving operators | see "Commuting" below; `bounded-commuting.test.js` |
-| K4 | local L²/graph bounds, constants depend only on `ρ, p` (P1 Thm 3.1) | empirical | **fails for `Projector`** (growth 64× over a 16× narrowing); holds for the interior part of `StableProjector` (ratio 0.86, growth 1.007 per halving), whose boundary part is open; holds everywhere for `BoundedCommutingProjector` (ratio 0.856, growth 1.000 per halving, at the boundary) |
+| K4 | local L²/graph bounds, constants depend only on `ρ, p` (P1 Thm 3.1) | empirical | **fails for `Projector`** (growth 64× over a 16× narrowing); holds for the interior part of `StableProjector` (ratio 0.86, growth 1.007 per halving), whose boundary part is open; holds everywhere for `BoundedCommutingProjector` (ratio 0.856, growth 1.000 per halving, at the boundary); holds for `TracePreservingProjector` at the boundary (ratio 1.01 for 0-forms and 1.006 for 1-forms, growth 0.995 per halving, `validation/trace-preserving.test.js`) |
 | K5 | L² stability on `V_{d,p}` (P1 Cor 3.2) | unchecked | needs the paper's boundary operator |
 | K6 | stable discrete lifting `Π∘E` (P1 Lemma 3.4) | unchecked | needs a harmonic extension and the boundary operator |
 | K7 | best approximation and polynomial extension (P1 Cors) | unchecked | follow from K4–K6 by the paper's proofs |
@@ -325,9 +325,10 @@ case.
   trace. For fields outside that class (a smooth non-polynomial field, or a
   polynomial field with a non-Whitney trace) the commuting residual is about
   5e-3 (0-forms) and 2e-3 (1-forms) at this size, because `mΠ` is only defined
-  on zero-trace fields; its dependence on `h` has not been measured. The local
-  `L²` bound (D4, K4, K5) of the full operator and its behaviour at higher
-  order are not yet measured. The operator needs a mesh fine enough that the
+  on zero-trace fields; its dependence on `h` has not been measured. Its local `L²` stability at the boundary is measured
+  (K4 above: ratio 1.01 and 1.006, growth 0.995 per halving of `h` for bumps at
+  a face centre, 0- and 1-forms, `n = 4` to `8`); 2- and 3-forms and corner and
+  edge bumps are not measured, and neither is behaviour at higher order. The operator needs a mesh fine enough that the
   extended stars are balls (it raises `ValidateError` on a 3 × 3 × 3 cube) and takes minutes on
   4 × 4 × 4 cells.
 - Higher order (`p > 0`) for the stable operators: Arnold–Guzmán (2021,

@@ -1,5 +1,8 @@
 import {expect} from 'chai';
 import {generateUnitCubeMesh} from '../traceprojector/generator.js';
+import {tetrahedronRule} from '../traceprojector/simplicial-complex.js';
+import {tolerances} from './support/tolerances.js';
+import {fitSlope} from './support/statistics.js';
 import {
   TracePreservingProjector,
 } from '../traceprojector/trace-preserving-projector.js';
@@ -102,4 +105,93 @@ describe('commuting of the trace-preserving projection', function() {
     console.log(`      1-form commuting residual: ${worst.toExponential(2)}`);
     expect(worst).to.be.below(1e-9);
   });
+});
+
+describe('stability of the trace-preserving projection at the boundary', function() {
+  this.timeout(1800000);
+
+  const bumpNormSquared = (delta) => {
+    // Half a bump lies inside the cube: 2 pi delta^3 * int (1 - s^2)^4 s^2.
+    let sum = 0;
+    const N = 20000;
+    for (let i = 0; i < N; i++) {
+      const s = (i + 0.5) / N;
+      sum += (1 - s * s) ** 4 * s * s / N;
+    }
+    return 2 * Math.PI * sum * delta ** 3;
+  };
+  const fieldW = [1, -2, 0.5];
+
+  /** Largest L2 ratio over two bump widths, for a bump at the face centre. */
+  function worstRatio(n, l) {
+    const base = generateUnitCubeMesh(n);
+    const p = new TracePreservingProjector(
+        base.getVertices(), base.getTetrahedra(), {quadratureOrder: 4});
+    const c = p.complex;
+    const centre = c.vertices.reduce((best, v, i) => {
+      const d = Math.hypot(v[0] - 0.5, v[1] - 0.5, v[2]);
+      return d < best.d ? {i, d} : best;
+    }, {i: -1, d: Infinity});
+    const x0 = c.vertices[centre.i];
+    let touching = new Set([centre.i]);
+    const cells = new Set();
+    for (let ring = 0; ring < 3; ring++) {
+      c.cells.forEach((t, k) => {
+        if (t.some((v) => touching.has(v))) cells.add(k);
+      });
+      touching = new Set([...cells].flatMap((k) => c.cells[k]));
+    }
+    let worst = 0;
+    for (const delta of [1 / n, 1 / (2 * n)]) {
+      const radial = (x) => x.map((q, i) => q - x0[i]);
+      const s = (x) => Math.hypot(...radial(x)) / delta;
+      const bump = (x) => (s(x) < 1 ? (1 - s(x) ** 2) ** 2 : 0);
+      const gradient = (x) => (s(x) >= 1 ? [0, 0, 0] : radial(x).map(
+          (q) => -4 * (1 - s(x) ** 2) / delta ** 2 * q));
+      const u = l === 0 ? bump : (x) => fieldW.map((q) => q * bump(x));
+      const du = l === 0 ? gradient : (x) => {
+        const g = gradient(x);
+        return [g[1] * fieldW[2] - g[2] * fieldW[1],
+          g[2] * fieldW[0] - g[0] * fieldW[2],
+          g[0] * fieldW[1] - g[1] * fieldW[0]];
+      };
+      let sum = 0;
+      for (const k of cells) {
+        const coefficients = c.cellEntities(k, l).map(
+            (e) => p.coefficient(u, du, l, e));
+        for (const {x, weight} of tetrahedronRule(c.geometry(k).points, 4)) {
+          const basis = c.whitney(k, l, x);
+          const value = l === 0 ?
+            basis.reduce((a, q, i) => a + q * coefficients[i], 0) :
+            Math.hypot(...[0, 1, 2].map((d) => basis.reduce(
+                (a, q, i) => a + q[d] * coefficients[i], 0)));
+          sum += weight * value * value;
+        }
+      }
+      const norm = l === 0 ? bumpNormSquared(delta) :
+        bumpNormSquared(delta) * (fieldW[0] ** 2 + fieldW[1] ** 2 +
+          fieldW[2] ** 2);
+      worst = Math.max(worst, Math.sqrt(sum / norm));
+    }
+    return worst;
+  }
+
+  for (const l of [0, 1]) {
+    it(`degree ${l}: the constant does not grow as h shrinks`, () => {
+      const sizes = [4, 5, 6, 8];
+      const logH = [];
+      const logC = [];
+      for (const n of sizes) {
+        const ratio = worstRatio(n, l);
+        console.log(`      n = ${n}: largest ratio at the boundary ${ratio.toFixed(3)}`);
+        logH.push(Math.log(1 / n));
+        logC.push(Math.log(ratio));
+        expect(ratio).to.be.below(50);
+      }
+      const growth = 2 ** -fitSlope(logH, logC).slope;
+      console.log(`      growth per halving of h = ${growth.toFixed(3)}`);
+      expect(growth).to.be.at.most(
+          tolerances.stableOperator.stability.maxGrowthPerHalvingOfH);
+    });
+  }
 });

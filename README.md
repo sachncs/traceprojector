@@ -57,7 +57,15 @@ It follows the decomposition `Π^l = Π_∂^l + Π_ring^l (I − Π_∂^l)` of
 > input must have well-defined point values, edge integrals and face fluxes,
 > and a non-finite value raises `ProjectError`.
 >
-> `StableProjector` (lowest order, `p = 0`) implements the locally
+> `TracePreservingProjector` (lowest order, `p = 0`) is the full operator
+> `Π = mΠ(I − Π_∂) + Π_∂`: a projection onto the Whitney forms that preserves
+> the discrete trace on the boundary and commutes with the exterior derivative
+> for fields whose trace is a lowest-order trace (checked to 4e-14). For other
+> fields the commuting residual is about 5e-3 on a 4×4×4 cube. It is for
+> validation-scale meshes: it takes minutes on 4×4×4 cells and needs a mesh
+> fine enough that the extended stars are balls.
+>
+, `p = 0`) implements the locally
 > L²-bounded interior part of the construction (Ern, Guzmán, Potu, Vohralík,
 > [arXiv:2502.03601](https://arxiv.org/abs/2502.03601)): interior coefficients
 > are integrals against local weight functions, so an input that is unbounded
@@ -65,7 +73,7 @@ It follows the decomposition `Π^l = Π_∂^l + Π_ring^l (I − Π_∂^l)` of
 > canonical degrees of freedom, so it needs finite boundary values, and it
 > commutes with the exterior derivative for fields with a piecewise
 > polynomial trace (the class for which the paper's proof applies). The
-> paper's weight-based boundary operator is not implemented. It is slower
+> boundary part is completed by `TracePreservingProjector`. It is slower
 > (iterative local solves on stars of up to several mesh rings) and is meant
 > for validation-scale meshes. `ZeroTraceProjector` is its zero-trace interior
 > part.

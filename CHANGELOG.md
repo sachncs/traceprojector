@@ -23,6 +23,12 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - `BoundedCommutingProjector` (lowest order): the projection of
   arXiv:2502.03601 Thm 5.1 without boundary condition. Locally L²-bounded and
   commuting for every input, boundary included; does not preserve traces.
+- `TracePreservingProjector` (lowest order): the full operator
+  `Π = mΠ(I − Π_∂) + Π_∂` of the boundary-preserving paper: a projection onto
+  the Whitney forms that preserves the discrete trace and commutes with the
+  exterior derivative for fields with a lowest-order trace (4e-14 measured).
+  Built from the boundary weights, the Worsey–Farin extension and
+  `ZeroTraceProjector`.
 - `docs/VALIDATION.md` and a `validation/` suite with tolerances fixed before
   the first run (`validation/tolerances.json`).
 - `npm run verify`: lint, tests, build, export parity, types parity (`tsd` and

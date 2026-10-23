@@ -48,9 +48,9 @@ Status is the strongest evidence added here beyond the paper's own proof:
 | D3 | `Π_∂u = 0` away from the boundary | identity | holds by construction for canonical `Π_∂` (no boundary entity, no term) |
 | D4 | local bound on `Π_∂`, incl. `Π_∂³` | empirical | **fails for canonical `Π_∂`** (point values); not implemented for the paper's `Π_∂` |
 | D5 | `Π_∂³` preserves cell integrals | identity | `tests/` (cell-mean projection) |
-| W1 | `α_r(w) = (tr w, ζ_r)_Γ`, zero on zero-trace (P1 Lemma 4.2) | unchecked | bulk extension `Y` not implemented |
+| W1 | `α_r(w) = (tr w, ζ_r)_Γ`, zero on zero-trace (P1 Lemma 4.2) | identity (`p = 0`) | `tests/boundary_projector.test.js`: `α_r(W_s) = δ_rs` for every boundary vertex, edge and face `r` and every Whitney form `W_s` of the mesh, with the extensions `Y` on the Worsey–Farin split |
 | W2 | `(ζ_{0,r}, tr B_{0,r'})_Γ = δ` (P1 Lemma 5.x) | identity | existing `tests/bweight.test.js`, `tests/weight.test.js`, `verifyBoundaryWeights` (not independently re-derived here) |
-| W3 | `−sdiv ζ¹ = Σκζ⁰`, `srot ζ² = Σκζ¹` | unchecked | not tested separately |
+| W3 | `−sdiv ζ¹ = Σκζ⁰`, `srot ζ² = Σκζ¹` | identity (`p = 0`) | `tests/boundary_weights.test.js`: divergence of the edge weight matches the vertex weights; the face weight's rotation matches the edge weights to 1e-9 |
 | W4 | partition of unity `Σ tr³(div B²)ζ² ≡ 1` | unchecked | not tested separately |
 | W5 | higher order: Kronecker, `ζ₀ ⊥ tr B₊`, mean-zero `div B₊²` | unchecked | `p ≥ 1` for `l = 1, 2` is not implemented |
 | W6 | support and `h^β` norm bounds on `B`, `Y` | unchecked | — |
@@ -59,8 +59,8 @@ Status is the strongest evidence added here beyond the paper's own proof:
 | M2 | the input meets the star assumption (P2 §2) | empirical | **fails on cube meshes at radius one near edges**; the implementation grows the star until it holds; `LocalWeights.radius` raises `ValidateError` if no radius up to 4 works |
 | G1 | `p > 0` for `l ∈ {1, 2}` | unchecked | not implemented (the code throws) |
 
-**Counts (22 claims, for the trace-preserving construction of Paper 1):** identity 9 (K1, K2, K3 narrowed, D1, D2, D3, D5, W2,
-M1), empirical 3 (K4, D4, M2), unchecked 10 (K5, K6, K7, W1, W3, W4, W5, W6,
+**Counts (22 claims, for the trace-preserving construction of Paper 1):** identity 11 (K1, K2, K3 narrowed, D1, D2, D3, D5, W1, W2, W3,
+M1; W1 and W3 at `p = 0`), empirical 3 (K4, D4, M2), unchecked 8 (K5, K6, K7, W4, W5, W6,
 W7, G1). K4, D4 and M2 each have a documented negative or partial result.
 
 ### Commuting (K3): the paper's statement is wider than its proof
@@ -316,17 +316,20 @@ case.
 
 ## Known gaps
 
-- The paper's weight-based boundary operator `Π_∂` is not implemented, so
-  boundary roughness is not covered and commuting outside `V_tr,p` is open.
-  The paper's central identity (Thm 2.1) is `Π = mΠ (I - Π_∂) + Π_∂`, where
-  `mΠ` is the zero-trace projection, which `ZeroTraceProjector` already
-  implements. What is missing is `Π_∂`, which must preserve traces on
-  `V_tr,p`, commute with `d` up to traces, vanish at interior simplices, and
-  be locally bounded. Built so far (internal, tested): the Worsey–Farin split
-  (`worsey-farin.js`) and the oriented boundary surface with its Alfeld split
-  (`boundary-surface.js`). Still to build: the finite element spaces over the
-  split meshes with their boundary degrees of freedom, the star-wise weight
-  problems on the surface, and the extensions `Y` into the bulk.
+- The paper's weight-based boundary operator `Π_∂` is implemented at lowest
+  order as `BoundaryProjector` (vertex, edge and face weights on the boundary
+  surface; extensions `Y` on the Worsey–Farin split), and `TracePreservingProjector`
+  assembles `Π = mΠ (I - Π_∂) + Π_∂`. Measured on the 4 × 4 × 4 cube: it
+  reproduces the lowest-order spaces in all four degrees, and commutes with
+  `d` to 4e-14 (0-forms) and 2e-14 (1-forms) for fields with a lowest-order
+  trace. For fields outside that class (a smooth non-polynomial field, or a
+  polynomial field with a non-Whitney trace) the commuting residual is about
+  5e-3 (0-forms) and 2e-3 (1-forms) at this size, because `mΠ` is only defined
+  on zero-trace fields; its dependence on `h` has not been measured. The local
+  `L²` bound (D4, K4, K5) of the full operator and its behaviour at higher
+  order are not yet measured. The operator needs a mesh fine enough that the
+  extended stars are balls (it raises `ValidateError` on a 3 × 3 × 3 cube) and takes minutes on
+  4 × 4 × 4 cells.
 - Higher order (`p > 0`) for the stable operators: Arnold–Guzmán (2021,
   ESAIM M2AN 55, doi 10.1051/m2an/2021054) was read. Their projection is
   `π_r = P_r + Q_r (I - P_r)` (eq. 5.2), where `P_r` is the lowest-order

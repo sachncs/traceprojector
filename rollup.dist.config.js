@@ -22,7 +22,7 @@ export default [
       name: 'TraceProjector',
       sourcemap: true,
       outro:
-        'if(typeof window!=="undefined"){for(const _e of["Mesh","Whitney","Projector","Locator","Refinement","Weight","Bubble","Solver","ValidateError","ProjectError","SingularError","H1","Hcurl","Hdiv","L2","ZeroTraceProjector","StableProjector","BoundedCommutingProjector"]){if(typeof TraceProjector[_e]!=="undefined"&&typeof window[_e]==="undefined"){window[_e]=TraceProjector[_e];}}}',
+        'if(typeof window!=="undefined"){for(const _e of["Mesh","Whitney","Projector","Locator","Refinement","Weight","Bubble","Solver","ValidateError","ProjectError","SingularError","H1","Hcurl","Hdiv","L2","ZeroTraceProjector","StableProjector","BoundedCommutingProjector","TracePreservingProjector"]){if(typeof TraceProjector[_e]!=="undefined"&&typeof window[_e]==="undefined"){window[_e]=TraceProjector[_e];}}}',
     },
     plugins: [resolve(), commonjs(), terser()],
   },

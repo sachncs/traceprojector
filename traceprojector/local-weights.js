@@ -247,7 +247,7 @@ export class LocalWeights {
           this.split.geometry(s).points,
           order,
       )) {
-        sum += weight * inner(this.evaluate(l, w.dofs, s, x), u(x));
+        sum += weight * inner(this.evaluate(l, w.dofs, s, x), u(x, s >> 2));
       }
     }
     return sum;

@@ -211,4 +211,5 @@ export { L2 } from './projectors/l2.js';
 export { ZeroTraceProjector } from './zero-trace-projector.js';
 export { BoundedCommutingProjector } from './bounded-commuting-projector.js';
 export { StableProjector } from './stable-projector.js';
+export { CanonicalProjector } from './canonical-projector.js';
 export { TracePreservingProjector } from './trace-preserving-projector.js';

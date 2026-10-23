@@ -57,6 +57,13 @@ It follows the decomposition `Π^l = Π_∂^l + Π_ring^l (I − Π_∂^l)` of
 > input must have well-defined point values, edge integrals and face fluxes,
 > and a non-finite value raises `ProjectError`.
 >
+> `CanonicalProjector` interpolates onto the Lagrange, Nédélec,
+> Raviart–Thomas and discontinuous spaces of **any** degree `p` (Arnold–Falk–
+> Winther canonical degrees of freedom). It is a projection, preserves the
+> boundary trace and commutes with the exterior derivative (checked for
+> `p = 0, 1, 2`, all form degrees), with the expected convergence orders.
+> Like `Projector` it needs regular input and is not `L²`-stable.
+>
 > `TracePreservingProjector` (lowest order, `p = 0`) is the full operator
 > `Π = mΠ(I − Π_∂) + Π_∂`: a projection onto the Whitney forms that preserves
 > the discrete trace on the boundary and commutes with the exterior derivative
@@ -435,8 +442,6 @@ dist/                          — Rollup bundles: ESM, CJS, UMD
 
 ### High priority
 
-- **Vector-valued higher-order projections** (`l = 1, 2`, `p > 0`) —
-  Nédélec and Raviart-Thomas enrichment for `H(curl)` and `H(div)`.
 - **Adaptive mesh refinement support** — integrate `Refinement` APIs
   into `Projector` so boundary weights can be recomputed
   incrementally as the mesh refines.
@@ -455,8 +460,6 @@ dist/                          — Rollup bundles: ESM, CJS, UMD
   precision.
 - **Time-dependent projections** — cache-friendly APIs for projecting
   fields that evolve between time steps.
-- **Arbitrary polynomial degree `p`** — unify the scalar bubble and
-  L² monomial bases into a single hierarchical basis generator.
 
 ---
 

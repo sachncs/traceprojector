@@ -23,6 +23,10 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - `BoundedCommutingProjector` (lowest order): the projection of
   arXiv:2502.03601 Thm 5.1 without boundary condition. Locally L²-bounded and
   commuting for every input, boundary included; does not preserve traces.
+- `CanonicalProjector`: canonical interpolation onto `P_r^- Λ^k` of any
+  degree for all form degrees (Lagrange, Nédélec, Raviart–Thomas, DG), with
+  the polynomial form spaces and the reference-element degrees of freedom it
+  is built from. Commutes with `d` and preserves the trace.
 - `TracePreservingProjector` (lowest order): the full operator
   `Π = mΠ(I − Π_∂) + Π_∂` of the boundary-preserving paper: a projection onto
   the Whitney forms that preserves the discrete trace and commutes with the

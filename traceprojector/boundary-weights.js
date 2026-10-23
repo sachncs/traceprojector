@@ -385,5 +385,13 @@ export function faceBoundaryWeight(complex, f) {
     }
     return sum;
   };
-  return {triangles, pair, edgeWeights, rotationResidual: deviation};
+  // Value at x inside child kk of triangle t; zero outside the extended star.
+  const valueAt = (t, kk, x) => {
+    const position = triangles.indexOf(t);
+    if (position < 0) return 0;
+    const k = 3 * position + kk;
+    const lambda = sub3.barycentric(k, x);
+    return split.triangles[k].reduce((s, v, i) => s + value(v) * lambda[i], 0);
+  };
+  return {triangles, pair, edgeWeights, rotationResidual: deviation, valueAt};
 }

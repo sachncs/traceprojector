@@ -194,6 +194,29 @@ export class Projector {
     tIdx: number;
     bary: number[];
   };
+
+  /**
+   * Locates the points once and returns a function that projects successive
+   * fields at them, for fields that evolve between time steps.
+   * @param points - Points inside the mesh.
+   * @param l - Form degree (default 0).
+   * @param p - Polynomial degree (default 0).
+   * @throws ProjectError If a point lies outside the mesh.
+   */
+  sampler(
+    points: number[][],
+    l?: number,
+    p?: number,
+  ): (u: (point: number[]) => number | number[]) => Array<number | number[]>;
+
+  /**
+   * A projector on the mesh obtained by bisecting the marked cells; the
+   * boundary weights are recomputed for the new mesh.
+   * @param marked - Cells to bisect.
+   * @returns The projector on the refined mesh, and the coarse cell each new
+   *   cell came from.
+   */
+  refine(marked: number[]): { projector: Projector; parent: number[] };
 }
 
 export { Mesh } from './mesh.js';
@@ -211,5 +234,6 @@ export { L2 } from './projectors/l2.js';
 export { ZeroTraceProjector } from './zero-trace-projector.js';
 export { BoundedCommutingProjector } from './bounded-commuting-projector.js';
 export { StableProjector } from './stable-projector.js';
+export { refineTetrahedra } from './bisection.js';
 export { CanonicalProjector } from './canonical-projector.js';
 export { TracePreservingProjector } from './trace-preserving-projector.js';

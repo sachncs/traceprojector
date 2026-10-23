@@ -18,10 +18,13 @@ import {
 } from './utils.js';
 import {verifyBoundaryWeights as runVerifyBoundaryWeights} from './boundaryVerify.js';
 import {ProjectError} from './errors.js';
+import {Mesh} from './mesh.js';
+import {Whitney} from './whitney.js';
 import {Weight} from './weight.js';
 import {Locator} from './locator.js';
 import {Bubble} from './bubble.js';
 import {Refinement} from './refinement.js';
+import {refineTetrahedra} from './bisection.js';
 import {H1} from './projectors/h1.js';
 import {Hcurl} from './projectors/hcurl.js';
 import {Hdiv} from './projectors/hdiv.js';
@@ -572,10 +575,59 @@ export class Projector {
       bary,
     };
   }
+
+  /**
+   * Locates the points once and returns a function that projects successive
+   * fields at them, for fields that evolve between time steps. Point location
+   * and, per field, the boundary degrees of freedom are computed once, so
+   * projecting a new field costs only its own quadrature.
+   *
+   * @param {!Array<!Array<number>>} points
+   * @param {number=} l - Form degree (default 0).
+   * @param {number=} p - Polynomial degree (default 0).
+   * @return {function(function(!Array<number>): (number|!Array<number>)):
+   *     !Array<(number|!Array<number>)>}
+   * @throws {ProjectError} If a point lies outside the mesh.
+   */
+  sampler(points, l = 0, p = 0) {
+    if (!this.locator) {
+      this.buildLocator();
+    }
+    const located = points.map((point) => {
+      Projector.validatePoint(point);
+      const found = this.locator.findTetrahedron(point);
+      if (!found) {
+        throw new ProjectError(
+            `Point [${point.join(', ')}] not found in any tetrahedron`);
+      }
+      return {point, tIdx: found.tIdx};
+    });
+    return (u) => located.map(
+        ({point, tIdx}) => this.project(u, point, tIdx, l, p));
+  }
+
+  /**
+   * A projector on the mesh obtained by bisecting the marked cells (see
+   * {@link refineTetrahedra}); the boundary weights are recomputed for the new
+   * mesh.
+   *
+   * @param {!Array<number>} marked - Cells to bisect.
+   * @return {{projector: !Projector, parent: !Array<number>}} The projector
+   *     on the refined mesh, and the coarse cell each new cell came from.
+   */
+  refine(marked) {
+    const refined = refineTetrahedra(
+        this.mesh.getVertices(), this.mesh.getTetrahedra(), marked);
+    const mesh = new Mesh(refined.vertices, refined.tetrahedra);
+    const projector = new Projector(mesh, new Whitney(mesh), {
+      quadratureOrder: this.order,
+      onWarning: this.onWarning,
+    });
+    return {projector, parent: refined.parent};
+  }
 }
 
-export {Mesh} from './mesh.js';
-export {Whitney} from './whitney.js';
+export {Mesh, Whitney};
 export {Locator} from './locator.js';
 export {Refinement} from './refinement.js';
 export {Weight} from './weight.js';
@@ -589,6 +641,7 @@ export {L2} from './projectors/l2.js';
 export {ZeroTraceProjector} from './zero-trace-projector.js';
 export {BoundedCommutingProjector} from './bounded-commuting-projector.js';
 export {StableProjector} from './stable-projector.js';
+export {refineTetrahedra} from './bisection.js';
 export {CanonicalProjector} from './canonical-projector.js';
 export {
   TracePreservingProjector,

@@ -14,7 +14,16 @@
   },
   "stability": {
     "maxGrowthPerHalvingOfH": 1.1,
-    "minQualityLevels": 4
+    "minQualityLevels": 4,
+    "qualityDegradation": {
+      "stretchFactors": [
+        1,
+        2,
+        4,
+        8
+      ],
+      "rule": "stable-projection ratio at stretch s is at most s times the ratio at s=1 (constant grows at most linearly in the aspect ratio); every ratio finite and below 100"
+    }
   },
   "metamorphic": {
     "runsPerProperty": 1000

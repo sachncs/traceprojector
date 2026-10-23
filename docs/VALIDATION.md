@@ -36,10 +36,10 @@ Status is the strongest evidence added here beyond the paper's own proof:
 
 | ID | Claim (source) | Status | Evidence |
 |---|---|---|---|
-| K1 | `Πu = u` on the discrete space (P1 Thm 3.1) | identity | `identities.test.js` (canonical), `stable-operator.test.js` (stable) |
+| K1 | `Πu = u` on the discrete space (P1 Thm 3.1) | identity | `identities.test.js` (canonical), `stable-operator.test.js` (stable), `bounded-commuting.test.js` (bounded, nonzero trace) |
 | K2 | `tr Πu = tr u` for `u ∈ V_tr,p` (P1 Thm 3.1) | identity | same files |
-| K3 | `dΠu = Πdu` (P1 Thm 3.1) | identity, **narrowed to `V_tr,p`** | see "Commuting" below |
-| K4 | local L²/graph bounds, constants depend only on `ρ, p` (P1 Thm 3.1) | empirical | **fails for `Projector`** (growth 64× over a 16× narrowing); holds for the interior part of the stable projection (ratio 0.86, growth 1.007 per halving); boundary part open |
+| K3 | `dΠu = Πdu` (P1 Thm 3.1) | identity: holds for **every** `u` for `BoundedCommutingProjector`; **narrowed to `V_tr,p`** for the trace-preserving operators | see "Commuting" below; `bounded-commuting.test.js` |
+| K4 | local L²/graph bounds, constants depend only on `ρ, p` (P1 Thm 3.1) | empirical | **fails for `Projector`** (growth 64× over a 16× narrowing); holds for the interior part of `StableProjector` (ratio 0.86, growth 1.007 per halving), whose boundary part is open; holds everywhere for `BoundedCommutingProjector` (ratio 0.856, growth 1.000 per halving, at the boundary) |
 | K5 | L² stability on `V_{d,p}` (P1 Cor 3.2) | unchecked | needs the paper's boundary operator |
 | K6 | stable discrete lifting `Π∘E` (P1 Lemma 3.4) | unchecked | needs a harmonic extension and the boundary operator |
 | K7 | best approximation and polynomial extension (P1 Cors) | unchecked | follow from K4–K6 by the paper's proofs |
@@ -59,7 +59,7 @@ Status is the strongest evidence added here beyond the paper's own proof:
 | M2 | the input meets the star assumption (P2 §2) | empirical | **fails on cube meshes at radius one near edges**; the implementation grows the star until it holds; `LocalWeights.radius` raises `ValidateError` if no radius up to 4 works |
 | G1 | `p > 0` for `l ∈ {1, 2}` | unchecked | not implemented (the code throws) |
 
-**Counts (22 claims):** identity 9 (K1, K2, K3 narrowed, D1, D2, D3, D5, W2,
+**Counts (22 claims, for the trace-preserving construction of Paper 1):** identity 9 (K1, K2, K3 narrowed, D1, D2, D3, D5, W2,
 M1), empirical 3 (K4, D4, M2), unchecked 10 (K5, K6, K7, W1, W3, W4, W5, W6,
 W7, G1). K4, D4 and M2 each have a documented negative or partial result.
 

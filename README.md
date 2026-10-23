@@ -29,7 +29,7 @@ Then in your code:
 import { Mesh, Whitney, Projector } from 'traceprojector'
 ```
 
-Or skip the install and try the bundled [web playground](web/) — `npm run web:dev` opens a 3D mesh viewer, an API playground with code export, and a live convergence plot.
+Or skip the install and try the bundled [web playground](site/) — `npm run site:dev` opens a 3D mesh viewer, an API playground with code export, and a live convergence plot.
 
 ---
 
@@ -87,7 +87,7 @@ You, even if:
 - You're a numerical-analysis researcher looking for a small,
   dependency-free reference implementation of `Π^l`.
 - You teach an FEM course and want a live playground for your
-  students — the bundled [web playground](web/) has 3D mesh
+  students — the bundled [web playground](site/) has 3D mesh
   visualisation, a convergence plot, and a code exporter.
 
 If you can install Node 24 (or later) and type commands into a
@@ -150,12 +150,12 @@ npm install traceprojector
 
 ### Option 2 — Try it online (no install)
 
-The bundled [web playground](web/) is a Next.js 16 app that loads the
+The bundled [web playground](site/) is a Next.js 16 app that loads the
 library straight from this repo. Once you have the repo cloned (see
 Option 3), you can run it with:
 
 ```bash
-npm run web:dev          # open http://localhost:3000
+npm run site:dev          # open http://localhost:3000
 ```
 
 It gives you a 3D mesh viewer, an API playground with code export, and

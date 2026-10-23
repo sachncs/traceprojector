@@ -14,8 +14,8 @@ This repository follows a zero-config philosophy: every script is a single `npm 
 | Build | `npm run build` | Build Rollup bundles: ESM, CJS, UMD |
 | Docs | `npm run docs` | Regenerate `docs/api.md` from JSDoc comments |
 | Full Build | `npm run build:full` | Build + docs in one step |
-| Web Dev | `npm run web:dev` | Start the Next.js 16 playground in `web/` |
-| Web Build | `npm run web:build` | Build the Next.js 16 playground for production |
+| Web Dev | `npm run site:dev` | Start the Next.js 16 playground in `site/` |
+| Web Build | `npm run site:build` | Build the Next.js 16 playground for production |
 
 ## Typical PR Workflow
 

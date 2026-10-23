@@ -20,7 +20,7 @@ export default [
   {
     input: './traceprojector/traceprojector.js',
     output: {
-      file: `dist/${pkgName}.cjs.js`,
+      file: `dist/${pkgName}.cjs`,
       format: 'cjs',
       sourcemap: true,
       exports: 'named'

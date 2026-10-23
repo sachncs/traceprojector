@@ -148,7 +148,14 @@ export function agBasis(r, k) {
       matrix, (row) => row[b]));
   const inverse = invert(transpose);
   const basis = inverse.map((row) => combine(space, row, k));
-  const result = {basis, entries, carriers, offsets};
+  const result = {
+    basis,
+    entries,
+    carriers,
+    offsets,
+    functionals,
+    derivatives,
+  };
   basisCache.set(id, result);
   return result;
 }

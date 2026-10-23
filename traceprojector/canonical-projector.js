@@ -11,12 +11,7 @@
 
 import {ValidateError, ProjectError} from './errors.js';
 import {SimplicialComplex} from './simplicial-complex.js';
-import {
-  carriers,
-  countOn,
-  moments,
-  referenceBasis,
-} from './reference-element.js';
+import {moments, referenceBasis} from './reference-element.js';
 
 const EDGE_PAIRS = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
 const FACE_TRIPLES = [[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]];
@@ -49,6 +44,11 @@ export class CanonicalProjector {
     this.layouts = new Map();
   }
 
+  /** The reference element of degree l: dual basis and dof carriers. */
+  element(l) {
+    return referenceBasis(this.r, l);
+  }
+
   /** The cell's map x = p0 + J s, with the inverse transpose and det J. */
   frame(c) {
     const {points} = this.complex.geometry(c);
@@ -66,10 +66,10 @@ export class CanonicalProjector {
   /** Global dof numbering of degree l: block offsets per entity dimension. */
   layout(l) {
     if (this.layouts.has(l)) return this.layouts.get(l);
-    const list = carriers(this.r, l);
+    const {carriers: list, offsets: first} = this.element(l);
     const perEntity = [0, 1, 2, 3].map((m) => {
-      const carrier = list.find((c) => c.dimension === m);
-      return carrier ? countOn(carrier, l) : 0;
+      const at = list.findIndex((c) => c.dimension === m);
+      return at < 0 ? 0 : first[at + 1] - first[at];
     });
     const counts = [
       this.complex.vertices.length,
@@ -109,7 +109,7 @@ export class CanonicalProjector {
   /** Global dof numbers of cell c in the order of the reference basis. */
   cellDofs(c, l) {
     const {perEntity, offsets} = this.layout(l);
-    const {carriers: list} = referenceBasis(this.r, l);
+    const {carriers: list} = this.element(l);
     const out = [];
     for (const carrier of list) {
       const m = carrier.dimension;
@@ -129,7 +129,7 @@ export class CanonicalProjector {
   coefficients(u, l) {
     const {perEntity, offsets, size} = this.layout(l);
     const out = new Float64Array(size);
-    const {carriers: list} = referenceBasis(this.r, l);
+    const {carriers: list} = this.element(l);
     const done = new Uint8Array(size);
     this.complex.cells.forEach((_, c) => {
       const {points} = this.complex.geometry(c);
@@ -164,7 +164,7 @@ export class CanonicalProjector {
    * @return {number|number[]}
    */
   evaluate(coefficients, point, c, l) {
-    const {basis} = referenceBasis(this.r, l);
+    const {basis} = this.element(l);
     const dofs = this.cellDofs(c, l);
     const s = this.referencePoint(c, point);
     const {columns, det, inverse} = this.frame(c);
@@ -199,7 +199,7 @@ export class CanonicalProjector {
    * the curl (l = 1) or the divergence (l = 2).
    */
   derivative(coefficients, point, c, l) {
-    const {basis} = referenceBasis(this.r, l);
+    const {basis} = this.element(l);
     const dofs = this.cellDofs(c, l);
     const s = this.referencePoint(c, point);
     const {columns, det, inverse} = this.frame(c);

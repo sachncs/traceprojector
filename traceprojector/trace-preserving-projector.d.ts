@@ -33,6 +33,17 @@ export class TracePreservingProjector {
   ): Float64Array;
 
   /**
+   * One Whitney coefficient of the projection, computed without the others.
+   * @param entity - Entity number in the projector's complex.
+   */
+  coefficient(
+    u: (point: number[]) => number | number[],
+    du: ((point: number[]) => number | number[]) | null,
+    l: number,
+    entity: number,
+  ): number;
+
+  /**
    * Value of the projection at a point of a cell.
    * @param cell - Cell number.
    * @param l - Form degree.

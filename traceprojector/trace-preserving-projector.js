@@ -34,6 +34,7 @@ export class TracePreservingProjector {
     this.complex = this.boundary.orig;
     this.order = options.quadratureOrder ?? 4;
     this.cache = new WeakMap();
+    this.single = new WeakMap();
   }
 
   /** Boundary entities of degree l as `{entity, alpha(u, du)}` records. */
@@ -59,22 +60,35 @@ export class TracePreservingProjector {
   }
 
   /**
-   * The coefficients of Pi_boundary u on the boundary entities of degree l.
-   * @return {Map<number, number>} Entity number to coefficient.
+   * The coefficients of Pi_boundary u on the boundary entities of degree l,
+   * computed on first use.
+   * @return {{get: function(number): (number|undefined)}} Entity number to
+   *     coefficient; undefined for an entity that is not on the boundary.
    */
   boundaryCoefficients(u, du, l) {
-    const coefficients = new Map();
+    const known = new Map();
     if (l === 3) {
-      this.complex.cells.forEach((_, c) => {
-        const {points} = this.complex.geometry(c);
-        coefficients.set(c, integrateTetrahedron(points, u, this.order));
-      });
-      return coefficients;
+      return {
+        get: (c) => {
+          if (!known.has(c)) {
+            const {points} = this.complex.geometry(c);
+            known.set(c, integrateTetrahedron(points, u, this.order));
+          }
+          return known.get(c);
+        },
+      };
     }
-    for (const {entity, alpha} of this.boundaryEntities(l)) {
-      coefficients.set(entity, alpha(u, du));
-    }
-    return coefficients;
+    const records = new Map(this.boundaryEntities(l).map(
+        (record) => [record.entity, record]));
+    return {
+      get: (entity) => {
+        if (!records.has(entity)) return undefined;
+        if (!known.has(entity)) {
+          known.set(entity, records.get(entity).alpha(u, du));
+        }
+        return known.get(entity);
+      },
+    };
   }
 
   /** Value of the boundary operator's output at x in a cell. */
@@ -124,8 +138,9 @@ export class TracePreservingProjector {
     ][l];
     const out = new Float64Array(count);
     for (let entity = 0; entity < count; entity++) {
-      out[entity] = boundary.has(entity) ?
-        boundary.get(entity) :
+      const own = boundary.get(entity);
+      out[entity] = own !== undefined ?
+        own :
         this.zero.coefficient(residual, l, entity);
       if (!Number.isFinite(out[entity])) {
         throw new ProjectError(
@@ -134,6 +149,28 @@ export class TracePreservingProjector {
     }
     perDegree.set(l, out);
     return out;
+  }
+
+  /**
+   * One Whitney coefficient of Pi u, computed without the others.
+   * @return {number}
+   */
+  coefficient(u, du, l, entity) {
+    let perDegree = this.single.get(u);
+    if (!perDegree) {
+      perDegree = new Map();
+      this.single.set(u, perDegree);
+    }
+    if (!perDegree.has(l)) {
+      const boundary = this.boundaryCoefficients(u, du, l);
+      perDegree.set(l, {
+        boundary,
+        residual: this.residual(u, boundary, l),
+      });
+    }
+    const {boundary, residual} = perDegree.get(l);
+    const own = boundary.get(entity);
+    return own !== undefined ? own : this.zero.coefficient(residual, l, entity);
   }
 
   /**

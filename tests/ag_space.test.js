@@ -54,7 +54,7 @@ describe('the Arnold-Guzman finite element space on a mesh', function() {
             (b[2] - a[2]) * (d[0] - a[0]) - (b[0] - a[0]) * (d[2] - a[2]),
             (b[0] - a[0]) * (d[1] - a[1]) - (b[1] - a[1]) * (d[0] - a[0]),
           ];
-          const tangents = [b.map((q, i) => q - a[i]), d.map((q, i) => q - a[i])];
+          const tangents = [b, d].map((q) => q.map((v, i) => v - a[i]));
           const [left, right] = owners.map(
               (cell) => space.evaluate(c, point, cell, l));
           if (l === 0) {

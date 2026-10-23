@@ -160,3 +160,30 @@ describe('lowest-order face boundary weight', () => {
     });
   });
 });
+
+describe('partition of unity of the face weights (P1 eq. l=2pou)', function() {
+  this.timeout(120000);
+  const {complex} = surfaceOf(3);
+  const weights = complex.triangles.map(
+      (_, f) => faceBoundaryWeight(complex, f));
+
+  it('sum over boundary faces of zeta_f is one at every surface point', () => {
+    complex.triangles.forEach((triangle, t) => {
+      const points = complex.geometry(t).points;
+      const samples = [[0.2, 0.3, 0.5], [0.6, 0.2, 0.2], [1 / 3, 1 / 3, 1 / 3]];
+      for (const w of samples) {
+        const x = [0, 1, 2].map(
+            (k) => w.reduce((s, wi, i) => s + wi * points[i][k], 0));
+        // Child k of the Alfeld split is [g, t_i, t_j] for (i, j) = (0, 1),
+        // (1, 2), (2, 0); it contains the points whose barycentric coordinate
+        // of the corner left out is the smallest.
+        const leftOut = [2, 0, 1];
+        const smallest = [0, 1, 2].reduce((a, b) => (w[b] < w[a] ? b : a), 0);
+        const owner = leftOut.indexOf(smallest);
+        const sum = weights.reduce(
+            (acc, weight) => acc + weight.valueAt(t, owner, x), 0);
+        expect(sum).to.be.closeTo(1, 1e-9);
+      }
+    });
+  });
+});

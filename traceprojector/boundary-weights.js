@@ -277,7 +277,25 @@ export function edgeBoundaryWeight(complex, e) {
     const position = triangles.indexOf(t);
     return position < 0 ? [0, 0, 0] : zeta(3 * position + kk, x);
   };
-  return {triangles, pair, divergence, vertexWeights, valueAt};
+  const normSquared = () => {
+    let sum = 0;
+    for (let k = 0; k < count; k++) {
+      const {points, area} = sub3.geometry(k);
+      for (const {x, weight} of triangleRule(points)) {
+        const z = zeta(k, x);
+        sum += weight * area * dot(z, z);
+      }
+    }
+    return sum;
+  };
+  return {
+    triangles,
+    pair,
+    divergence,
+    vertexWeights,
+    valueAt,
+    normSquared,
+  };
 }
 
 /**
@@ -393,5 +411,23 @@ export function faceBoundaryWeight(complex, f) {
     const lambda = sub3.barycentric(k, x);
     return split.triangles[k].reduce((s, v, i) => s + value(v) * lambda[i], 0);
   };
-  return {triangles, pair, edgeWeights, rotationResidual: deviation, valueAt};
+  const normSquared = () => {
+    let sum = 0;
+    for (let k = 0; k < count; k++) {
+      const {points, area} = sub3.geometry(k);
+      for (const {x, weight} of triangleRule(points)) {
+        const z = valueAt(triangles[split.parent[k]], k % 3, x);
+        sum += weight * area * z * z;
+      }
+    }
+    return sum;
+  };
+  return {
+    triangles,
+    pair,
+    edgeWeights,
+    rotationResidual: deviation,
+    valueAt,
+    normSquared,
+  };
 }

@@ -164,17 +164,8 @@ export class BoundaryProjector {
     return unit(cross(sub(b, a), sub(c, a)));
   }
 
-  /**
-   * alpha_r^1(w) = (w, curl Y) - (curl w, Y) for a boundary edge r, with Y in
-   * N0 of the fine mesh whose boundary circulations are those of the rotated
-   * edge weight.
-   * @param {number} r A boundary edge (index in the surface complex).
-   * @param {function(number[], number): number[]} u The field.
-   * @param {function(number[], number): number[]} curl Its curl.
-   * @return {number}
-   */
-  alpha1(r, u, curl) {
-    const weight = this.weight(1, r);
+  /** The circulations on the fine boundary edges of the rotated weight. */
+  edgeDofs(weight) {
     const dof = new Map();
     for (const t of weight.triangles) {
       const normal = this.normal(t);
@@ -192,6 +183,94 @@ export class BoundaryProjector {
         }
       }
     }
+    return dof;
+  }
+
+  /** The nodal values on the fine boundary vertices of a face weight. */
+  nodalDofs(weight) {
+    const nodal = new Map();
+    for (const t of weight.triangles) {
+      for (let k = 0; k < 3; k++) {
+        const {points} = this.subFaces.get(`${t}_${k}`);
+        for (const v of points) {
+          if (!nodal.has(v)) {
+            nodal.set(v, weight.valueAt(t, k, this.fine.vertices[v]));
+          }
+        }
+      }
+    }
+    return nodal;
+  }
+
+  /**
+   * Squared L2 norm of the extension Y_r^l of the boundary weight into the
+   * bulk.
+   * @param {number} l Form degree of the weight (0, 1 or 2).
+   * @param {number} r The boundary entity.
+   * @return {number}
+   */
+  extensionNormSquared(l, r) {
+    const weight = this.weight(l, r);
+    let sum = 0;
+    if (l === 0) {
+      for (const t of weight.triangles) {
+        for (let k = 0; k < 3; k++) {
+          const entry = this.subFaces.get(`${t}_${k}`);
+          const flux = entry.sign * weight.valueOf(t, k) * entry.area;
+          if (flux === 0) continue;
+          const c = entry.cell;
+          const index = this.fine.cellFaces[c].indexOf(entry.face);
+          for (const {x, weight: q} of tetrahedronRule(
+              this.fine.geometry(c).points, this.order)) {
+            const y = this.fine.whitney(c, 2, x)[index];
+            sum += q * flux * flux * dot(y, y);
+          }
+        }
+      }
+      return sum;
+    }
+    const dofs = l === 1 ? this.edgeDofs(weight) : this.nodalDofs(weight);
+    const cells = new Set();
+    for (const key of dofs.keys()) {
+      (l === 1 ? this.edgeCells : this.vertexCells).get(key)
+          .forEach((c) => cells.add(c));
+    }
+    for (const c of cells) {
+      for (const {x, weight: q} of tetrahedronRule(
+          this.fine.geometry(c).points, this.order)) {
+        let value = 0;
+        if (l === 1) {
+          const basis = this.fine.whitney(c, 1, x);
+          const y = [0, 0, 0];
+          this.fine.cellEdges[c].forEach((e, m) => {
+            const d = dofs.get(e) ?? 0;
+            basis[m].forEach((v, i) => (y[i] += d * v));
+          });
+          value = dot(y, y);
+        } else {
+          const lambda = this.fine.barycentric(c, x);
+          const y = this.fine.cells[c].reduce(
+              (acc, v, i) => acc + (dofs.get(v) ?? 0) * lambda[i], 0);
+          value = y * y;
+        }
+        sum += q * value;
+      }
+    }
+    return sum;
+  }
+
+  /**
+   * alpha_r^1(w) = (w, curl Y) - (curl w, Y) for a boundary edge r, with Y in
+   * N0 of the fine mesh whose boundary circulations are those of the rotated
+   * edge weight.
+   * @param {number} r A boundary edge (index in the surface complex).
+   * @param {function(number[], number): number[]} u The field.
+   * @param {function(number[], number): number[]} curl Its curl.
+   * @return {number}
+   */
+  alpha1(r, u, curl) {
+    const weight = this.weight(1, r);
+    const dof = this.edgeDofs(weight);
     const cellsTouched = new Set();
     for (const edge of dof.keys()) {
       this.edgeCells.get(edge).forEach((c) => cellsTouched.add(c));
@@ -233,17 +312,7 @@ export class BoundaryProjector {
    */
   alpha2(r, u, divergence) {
     const weight = this.weight(2, r);
-    const nodal = new Map();
-    for (const t of weight.triangles) {
-      for (let k = 0; k < 3; k++) {
-        const {points} = this.subFaces.get(`${t}_${k}`);
-        for (const v of points) {
-          if (!nodal.has(v)) {
-            nodal.set(v, weight.valueAt(t, k, this.fine.vertices[v]));
-          }
-        }
-      }
-    }
+    const nodal = this.nodalDofs(weight);
     const cellsTouched = new Set();
     for (const v of nodal.keys()) {
       this.vertexCells.get(v).forEach((c) => cellsTouched.add(c));

@@ -120,13 +120,16 @@ export class SurfaceComplex {
     return found;
   }
 
-  /** Triangles that share a vertex with a triangle of the star. */
+  /**
+   * Triangles that contain at least one vertex of the simplex: the union of
+   * the stars of its vertices (the extended boundary star of the paper).
+   */
   extendedStar(l, index) {
-    const corners = new Set(this.star(l, index).flatMap(
-        (t) => this.triangles[t]));
+    const own = l === 0 ? [index] : l === 1 ? this.edges[index] :
+      this.triangles[index];
     const found = [];
     this.triangles.forEach((triangle, t) => {
-      if (triangle.some((v) => corners.has(v))) found.push(t);
+      if (triangle.some((v) => own.includes(v))) found.push(t);
     });
     return found;
   }

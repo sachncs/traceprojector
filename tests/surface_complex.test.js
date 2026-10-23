@@ -128,16 +128,16 @@ describe('surface exterior derivative and stars', () => {
       expect(complex.triangles[t]).to.include(0));
   });
 
-  it('the extended star contains the star and every triangle touching it', () => {
+  it('the extended star is the union of the stars of the vertices', () => {
     for (const [l, index] of [[0, 3], [1, 5], [2, 7]]) {
-      const star = new Set(complex.star(l, index));
-      const extended = new Set(complex.extendedStar(l, index));
-      star.forEach((t) => expect(extended.has(t)).to.equal(true));
-      const corners = new Set([...star].flatMap((t) => complex.triangles[t]));
-      complex.triangles.forEach((triangle, t) => {
-        const touches = triangle.some((v) => corners.has(v));
-        expect(extended.has(t)).to.equal(touches);
-      });
+      const own = l === 0 ? [index] : l === 1 ? complex.edges[index] :
+        complex.triangles[index];
+      const expected = new Set(own.flatMap((v) => complex.star(0, v)));
+      const extended = complex.extendedStar(l, index);
+      expect(new Set(extended)).to.deep.equal(expected);
+      complex.star(l, index).forEach((t) =>
+        expect(extended).to.include(t));
     }
+    expect(complex.extendedStar(0, 3)).to.deep.equal(complex.star(0, 3));
   });
 });

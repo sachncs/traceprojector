@@ -2,7 +2,10 @@ import {expect} from 'chai';
 import {generateUnitCubeMesh} from '../traceprojector/generator.js';
 import {boundarySurface} from '../traceprojector/boundary-surface.js';
 import {SurfaceComplex} from '../traceprojector/surface-complex.js';
-import {vertexBoundaryWeight} from '../traceprojector/boundary-weights.js';
+import {
+  vertexBoundaryWeight,
+  edgeBoundaryWeight,
+} from '../traceprojector/boundary-weights.js';
 
 function surfaceOf(n) {
   const cube = generateUnitCubeMesh(n);
@@ -70,5 +73,53 @@ describe('vertex boundary weight scaling', () => {
     // Halving h multiplies the norm by about 2 (scale invariance of the
     // normalized weight).
     expect(norms[1] / norms[0]).to.be.within(1.8, 2.2);
+  });
+});
+
+describe('lowest-order edge boundary weight (P1 eq. 805.1)', () => {
+  const {complex} = surfaceOf(3);
+  // The Whitney 1-form of boundary edge f, as a field on the surface.
+  const whitney = (f) => (x) => {
+    for (const t of complex.edgeTriangles[f]) {
+      const {points} = complex.geometry(t);
+      const lambda = complex.barycentric(t, x);
+      const back = [0, 1, 2].map((k) =>
+        lambda.reduce((sum, q, i) => sum + q * points[i][k], 0));
+      const off = Math.hypot(...x.map((q, k) => q - back[k]));
+      if (off < 1e-9 && lambda.every((q) => q > -1e-9)) {
+        return complex.whitney(t, 1, x)[complex.triangleEdges[t].indexOf(f)];
+      }
+    }
+    return [0, 0, 0];
+  };
+  const e = complex.edges.findIndex(([a, b]) => {
+    const p = complex.vertices[a];
+    const q = complex.vertices[b];
+    return p[2] === 0 && q[2] === 0 && p[1] === q[1] && p[1] > 0.2 &&
+      p[1] < 0.8;
+  });
+  const weight = edgeBoundaryWeight(complex, e);
+
+  it('is supported in the extended star of the edge', () => {
+    const [a, b] = complex.edges[e];
+    const touching = complex.triangles.map((t, i) => [t, i])
+        .filter(([t]) => t.includes(a) || t.includes(b)).map(([, i]) => i);
+    expect(weight.triangles.slice().sort()).to.deep.equal(touching.sort());
+  });
+
+  it('reproduces the circulation: (zeta, W_f) = delta for every edge f', () => {
+    complex.edges.forEach((_, f) => {
+      expect(weight.pair(whitney(f))).to.be.closeTo(f === e ? 1 : 0, 1e-9);
+    });
+  });
+
+  it('has divergence minus the difference of the end-vertex weights', () => {
+    for (const t of weight.triangles) {
+      for (let k = 0; k < 3; k++) {
+        const [va, vb] = weight.vertexWeights;
+        expect(weight.divergence(t, k)).to.be.closeTo(
+            -(vb.valueOf(t, k) - va.valueOf(t, k)), 1e-9);
+      }
+    }
   });
 });

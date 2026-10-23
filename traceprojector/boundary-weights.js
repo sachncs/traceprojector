@@ -272,5 +272,118 @@ export function edgeBoundaryWeight(complex, e) {
     });
     return sum / sub3.geometry(k).area;
   };
-  return {triangles, pair, divergence, vertexWeights};
+  // Value at x inside child kk of triangle t; zero outside the extended star.
+  const valueAt = (t, kk, x) => {
+    const position = triangles.indexOf(t);
+    return position < 0 ? [0, 0, 0] : zeta(3 * position + kk, x);
+  };
+  return {triangles, pair, divergence, vertexWeights, valueAt};
+}
+
+/**
+ * The lowest-order weight of a boundary face: the continuous piecewise-linear
+ * function on the Alfeld split of the extended star of the face, zero on its
+ * boundary, whose surface rotation is the signed sum of the weights of the
+ * face's edges. It satisfies (zeta, 1 / |f'|)_f' = delta for every boundary
+ * face f'.
+ *
+ * @param {!Object} complex A SurfaceComplex of the boundary triangles.
+ * @param {number} f A boundary face.
+ * @return {{triangles: number[], pair: function(function(number[]): number):
+ *     number, edgeWeights: !Array<!Object>, rotationResidual: number}} The
+ *     weight, with the largest deviation of its rotation from the edge
+ *     weights it was built from.
+ * @throws {SingularError} If no such function exists.
+ */
+export function faceBoundaryWeight(complex, f) {
+  const triangles = complex.extendedStar(2, f);
+  const edgeWeights = complex.triangleEdges[f].map(
+      (e) => edgeBoundaryWeight(complex, e));
+  const signs = complex.triangleEdges[f].map((e) => edgeSign(complex, f, e));
+  const rhsField = (t, kk, x) => {
+    const out = [0, 0, 0];
+    edgeWeights.forEach((weight, i) => {
+      weight.valueAt(t, kk, x).forEach((q, d) => (out[d] += signs[i] * q));
+    });
+    return out;
+  };
+  const split = alfeldSplit(complex.vertices, triangles.map(
+      (t) => complex.triangles[t]));
+  const sub3 = new complex.constructor(split.vertices, split.triangles);
+  const count = split.triangles.length;
+  const normalOf = (k) => {
+    const {points} = sub3.geometry(k);
+    return unit(crossProduct(sub(points[1], points[0]),
+        sub(points[2], points[0])));
+  };
+  const onBoundary = new Set();
+  sub3.edges.forEach(([p, q], j) => {
+    if (sub3.edgeTriangles[j].length === 1) {
+      onBoundary.add(p);
+      onBoundary.add(q);
+    }
+  });
+  const nodes = [...new Set(split.triangles.flat())]
+      .filter((v) => !onBoundary.has(v));
+  const local = new Map(nodes.map((v, i) => [v, i]));
+  const n = nodes.length;
+  const stiffness = new Float64Array(n * n);
+  const rhs = new Float64Array(n);
+  for (let k = 0; k < count; k++) {
+    const {points, area, gradients} = sub3.geometry(k);
+    const normal = normalOf(k);
+    const child = split.triangles[k];
+    const t = triangles[split.parent[k]];
+    for (let i = 0; i < 3; i++) {
+      if (!local.has(child[i])) continue;
+      for (let j = 0; j < 3; j++) {
+        if (!local.has(child[j])) continue;
+        stiffness[local.get(child[i]) * n + local.get(child[j])] +=
+          area * dot(gradients[i], gradients[j]);
+      }
+      const rotated = crossProduct(gradients[i], normal);
+      for (const {x, weight} of triangleRule(points)) {
+        rhs[local.get(child[i])] +=
+          weight * area * dot(rhsField(t, k % 3, x), rotated);
+      }
+    }
+  }
+  const solved = solveSemidefinite(stiffness, n, rhs);
+  const value = (v) => (local.has(v) ? solved.x[local.get(v)] : 0);
+
+  // Deviation of the rotation of the function from the edge weights.
+  let deviation = 0;
+  for (let k = 0; k < count; k++) {
+    const {points, gradients} = sub3.geometry(k);
+    const normal = normalOf(k);
+    const gradient = [0, 0, 0];
+    split.triangles[k].forEach((v, i) => {
+      gradients[i].forEach((q, d) => (gradient[d] += value(v) * q));
+    });
+    const rotation = crossProduct(gradient, normal);
+    for (const {x} of triangleRule(points)) {
+      const wanted = rhsField(triangles[split.parent[k]], k % 3, x);
+      deviation = Math.max(deviation, Math.hypot(...sub(rotation, wanted)));
+    }
+  }
+  const scale = Math.max(...edgeWeights.map((w) => Math.hypot(
+      ...w.valueAt(triangles[0], 0, complex.geometry(triangles[0]).points[0]))),
+  1);
+  if (deviation > 1e-8 * scale) {
+    throw new SingularError('the rotation of the face weight is inconsistent');
+  }
+  const pair = (field) => {
+    let sum = 0;
+    for (let k = 0; k < count; k++) {
+      const {points, area} = sub3.geometry(k);
+      for (const {x, weight} of triangleRule(points)) {
+        const lambda = sub3.barycentric(k, x);
+        const height = split.triangles[k].reduce(
+            (s, v, i) => s + value(v) * lambda[i], 0);
+        sum += weight * area * height * field(x);
+      }
+    }
+    return sum;
+  };
+  return {triangles, pair, edgeWeights, rotationResidual: deviation};
 }

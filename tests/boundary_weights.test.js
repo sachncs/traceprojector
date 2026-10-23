@@ -5,6 +5,7 @@ import {SurfaceComplex} from '../traceprojector/surface-complex.js';
 import {
   vertexBoundaryWeight,
   edgeBoundaryWeight,
+  faceBoundaryWeight,
 } from '../traceprojector/boundary-weights.js';
 
 function surfaceOf(n) {
@@ -121,5 +122,41 @@ describe('lowest-order edge boundary weight (P1 eq. 805.1)', () => {
             -(vb.valueOf(t, k) - va.valueOf(t, k)), 1e-9);
       }
     }
+  });
+});
+
+describe('lowest-order face boundary weight', () => {
+  const {complex} = surfaceOf(3);
+  const f = complex.triangles.findIndex((t) => {
+    const ps = t.map((v) => complex.vertices[v]);
+    return ps.every((p) => p[2] === 0) &&
+      ps.every((p) => p[0] > 0.2 && p[0] < 0.8 || p[0] === 1 / 3);
+  });
+  const weight = faceBoundaryWeight(complex, f);
+  // The Whitney 2-form of a boundary face: the constant 1 / area on it.
+  const density = (g) => (x) => {
+    const {points, area} = complex.geometry(g);
+    const lambda = complex.barycentric(g, x);
+    const back = [0, 1, 2].map((k) =>
+      lambda.reduce((sum, q, i) => sum + q * points[i][k], 0));
+    const off = Math.hypot(...x.map((q, k) => q - back[k]));
+    return off < 1e-9 && lambda.every((q) => q > -1e-9) ? 1 / area : 0;
+  };
+
+  it('is supported in the extended star of the face', () => {
+    const corners = new Set(complex.triangles[f]);
+    const touching = complex.triangles.map((t, i) => [t, i])
+        .filter(([t]) => t.some((v) => corners.has(v))).map(([, i]) => i);
+    expect(weight.triangles.slice().sort()).to.deep.equal(touching.sort());
+  });
+
+  it('has a rotation equal to the signed sum of the edge weights', () => {
+    expect(weight.rotationResidual).to.be.below(1e-9);
+  });
+
+  it('reproduces the face integral: (zeta, 1 / |g|)_g = delta', () => {
+    complex.triangles.forEach((_, g) => {
+      expect(weight.pair(density(g))).to.be.closeTo(g === f ? 1 : 0, 1e-9);
+    });
   });
 });

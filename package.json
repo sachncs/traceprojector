@@ -58,6 +58,10 @@
     "./generator": {
       "types": "./traceprojector/generator.d.ts",
       "default": "./traceprojector/generator.js"
+    },
+    "./parallel": {
+      "types": "./traceprojector/parallel.d.ts",
+      "default": "./traceprojector/parallel.js"
     }
   },
   "types": "traceprojector/traceprojector.d.ts",

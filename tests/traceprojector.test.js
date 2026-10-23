@@ -291,3 +291,45 @@ describe('anisotropic meshes', () => {
         .to.throw(ValidateError);
   });
 });
+
+describe('projection on worker threads', function() {
+  this.timeout(60000);
+
+  it('matches the serial result for any number of workers', async () => {
+    const {projectInParallel} = await import('../traceprojector/parallel.js');
+    const field = new URL('./fixtures/linear-field.mjs', import.meta.url).href;
+    const base = generateUnitCubeMesh(3);
+    const points = [];
+    for (let i = 1; i < 6; i++) {
+      for (let j = 1; j < 6; j++) points.push([i / 6, j / 6, (i + j) / 13]);
+    }
+    const mesh = new Mesh(base.getVertices(), base.getTetrahedra());
+    const serial = new Projector(
+        mesh, new Whitney(mesh), {onWarning: () => {}});
+    serial.computeBoundaryWeights();
+    const u = (await import(field)).default;
+    const want = serial.sampler(points, 0)(u);
+    for (const workers of [1, 3]) {
+      const got = await projectInParallel({
+        vertices: base.getVertices(),
+        tetrahedra: base.getTetrahedra(),
+        field,
+        points,
+        workers,
+      });
+      got.forEach((value, i) => expect(value).to.be.closeTo(want[i], 1e-12));
+    }
+  });
+
+  it('rejects a field that is not a module URL', async () => {
+    const {projectInParallel} = await import('../traceprojector/parallel.js');
+    let caught = null;
+    try {
+      await projectInParallel({vertices: [], tetrahedra: [], field: () => 1,
+        points: []});
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).to.be.instanceOf(ValidateError);
+  });
+});

@@ -64,6 +64,14 @@ It follows the decomposition `Π^l = Π_∂^l + Π_ring^l (I − Π_∂^l)` of
 > `p = 0, 1, 2`, all form degrees), with the expected convergence orders.
 > Like `Projector` it needs regular input and is not `L²`-stable.
 >
+> `HigherOrderProjector` (any degree `p`) is the locally `L²`-bounded
+> commuting projection of Arnold and Guzmán onto the same spaces. It commutes
+> with the exterior derivative for every `L²` input with an `L²` derivative,
+> reproduces its space, and its `L²` constant did not grow on narrow bumps
+> (1.007 at `p = 1`). It does not preserve boundary traces, needs a mesh fine
+> enough that its extended stars are balls, and is for validation-scale
+> meshes: minutes on 4×4×4 cells at `p = 1`.
+>
 > `TracePreservingProjector` (lowest order, `p = 0`) is the full operator
 > `Π = mΠ(I − Π_∂) + Π_∂`: a projection onto the Whitney forms that preserves
 > the discrete trace on the boundary and commutes with the exterior derivative

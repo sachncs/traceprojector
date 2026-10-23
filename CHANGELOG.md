@@ -23,6 +23,11 @@ and this project follows [Semantic Versioning](https://semver.org/).
 - `BoundedCommutingProjector` (lowest order): the projection of
   arXiv:2502.03601 Thm 5.1 without boundary condition. Locally L²-bounded and
   commuting for every input, boundary included; does not preserve traces.
+- `HigherOrderProjector`: the locally bounded commuting projection of
+  Arnold and Guzmán for any degree `p` and every form degree, with
+  `HighOrderWeights` (weights of any degree), `AgSpace` (their degrees of
+  freedom) and the correction `Q_r`. Commutes with `d` to 2.5e-13 and keeps
+  its `L²` constant (1.007) on narrow bumps at `p = 1`.
 - `refineTetrahedra` and `Projector.refine` (conforming longest-edge
   bisection), `Projector.sampler` (point location cached across time
   steps) and `projectInParallel` (Node worker threads).

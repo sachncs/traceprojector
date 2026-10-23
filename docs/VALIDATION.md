@@ -57,11 +57,11 @@ Status is the strongest evidence added here beyond the paper's own proof:
 | W7 | discrete Poincaré on boundary extended stars | unchecked | — |
 | M1 | `Π̊` is a projection onto the zero-trace space, commuting, L²-bounded (P2 Thm 6.1) | identity + empirical | `stable-operator.test.js` (identities at 2e-15), `stability.test.js` (bounded) |
 | M2 | the input meets the star assumption (P2 §2) | empirical | **fails on cube meshes at radius one near edges**; the implementation grows the star until it holds; `LocalWeights.radius` raises `ValidateError` if no radius up to 4 works |
-| G1 | `p > 0` for `l ∈ {1, 2}` | unchecked | not implemented (the code throws) |
+| G1 | `p > 0` for `l ∈ {1, 2}` | narrowed | canonical interpolation of any degree for all `l` (`CanonicalProjector`: projection, commuting, conforming, convergence orders); locally bounded commuting projection of any degree for all `l` without trace preservation (`HigherOrderProjector`, Arnold–Guzmán). The paper's trace-preserving operator at `p > 0` (the `P_+` part) is not implemented |
 
 **Counts (22 claims, for the trace-preserving construction of Paper 1):** identity 11 (K1, K2, K3 narrowed, D1, D2, D3, D5, W1, W2, W3,
-M1; W1 and W3 at `p = 0`), empirical 3 (K4, D4, M2), unchecked 8 (K5, K6, K7, W4, W5, W6,
-W7, G1). K4, D4 and M2 each have a documented negative or partial result.
+M1; W1 and W3 at `p = 0`), empirical 3 (K4, D4, M2), unchecked 7 (K5, K6, K7, W4, W5, W6,
+W7), narrowed 1 (G1). K4, D4 and M2 each have a documented negative or partial result.
 
 ### Commuting (K3): the paper's statement is wider than its proof
 
@@ -331,16 +331,26 @@ case.
   edge bumps are not measured, and neither is behaviour at higher order. The operator needs a mesh fine enough that the
   extended stars are balls (it raises `ValidateError` on a 3 × 3 × 3 cube) and takes minutes on
   4 × 4 × 4 cells.
-- Higher order (`p > 0`) for the stable operators: Arnold–Guzmán (2021,
-  ESAIM M2AN 55, doi 10.1051/m2an/2021054) was read. Their projection is
-  `π_r = P_r + Q_r (I - P_r)` (eq. 5.2), where `P_r` is the lowest-order
-  stable operator of this library (their Thm 4.3) and `Q_r` projects onto
-  `M_r = (I - Π_1) P_r^- Λ^k`. Building `Q_r` needs, none of which exists
-  here: bases of the full `P_r^- Λ^k` spaces for k = 0..3; the dofs
-  `<<tr_τ w, y>>_τ` of eq. 5.8; the discrete extensions `E_σ` (eq. 5.10) on
-  `G_r^k(σ)`; and weights `Z_r^k(σ)` of every degree. Their commuting and
-  stability claims (Thm 3.1) rest on their Assumption 2.4 (uniformly bounded
-  Bogovskii constants on extended stars), which they do not prove in general.
+- Higher order (`p > 0`) for the stable operators is implemented as
+  `HigherOrderProjector` (Arnold–Guzmán 2021: `π_r = P_r + Q_r (I - P_r)`),
+  without trace preservation and without boundary conditions. Built from
+  `AgSpace` (their degrees of freedom, eq. 5.8; unisolvence and
+  `d E g = E d g` checked for r ≤ 3), `HighOrderWeights` (weights of any
+  degree on Alfeld-split stars) and the correction `Q_r`. Measured at `p = 1`
+  (degree-2 spaces): the weights satisfy `<Z(σ), u> = φ_σ(u)` on the whole
+  space to 1e-13 for all four form degrees and equal `LocalWeights` at
+  `p = 0`; `Q` is the identity on `M_r` and commutes with `d` on smooth
+  non-polynomial fields in degrees 0 to 2; the assembled operator reproduces a
+  quadratic to 5e-15, satisfies `grad π⁰ u = π¹ grad u` to 2.5e-13 on the
+  4 × 4 × 4 cube, and its `L²` ratio on narrow bumps is 1.007 at `n = 4, 5, 6`
+  (growth 1.000 per halving, limit 1.10). Not covered: the end-to-end
+  pipeline was run for `π⁰` and `π¹` only (degrees 2 and 3 follow from the
+  tested components but were not run as one pipeline), no bump stability for
+  `l ≥ 1`, and Assumption 2.4 of the paper (uniformly bounded Bogovskii
+  constants) is an assumption of their theorem, not something checked here.
+  Cost: the weights are dense local solves (about 10 s per edge, 30 s per
+  face and 60 s per cell at `p = 1`), so the operator is for
+  validation-scale meshes.
 - Performance: local problems use iterative solvers on stars of up to several
   rings; the whole `n = 4` mesh takes minutes. Limits are not yet measured.
 - Stability constants (growth under refinement) are not yet measured.

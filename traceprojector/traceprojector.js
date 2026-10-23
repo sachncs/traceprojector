@@ -643,6 +643,7 @@ export {BoundedCommutingProjector} from './bounded-commuting-projector.js';
 export {StableProjector} from './stable-projector.js';
 export {refineTetrahedra} from './bisection.js';
 export {CanonicalProjector} from './canonical-projector.js';
+export {HigherOrderProjector} from './higher-order-projector.js';
 export {
   TracePreservingProjector,
 } from './trace-preserving-projector.js';

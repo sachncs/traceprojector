@@ -1,0 +1,21 @@
+{
+  "_comment": "Pre-registered before the first validation run. Rules and numbers fixed in advance; any later change must be listed with a reason in docs/VALIDATION.md.",
+  "machineEpsilon": 1.1102230246251565e-16,
+  "identity": {
+    "rule": "residual <= c * nOps * machineEpsilon * rho * scale; rho = max over cells of h/theta (diameter over inscribed-ball diameter); scale = max(1, max|field| over the mesh)",
+    "c": 10,
+    "nOps": 100,
+    "quadratureNote": "Identities are tested on polynomial fields whose degree is integrated exactly by the quadrature order in use; quadrature-limited residuals are reported separately and must decrease with order."
+  },
+  "convergence": {
+    "rule": "lower 95% confidence bound of fitted log-log slope >= theoreticalOrder - delta, over >= minRefinements refinements",
+    "delta": 0.1,
+    "minRefinements": 4
+  },
+  "stability": { "maxGrowthPerHalvingOfH": 1.10, "minQualityLevels": 4 },
+  "metamorphic": { "runsPerProperty": 1000 },
+  "fuzz": { "cases": 10000, "timeoutMs": 10000, "heapCeilingMb": 512 },
+  "geometry": { "scaleExponents": [-6, 6], "nearDegenerateTets": 100000 },
+  "mutation": { "breakThresholdPercent": 70 },
+  "coverage": { "branchBaselinePercent": 93.59 }
+}

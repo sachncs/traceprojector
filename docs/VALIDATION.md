@@ -35,11 +35,32 @@ Status is the strongest evidence added here beyond the paper's own proof:
 
 | ID | Claim (source) | Status | Evidence |
 |---|---|---|---|
-| K1 | `Πu = u` on the discrete space (P1 Thm 3.1) | identity | `validation/identities.test.js`, `validation/stable-operator.test.js` |
-| K2 | `tr Πu = tr u` for `u ∈ V_tr,p` (P1 Thm 3.1) | identity | `validation/identities.test.js` (canonical), `validation/stable-operator.test.js` |
-| K3 | `dΠu = Πdu` (P1 Thm 3.1) | identity, **narrowed** | see "Commuting" below |
-| K4 | local L²/graph bounds, constants depend only on `ρ, p` (P1 Thm 3.1) | empirical | **fails for `Projector`**; holds for the interior part of `StableProjector`; open for the boundary part |
-| K5–K7, D1–D5, W1–W7, M1, M2, G1 | see `plan` table | not yet separately tested | — |
+| K1 | `Πu = u` on the discrete space (P1 Thm 3.1) | identity | `identities.test.js` (canonical), `stable-operator.test.js` (stable) |
+| K2 | `tr Πu = tr u` for `u ∈ V_tr,p` (P1 Thm 3.1) | identity | same files |
+| K3 | `dΠu = Πdu` (P1 Thm 3.1) | identity, **narrowed to `V_tr,p`** | see "Commuting" below |
+| K4 | local L²/graph bounds, constants depend only on `ρ, p` (P1 Thm 3.1) | empirical | **fails for `Projector`** (growth 64× over a 16× narrowing); holds for the interior part of the stable projection (ratio 0.86, growth 1.007 per halving); boundary part open |
+| K5 | L² stability on `V_{d,p}` (P1 Cor 3.2) | unchecked | needs the paper's boundary operator |
+| K6 | stable discrete lifting `Π∘E` (P1 Lemma 3.4) | unchecked | needs a harmonic extension and the boundary operator |
+| K7 | best approximation and polynomial extension (P1 Cors) | unchecked | follow from K4–K6 by the paper's proofs |
+| D1 | `tr Π_∂u = tr u` on `V_tr,p` | identity | canonical `Π_∂`: boundary degrees of freedom equal those of `u` (`stable-operator.test.js`) |
+| D2 | `tr(dΠ_∂u) = tr(Π_∂du)` | identity | canonical `Π_∂`: Stokes; exact on boundary edges (checked at the coefficient level) |
+| D3 | `Π_∂u = 0` away from the boundary | identity | holds by construction for canonical `Π_∂` (no boundary entity, no term) |
+| D4 | local bound on `Π_∂`, incl. `Π_∂³` | empirical | **fails for canonical `Π_∂`** (point values); not implemented for the paper's `Π_∂` |
+| D5 | `Π_∂³` preserves cell integrals | identity | `tests/` (cell-mean projection) |
+| W1 | `α_r(w) = (tr w, ζ_r)_Γ`, zero on zero-trace (P1 Lemma 4.2) | unchecked | bulk extension `Y` not implemented |
+| W2 | `(ζ_{0,r}, tr B_{0,r'})_Γ = δ` (P1 Lemma 5.x) | identity | existing `tests/bweight.test.js`, `tests/weight.test.js`, `verifyBoundaryWeights` (not independently re-derived here) |
+| W3 | `−sdiv ζ¹ = Σκζ⁰`, `srot ζ² = Σκζ¹` | unchecked | not tested separately |
+| W4 | partition of unity `Σ tr³(div B²)ζ² ≡ 1` | unchecked | not tested separately |
+| W5 | higher order: Kronecker, `ζ₀ ⊥ tr B₊`, mean-zero `div B₊²` | unchecked | `p ≥ 1` for `l = 1, 2` is not implemented |
+| W6 | support and `h^β` norm bounds on `B`, `Y` | unchecked | — |
+| W7 | discrete Poincaré on boundary extended stars | unchecked | — |
+| M1 | `Π̊` is a projection onto the zero-trace space, commuting, L²-bounded (P2 Thm 6.1) | identity + empirical | `stable-operator.test.js` (identities at 2e-15), `stability.test.js` (bounded) |
+| M2 | the input meets the star assumption (P2 §2) | empirical | **fails on cube meshes at radius one near edges**; the implementation grows the star until it holds; `LocalWeights.radius` raises `ValidateError` if no radius up to 4 works |
+| G1 | `p > 0` for `l ∈ {1, 2}` | unchecked | not implemented (the code throws) |
+
+**Counts (22 claims):** identity 9 (K1, K2, K3 narrowed, D1, D2, D3, D5, W2,
+M1), empirical 3 (K4, D4, M2), unchecked 10 (K5, K6, K7, W1, W3, W4, W5, W6,
+W7, G1). K4, D4 and M2 each have a documented negative or partial result.
 
 ### Commuting (K3): the paper's statement is wider than its proof
 

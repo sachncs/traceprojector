@@ -43,6 +43,7 @@ import {
   physicalForm,
   scaleForm,
   timesPolynomial,
+  translateForm,
   zeroLike,
 } from './physical-forms.js';
 import {Polynomial} from './polynomial-forms.js';
@@ -65,19 +66,88 @@ export class HighOrderWeights {
     this.degree = p;
     this.r = p + 1;
     this.order = options.quadratureOrder ?? 2 * this.r + 2;
+    // Gauss points per direction that integrate the products of two basis
+    // functions of degree r with a bubble exactly.
+    this.exactOrder = this.r + 3;
     this.topology = new LocalWeights(vertices, tetrahedra, {
       boundaryConditions: false,
     });
     this.base = this.topology.base;
     this.weights = [new Map(), new Map(), new Map(), new Map()];
+    // Weights already computed, by the translation class of their star.
+    this.classes = new Map();
+    this.translated = 0;
     this.formCache = new WeakMap();
   }
 
   /** The weight of an entity of degree l, computed on first use. */
   weight(l, index) {
     const cache = this.weights[l];
-    if (!cache.has(index)) cache.set(index, this.compute(l, index));
-    return cache.get(index);
+    if (cache.has(index)) return cache.get(index);
+    const signature = this.signature(l, index);
+    const known = this.classes.get(signature.key);
+    let z;
+    if (known) {
+      z = this.translate(known, signature);
+      this.translated++;
+    } else {
+      z = this.compute(l, index);
+      this.classes.set(signature.key, {z, signature});
+    }
+    cache.set(index, z);
+    return z;
+  }
+
+  /**
+   * The translation class of an entity: its star, as sets of vertex
+   * coordinates relative to the star's lexicographically smallest vertex, and
+   * the entity's own vertices in increasing number. Two entities with the
+   * same key have weights that are translates of each other.
+   */
+  signature(l, index) {
+    const star = this.topology.extendedStar(
+        l, index, this.topology.radius(l, index));
+    const point = (v) => this.base.vertices[v];
+    const all = [...new Set(star.cells.flatMap((c) => this.base.cells[c]))];
+    let origin = point(all[0]);
+    for (const v of all) {
+      const q = point(v);
+      if (q[0] < origin[0] - 1e-12 || (Math.abs(q[0] - origin[0]) <= 1e-12 &&
+          (q[1] < origin[1] - 1e-12 || (Math.abs(q[1] - origin[1]) <= 1e-12 &&
+            q[2] < origin[2] - 1e-12)))) {
+        origin = q;
+      }
+    }
+    const relative = (v) => point(v).map((q, i) => (q - origin[i]).toFixed(9))
+        .join(',');
+    const cellKey = (c) => this.base.cells[c].map(relative).sort().join('|');
+    const own = l === 0 ? [index] : l === 1 ? this.base.edges[index] :
+      l === 2 ? this.base.faces[index] : this.base.cells[index];
+    const key = `${l}#${own.map(relative).join('|')}#${
+      star.cells.map(cellKey).sort().join(';')}`;
+    return {key, origin, cells: star.cells, cellKey};
+  }
+
+  /** The weight of a class representative, moved to another entity. */
+  translate({z, signature: from}, to) {
+    const shift = to.origin.map((q, i) => q - from.origin[i]);
+    const byKey = new Map(to.cells.map((c) => [to.cellKey(c), c]));
+    const vertexAt = (c, target) => this.base.cells[c].findIndex((v) =>
+      this.base.vertices[v].every((q, i) => Math.abs(q - target[i]) < 1e-9));
+    const pieces = z.pieces.map((piece) => {
+      const fromCell = piece.cell;
+      const cell = byKey.get(from.cellKey(fromCell));
+      const dropped = this.base.vertices[
+          this.base.cells[fromCell][piece.k]].map((q, i) => q + shift[i]);
+      const k = vertexAt(cell, dropped);
+      return {
+        cell,
+        k,
+        points: piece.points.map((q) => q.map((v, i) => v + shift[i])),
+        form: translateForm(piece.form, shift),
+      };
+    });
+    return {l: z.l, index: undefined, cells: to.cells, pieces};
   }
 
   /**
@@ -299,7 +369,7 @@ export class HighOrderWeights {
       const forms = this.basisForms(space, c, l);
       const dofs = space.cellDofs(c, l);
       const rule = tetrahedronRule(space.complex.geometry(c).points,
-          2 * this.r + 1);
+          this.exactOrder);
       const values = forms.map((f) => rule.map(({x}) => evaluateForm(f, x)));
       dofs.forEach((a, i) => {
         if (position[a] < 0) return;
@@ -325,7 +395,7 @@ export class HighOrderWeights {
     const size = space.size(l);
     const mu = this.bubbleWeights(splitSpace, centroids);
     const rule = (s) => tetrahedronRule(
-        splitSpace.complex.geometry(s).points, 2 * this.r + 5);
+        splitSpace.complex.geometry(s).points, this.exactOrder);
     const entries = Array.from({length: size}, () => new Map());
     const rhs = new Float64Array(size);
     const derivativeForms = new Map();

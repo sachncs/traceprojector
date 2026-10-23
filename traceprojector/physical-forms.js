@@ -66,6 +66,17 @@ export function physicalForm(form, l, frame) {
       Polynomial.zero()));
 }
 
+/**
+ * The form shifted by T: the form whose value at x is the value of the given
+ * form at x - T.
+ */
+export function translateForm(form, T) {
+  const maps = [0, 1, 2].map((i) => affine(
+      -T[i], [0, 1, 2].map((j) => (j === i ? 1 : 0))));
+  return Array.isArray(form) ?
+    form.map((p) => substitute(p, maps)) : substitute(form, maps);
+}
+
 /** The value of a scalar or triple polynomial form at x. */
 export const evaluateForm = (form, x) => (Array.isArray(form) ?
   form.map((p) => p.evaluate(x)) : form.evaluate(x));

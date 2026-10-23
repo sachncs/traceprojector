@@ -129,7 +129,7 @@ export class HigherOrderProjector {
     const mu = this.weights.bubbleWeights(splitSpace, split.centroids);
     const subCells = splitSpace.complex.cells.length;
     const rules = Array.from({length: subCells}, (_, s) => tetrahedronRule(
-        splitSpace.complex.geometry(s).points, this.order));
+        splitSpace.complex.geometry(s).points, this.weights.exactOrder));
 
     // The mu-weighted mass system on the star, restricted to M_r.
     const systems = new Map();

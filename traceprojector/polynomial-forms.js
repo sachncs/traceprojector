@@ -10,6 +10,17 @@ import {ValidateError} from './errors.js';
 
 const key = (e) => e.join(',');
 
+/** Exponent triples of keys already seen. */
+const parsed = new Map();
+const parse = (k) => {
+  let out = parsed.get(k);
+  if (!out) {
+    out = k.split(',').map(Number);
+    parsed.set(k, out);
+  }
+  return out;
+};
+
 export class Polynomial {
   /** @param {Map<string, number>=} terms Exponent triple to coefficient. */
   constructor(terms = new Map()) {
@@ -40,9 +51,10 @@ export class Polynomial {
   multiply(other) {
     const terms = new Map();
     for (const [a, c] of this.terms) {
+      const [a0, a1, a2] = parse(a);
       for (const [b, d] of other.terms) {
-        const e = key(a.split(',').map((q, i) => Number(q) +
-          Number(b.split(',')[i])));
+        const [b0, b1, b2] = parse(b);
+        const e = `${a0 + b0},${a1 + b1},${a2 + b2}`;
         terms.set(e, (terms.get(e) ?? 0) + c * d);
       }
     }
@@ -53,20 +65,26 @@ export class Polynomial {
   derivative(i) {
     const terms = new Map();
     for (const [e, c] of this.terms) {
-      const exponents = e.split(',').map(Number);
+      const exponents = parse(e).slice();
       if (exponents[i] === 0) continue;
       const factor = exponents[i];
       exponents[i] -= 1;
-      terms.set(key(exponents), (terms.get(key(exponents)) ?? 0) + c * factor);
+      const k = key(exponents);
+      terms.set(k, (terms.get(k) ?? 0) + c * factor);
     }
     return new Polynomial(terms).clean();
   }
 
   evaluate(x) {
+    if (!this.compiled) {
+      const flat = [];
+      for (const [e, c] of this.terms) flat.push(...parse(e), c);
+      this.compiled = Float64Array.from(flat);
+    }
+    const t = this.compiled;
     let sum = 0;
-    for (const [e, c] of this.terms) {
-      const [a, b, d] = e.split(',').map(Number);
-      sum += c * x[0] ** a * x[1] ** b * x[2] ** d;
+    for (let i = 0; i < t.length; i += 4) {
+      sum += t[i + 3] * x[0] ** t[i] * x[1] ** t[i + 1] * x[2] ** t[i + 2];
     }
     return sum;
   }
@@ -76,6 +94,7 @@ export class Polynomial {
     for (const [e, c] of this.terms) {
       if (Math.abs(c) < 1e-14) this.terms.delete(e);
     }
+    this.compiled = undefined;
     return this;
   }
 }

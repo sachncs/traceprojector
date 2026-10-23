@@ -297,9 +297,11 @@ off-centre points were at face centroids, not the Keast points), so the L²
 projection onto P^p was wrong for `p >= 2` (error 0.13 for a linear function at
 `p = 2`, 11 at `p = 3`).
 
-**Still open:** `bweight.js` (83%, 78 survivors) has no new killing tests, and
-its helper functions are not exported, so they can only be reached through the
-weight functionals. The other files of the first run were not re-measured.
+**Still open:** `bweight.js` stays at 82.8% (79 survivors) after the
+similarity-equivariance tests in `tests/bweight_equivariance.test.js`: they
+pass but kill no further mutants, because the surviving mutants sit in helper
+functions that are not exported and that the functionals reach only through
+symmetric paths. The score was re-measured, not improved. The other files of the first run were not re-measured.
 
 ## Known gaps
 

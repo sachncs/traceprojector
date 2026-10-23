@@ -278,11 +278,28 @@ files: `refinement.js` 50%, `errors.js` 50%, `traceprojector.js` 55%,
 `surface.js` 59%, `l2.js` 64%, `sparse-linear-algebra.js` 66%, `locator.js`
 68%, `bubble.js` 68%.
 
-**Not done:** the plan asks that survivors in `bweight.js`, `bubble.js` and
-`projectors/` get a killing test. Those files have 78, 87 and 43 survivors
-(`bweight.js` 83%, `bubble.js` 68%, projectors 83%) and no killing tests were
-added, so that part of the criterion is open. `bubble.js`, the higher-order
-code, is the weakest of the three.
+**Killing tests, and a second measurement.** The survivors showed that the
+unit suite never exercised the full operator `Π = partial + ring`, the degree
+of freedom orientations, the bubble basis or the quadrature rules. Added
+`tests/projector_parts.test.js`, `tests/bubble_properties.test.js` and
+`tests/quadrature_exactness.test.js`. Re-running Stryker on those three groups
+with the current suite (703 killed + 12 timed out of 789 mutants):
+
+| File | Before | After |
+|---|---:|---:|
+| `projectors/` (h1, hcurl, hdiv, l2) | 83.3% | 92.6% |
+| `bubble.js` | 68.4% | 89.1% |
+| `quadrature.js` | 73.9% | 90.3% |
+
+Writing these tests found a real defect, fixed in the same change: the
+tetrahedron rule documented as order 3 was exact only to degree 2 (its four
+off-centre points were at face centroids, not the Keast points), so the L²
+projection onto P^p was wrong for `p >= 2` (error 0.13 for a linear function at
+`p = 2`, 11 at `p = 3`).
+
+**Still open:** `bweight.js` (83%, 78 survivors) has no new killing tests, and
+its helper functions are not exported, so they can only be reached through the
+weight functionals. The other files of the first run were not re-measured.
 
 ## Known gaps
 

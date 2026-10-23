@@ -61,8 +61,9 @@ export class Mesh {
    */
   constructor (vertices, tetrahedra) {
     Mesh.validateInput(vertices, tetrahedra)
-    this.vertices = vertices
-    this.tetrahedra = tetrahedra
+    // The mesh owns its data: refinement appends vertices, which must not leak into the caller's arrays.
+    this.vertices = vertices.map((v) => [...v])
+    this.tetrahedra = tetrahedra.map((t) => [...t])
     this.originalVertexCount = vertices.length
     this.vertexCount = vertices.length
     this.tetrahedronCount = tetrahedra.length

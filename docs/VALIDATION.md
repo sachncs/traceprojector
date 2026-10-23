@@ -117,6 +117,47 @@ the boundary-weight verification; translations to 10^8 are accepted; over
 disagrees with the exact predicate of `robust-predicates`, and none clearly
 above the floor is called degenerate.
 
+## Input robustness: the fuzzer (A8)
+
+`validation/fuzz.test.js` runs 10,000 seeded cases (limits and verdict rule in
+`tolerances.json`), each in a worker thread with a 512 MB heap ceiling and a
+10 s watchdog. Generators: valid perturbed/rotated/shifted/scaled cube meshes,
+non-finite coordinates, empty and non-array input, wrong shapes, bad indices,
+repeated indices, coincident vertices, flat and inverted tetrahedra, extreme
+coordinates (1e±300), disconnected meshes, a face shared by three tetrahedra
+and a hanging node. A case passes when the library raises `ValidateError`,
+`ProjectError` or `SingularError` for invalid input, or returns the exact
+projection of an affine field for valid input.
+
+The first run found two silent acceptances: a **face shared by three
+tetrahedra** and a **hanging node** (two cells meeting without sharing a face)
+were accepted, so projections on such meshes would be wrong without any error.
+`Mesh` now raises `ValidateError` for both. The check does not reject meshes
+with cavities. Result: 10,000 of 10,000 cases pass, with no hangs, crashes or
+untyped errors. Not detected, and not tested: two tetrahedra that overlap in
+volume without any shared-face inconsistency.
+
+## Metamorphic properties (A7)
+
+`validation/metamorphic.test.js` (`fast-check`, 1,000 runs per property, shrinking
+on): for form degrees 0 to 3, the canonical projection is linear, independent of
+vertex and cell numbering (including even permutations of a cell's vertices),
+commutes with rigid motions and with uniform scaling (for the pullback of the
+field), and is idempotent. All pass.
+
+Two things came out of writing these:
+
+- **`computeBoundaryWeights()` modified the caller's arrays.** `Mesh` kept a
+  reference to the `vertices` array it was given and the refinement appended
+  split points to it (27 vertices became 195), so reusing the arrays produced a
+  different mesh. `Mesh` now copies its input.
+- **The default order-3 tetrahedron rule has points on the element faces and a
+  negative weight.** A function that jumps across faces, such as the degree-3
+  output, is then evaluated at ambiguous points: `Π³(Π³u) ≠ Π³u` with that rule
+  (error 0.09) and holds with the interior order-2 rule (`quadratureOrder: 2`).
+  The negative weight also means the cell average is not a monotone
+  positive-weight quadrature. The default was not changed here.
+
 ## Known gaps
 
 - The paper's weight-based boundary operator `Π_∂` is not implemented, so

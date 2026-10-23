@@ -29,7 +29,8 @@ Thrown by `Projector` and projector classes when arguments are invalid or operat
 | Point outside mesh | `Point ... not found in mesh` |
 | Unimplemented higher-order vector projection | `Higher-order vector projection (l=1 or l=2, p>0) is not yet implemented` |
 
-**Recovery**: Validate inputs before calling projection methods; ensure the point locator is built for global queries.
+**Recovery**: Validate inputs before calling projection methods; ensure the
+* point locator is built for global queries.
 
 ## SingularError
 
@@ -41,7 +42,8 @@ Thrown by linear algebra routines in `utils.js` when a matrix is singular or num
 | Zero determinant in `inverse3x3` | `Singular matrix encountered` |
 | Zero determinant in `solve3x3` | `Singular matrix encountered` |
 
-**Recovery**: Check mesh validity (degenerate elements cause singular Jacobians) or verify the input matrix.
+**Recovery**: Check mesh validity (degenerate elements cause singular Jacobians)
+* or verify the input matrix.
 
 ## Weight Warnings
 
@@ -77,7 +79,8 @@ Thrown by linear algebra routines in `utils.js` when a matrix is singular or num
 |------|---------|---------|
 | `LOCAL_SOLVER_ILL_CONDITIONED` | `Solver: matrix is ill-conditioned (norm=...). Results may be inaccurate.` | The local stiffness matrix is numerically ill-conditioned; the solve may be inaccurate. |
 
-**Recovery**: Inspect the local star geometry for inverted or degenerate elements.
+**Recovery**: Inspect the local star geometry for inverted or degenerate
+* elements.
 
 ## Projector Warnings
 
@@ -85,6 +88,6 @@ Thrown by linear algebra routines in `utils.js` when a matrix is singular or num
 
 | Code | Message | Meaning |
 |------|---------|---------|
-| `TRACEPROJECTOR_DEGENERATE_MESH` | `Projector: mesh contains N degenerate or near-degenerate tetrahedra. Projections may fail.` | The mesh has tetrahedra with signed volume below `1e-12`. |
+| `TRACEPROJECTOR_DEGENERATE_MESH` | `Projector: mesh contains N degenerate or near-degenerate tetrahedra. Projections may fail.` | The mesh has tetrahedra whose volume relative to their longest edge cubed is below `1e-10` (see `MIN_RELATIVE_VOLUME`). |
 
 **Recovery**: Re-mesh or repair the input mesh before computing projections.

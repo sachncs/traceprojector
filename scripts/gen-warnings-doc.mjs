@@ -100,13 +100,13 @@ const FOOTER = `
 
 | Code | Message | Meaning |
 |------|---------|---------|
-| \`TRACEPROJECTOR_DEGENERATE_MESH\` | \`Projector: mesh contains N degenerate or near-degenerate tetrahedra. Projections may fail.\` | The mesh has tetrahedra with signed volume below \`1e-12\`. |
+| \`TRACEPROJECTOR_DEGENERATE_MESH\` | \`Projector: mesh contains N degenerate or near-degenerate tetrahedra. Projections may fail.\` | The mesh has tetrahedra whose volume relative to their longest edge cubed is below \`1e-10\` (see \`MIN_RELATIVE_VOLUME\`). |
 
 **Recovery**: Re-mesh or repair the input mesh before computing projections.
 `;
 
 function escapeBackticks(s) {
-  return s.replace(/`/g, '\\`');
+  return s.replace(/\\/g, '\\\\').replace(/`/g, '\\`');
 }
 
 function buildDoc(entries) {

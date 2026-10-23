@@ -179,4 +179,32 @@ describe('Stability of the projections on narrow bumps', function() {
     expect(growth).to.be.at.most(
         tolerances.stableOperator.stability.maxGrowthPerHalvingOfH);
   });
+
+  it('the stable projection degrades at most linearly with the aspect ratio', () => {
+    const {stretchFactors} = tolerances.stability.qualityDegradation;
+    expect(stretchFactors.length).to.be.at.least(
+        tolerances.stability.minQualityLevels);
+    const n = 6;
+    const h = 1 / n;
+    const ratios = stretchFactors.map((stretch) => {
+      const base = generateUnitCubeMesh(n);
+      const vertices = base.getVertices()
+          .map((v) => [v[0], v[1], v[2] * stretch]);
+      const mesh = new Mesh(vertices, base.getTetrahedra());
+      const stable = new StableProjector(
+          mesh.getVertices(), mesh.getTetrahedra(), {quadratureOrder: 4});
+      const {point, cells} = centreOf(mesh, 3, [0.5, 0.5, 0.5 * stretch]);
+      const u = bump(point, h / 2);
+      const ratio =
+        projectedNorm(mesh, cells, (x, c) => stable.project(u, x, c, 0)) /
+        bumpNorm(h / 2);
+      console.log(`      stretch ${stretch}: ratio ${ratio.toFixed(3)}`);
+      return ratio;
+    });
+    ratios.forEach((ratio, i) => {
+      expect(Number.isFinite(ratio)).to.equal(true);
+      expect(ratio).to.be.below(100);
+      expect(ratio).to.be.at.most(stretchFactors[i] * ratios[0]);
+    });
+  });
 });

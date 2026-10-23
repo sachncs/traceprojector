@@ -243,8 +243,8 @@ vertex, `‖Πu‖ / ‖u‖` in L² is a lower bound for the stability constant
   8 and 10 cells per side, with growth 1.000 per halving of `h`. Unlike the
   trace-preserving variant it needs no finite boundary values.
 
-Not covered: the pre-registered four mesh-quality levels (shape regularity),
-bumps near the boundary, and the second part of the singular-field criterion
+Mesh-quality levels are covered for anisotropic stretch only (see below). Not
+covered: bumps near the boundary for the stable operator, and the second part of the singular-field criterion
 (change between mesh sizes against the smooth-field change). The stability
 statement holds for the interior part only.
 
@@ -302,6 +302,17 @@ similarity-equivariance tests in `tests/bweight_equivariance.test.js`: they
 pass but kill no further mutants, because the surviving mutants sit in helper
 functions that are not exported and that the functionals reach only through
 symmetric paths. The score was re-measured, not improved. The other files of the first run were not re-measured.
+
+### Stability under degrading mesh quality
+
+The mesh is stretched in z by 1, 2, 4, 8 (aspect ratios up to 8), and a bump of
+radius h/2 centred in the cube is projected by the stable operator. The ratio
+||Pi u|| / ||u|| is 0.440, 0.354, 0.289, 0.247: it does not grow, so the
+pre-registered bound (at most linear in the stretch) holds with room. This
+tests anisotropy only; slivers and random perturbation are covered by the
+geometry and fuzz suites for acceptance, not for the stability constant, and
+the bump shrinks relative to the stretched cells, so the test is not a worst
+case.
 
 ## Known gaps
 

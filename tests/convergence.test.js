@@ -234,7 +234,7 @@ describe('h-Convergence on Cube Meshes', () => {
   it('l=0 p=0: H1 semi-norm converges at rate ~1 (asymptotic)', () => {
     // Note: on coarse all-boundary meshes (open cube), boundary integral
     // weights are not yet exact, so pre-asymptotic rates are lower.
-    const meshes = [1, 2, 4].map((n) => generateUnitCubeMesh(n));
+    const meshes = [2, 4, 8].map((n) => generateUnitCubeMesh(n));
     const results = [];
 
     for (const mesh of meshes) {
@@ -281,7 +281,7 @@ describe('h-Convergence on Cube Meshes', () => {
   it('l=0 p=0: L2 error converges at rate ~1+ (asymptotic)', () => {
     // On all-boundary meshes, boundary-weighted vertex DoFs deviate from
     // exact nodal values on coarse meshes, lowering pre-asymptotic rates.
-    const meshes = [1, 2, 4].map((n) => generateUnitCubeMesh(n));
+    const meshes = [2, 4, 8].map((n) => generateUnitCubeMesh(n));
     const results = [];
 
     for (const mesh of meshes) {
@@ -319,7 +319,7 @@ describe('h-Convergence on Cube Meshes', () => {
   });
 
   it('l=3 p=0: L2 error converges at rate ~1', () => {
-    const meshes = [1, 2, 4].map((n) => generateUnitCubeMesh(n));
+    const meshes = [2, 4, 8].map((n) => generateUnitCubeMesh(n));
     const results = [];
 
     for (const mesh of meshes) {
@@ -358,7 +358,7 @@ describe('h-Convergence on Cube Meshes', () => {
   });
 
   it('l=1 p=0: L2 error converges at rate ~1 for vector field', () => {
-    const meshes = [1, 2, 4].map((n) => generateUnitCubeMesh(n));
+    const meshes = [2, 4, 8].map((n) => generateUnitCubeMesh(n));
     const results = [];
 
     for (const mesh of meshes) {

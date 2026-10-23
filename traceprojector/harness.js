@@ -4,10 +4,19 @@
  * Computes discrete error norms and convergence rates on a sequence of meshes.
  */
 
-import {integrateTetrahedron} from './quadrature.js';
+import {integrateTetrahedron} from './simplicial-complex.js';
 import {ProjectError} from './errors.js';
 import {Projector} from './traceprojector.js';
 import {Whitney} from './whitney.js';
+
+/**
+ * Gauss points per direction for the error integrals. The error norms use a
+ * positive-weight rule of their own, independent of the projector's quadrature:
+ * integrating a squared error with a rule that has a negative weight is
+ * unreliable on coarse meshes.
+ * @const {number}
+ */
+const ERROR_QUADRATURE_POINTS = 4;
 
 /**
  * Computes the L2 error between an exact function and its projection.
@@ -34,7 +43,7 @@ export function computeL2ErrorScalar(mesh, traceProjector, exactFn, projFn) {
     errSq += integrateTetrahedron(
         verts,
         integrand,
-        traceProjector.quadratureOrder,
+        ERROR_QUADRATURE_POINTS,
     );
   }
   return Math.sqrt(Math.max(0, errSq));
@@ -66,7 +75,7 @@ export function computeL2ErrorVector(mesh, traceProjector, exactFn, projFn) {
     errSq += integrateTetrahedron(
         verts,
         integrand,
-        traceProjector.quadratureOrder,
+        ERROR_QUADRATURE_POINTS,
     );
   }
   return Math.sqrt(Math.max(0, errSq));
@@ -124,7 +133,7 @@ export function computeH1SemiError(mesh, traceProjector, exactFn, projFn) {
     errSq += integrateTetrahedron(
         verts,
         integrand,
-        traceProjector.quadratureOrder,
+        ERROR_QUADRATURE_POINTS,
     );
   }
   return Math.sqrt(Math.max(0, errSq));

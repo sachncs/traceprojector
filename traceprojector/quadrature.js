@@ -51,7 +51,8 @@ export function triangleQuadrature(order) {
 /**
  * Returns quadrature points and weights on the reference tetrahedron.
  *
- * Note: order 3 contains a negative weight (-4/5). Callers integrating
+ * Order 3 is the five-point Keast rule: exact for cubics, with interior points
+ * and a negative weight (-4/5). Callers integrating
  * non-smooth or sign-changing functions should consider a lower order or
  * a different rule to avoid cancellation issues.
  *
@@ -83,10 +84,10 @@ export function tetrahedronQuadrature(order) {
       return {
         bary: [
           [1 / 4, 1 / 4, 1 / 4, 1 / 4],
-          [1 / 3, 1 / 3, 1 / 3, 0],
-          [1 / 3, 1 / 3, 0, 1 / 3],
-          [1 / 3, 0, 1 / 3, 1 / 3],
-          [0, 1 / 3, 1 / 3, 1 / 3],
+          [1 / 6, 1 / 6, 1 / 6, 1 / 2],
+          [1 / 6, 1 / 6, 1 / 2, 1 / 6],
+          [1 / 6, 1 / 2, 1 / 6, 1 / 6],
+          [1 / 2, 1 / 6, 1 / 6, 1 / 6],
         ],
         weights: [-4 / 5, 9 / 20, 9 / 20, 9 / 20, 9 / 20],
       };

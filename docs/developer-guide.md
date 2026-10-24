@@ -23,7 +23,7 @@ If `npm test` passes you have a working checkout.
 traceprojector/   the library: pure ES modules, no runtime dependencies,
                   with a hand-written .d.ts next to each public module
 tests/            fast unit tests (Mocha + Chai), one file per module
-tests-d/          type tests (tsd) that check the .d.ts files against the JS
+tests/types/     type tests (tsd) that check the .d.ts files against the JS
 validation/       the numerical validation of the papers' claims
   slow/           the same for the expensive higher-order operator
 site/             the website and demo (Next.js), also renders docs/
@@ -150,7 +150,7 @@ what, and numerical code says which equation of which paper it implements.
 1. Write the module in `traceprojector/` with JSDoc.
 2. Write its `.d.ts` beside it and export it from `traceprojector.js` and
    `traceprojector.d.ts`. `npm run verify:types` fails if they disagree.
-3. Add a unit test in `tests/` and a `tsd` test in `tests-d/`.
+3. Add a unit test in `tests/` and a `tsd` test in `tests/types/`.
 4. If it implements a claim of a paper, add the claim to
    [Validation](VALIDATION.md) with its assumptions, pre-register the
    tolerance in `validation/tolerances.json`, and add the validation test.

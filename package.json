@@ -125,6 +125,6 @@
     "tsd": "^0.33.0"
   },
   "tsd": {
-    "directory": "tests-d"
+    "directory": "tests/types"
   }
 }

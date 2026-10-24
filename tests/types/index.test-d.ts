@@ -3,9 +3,9 @@ import {
   Mesh, Whitney, Projector, StableProjector, ZeroTraceProjector,
   TracePreservingProjector,
   ValidateError, ProjectError, SingularError,
-} from '../traceprojector/traceprojector.js';
-import {generateUnitCubeMesh} from '../traceprojector/generator.js';
-import {CoefficientPool} from '../traceprojector/parallel.js';
+} from '../../traceprojector/traceprojector.js';
+import {generateUnitCubeMesh} from '../../traceprojector/generator.js';
+import {CoefficientPool} from '../../traceprojector/parallel.js';
 
 const mesh = generateUnitCubeMesh(2);
 expectType<Mesh>(mesh);

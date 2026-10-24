@@ -1,0 +1,2 @@
+canonical: |grad Pi0 u - Pi1 grad u| below 1e-9: true
+bounded:   edge coefficient of grad u = difference of vertex coefficients to 1e-8: true

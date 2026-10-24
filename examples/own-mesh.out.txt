@@ -1,0 +1,9 @@
+as given                 accepted
+second one flipped       ValidateError: Tetrahedron 1 has non-positive or degenerate volume
+a NaN coordinate         ValidateError: Vertex 3 must be an array of 3 finite numbers
+a vertex that is missing ValidateError: Tetrahedron 0 contains out-of-bounds vertex index 9
+validateMeshInput        accepted
+projector, flipped       ValidateError: Tetrahedron 0 has non-positive or degenerate volume
+point (0.2, 0.2, 0.2) lies in tetrahedron 0
+point (2, 2, 2) lies in null
+caught a ValidateError: true

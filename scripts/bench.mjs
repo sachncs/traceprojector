@@ -30,6 +30,7 @@ import {
   minimumNormSolveBanded,
 } from '../traceprojector/banded-linear-algebra.js';
 import {SparseMatrix} from '../traceprojector/sparse-linear-algebra.js';
+import {HighOrderBoundary} from '../traceprojector/high-order-boundary.js';
 import {CoefficientPool} from '../traceprojector/parallel.js';
 
 const root = resolve(import.meta.dirname, '..');
@@ -210,6 +211,29 @@ scenarios.push({
       return total;
     }, 1);
     return {ms, entities: value, msPerEntity: ms / value};
+  },
+});
+
+scenarios.push({
+  name: 'boundary/p=1 operator, all coefficients of l=0 and l=2 (2x2x2 cube)',
+  run() {
+    const cube = generateUnitCubeMesh(2);
+    const vertices = cube.getVertices();
+    const tetrahedra = cube.getTetrahedra();
+    const {ms, value} = time(() => {
+      const boundary = new HighOrderBoundary(vertices, tetrahedra, {degree: 1});
+      let count = 0;
+      for (const l of [0, 2]) {
+        const size = boundary.space.size(l);
+        const c = Float64Array.from({length: size}, (_, i) => Math.sin(i + 1));
+        const u = (x, cell) => boundary.space.evaluate(c, x, cell, l);
+        const du = (x, cell) => boundary.space.derivative(c, x, cell, l);
+        const out = boundary.coefficients(u, du, l);
+        count += out.bubbles.size + out.whitney.size;
+      }
+      return count;
+    }, 1);
+    return {ms, coefficients: value, msPerCoefficient: ms / value};
   },
 });
 

@@ -1,0 +1,110 @@
+{
+  "node": "v26.11.0",
+  "cpu": "Apple M3 Pro",
+  "calibrationMs": 3.9982499999999987,
+  "exponents": {
+    "solverTime": 1.8643626709723176,
+    "solverSpace": 1.75906161096604
+  },
+  "results": {
+    "solver/minimum-norm grid 8^3": {
+      "ms": 26.258667000000003,
+      "unknowns": 512,
+      "entries": 38594,
+      "iterations": 75,
+      "residual": 6.977165810280417e-15,
+      "stationarity": 5.048107675507001e-16,
+      "dualityGap": 3.2226521962913586e-16,
+      "normalized": 6.56754004877134
+    },
+    "solver/minimum-norm grid 11^3": {
+      "ms": 126.52712500000001,
+      "unknowns": 1331,
+      "entries": 201349,
+      "iterations": 93,
+      "residual": 7.528551713248155e-15,
+      "stationarity": 4.84235964441039e-16,
+      "dualityGap": 1.578438362793257e-16,
+      "normalized": 31.64562621146753
+    },
+    "solver/minimum-norm grid 14^3": {
+      "ms": 547.2963329999998,
+      "unknowns": 2744,
+      "entries": 763707,
+      "iterations": 116,
+      "residual": 6.9502481913718946e-15,
+      "stationarity": 6.471629898766e-16,
+      "dualityGap": 7.117056255069816e-17,
+      "normalized": 136.88396998686923
+    },
+    "solver/minimum-norm grid 17^3": {
+      "ms": 1755.7907079999995,
+      "unknowns": 4913,
+      "entries": 2017274,
+      "iterations": 120,
+      "residual": 7.318619488130608e-15,
+      "stationarity": 7.082568182937779e-16,
+      "dualityGap": 1.3699381158480853e-16,
+      "normalized": 439.13980066279
+    },
+    "weights/p=1 l=1 (6x6x6 cube, cold)": {
+      "ms": 146.4930000000004,
+      "solves": 1,
+      "unknowns": 1524,
+      "entries": 51096,
+      "iterations": 23,
+      "residual": 7.34519406691164e-15,
+      "stationarity": 1.052900945503867e-15,
+      "dualityGap": 3.6678236331043886e-17,
+      "normalized": 36.63927968486224
+    },
+    "weights/p=1 l=2 (6x6x6 cube, cold)": {
+      "ms": 323.5251250000001,
+      "solves": 4,
+      "unknowns": 1101,
+      "entries": 129246,
+      "iterations": 104,
+      "residual": 2.5180318970504225e-13,
+      "stationarity": 2.662649872978121e-15,
+      "dualityGap": 2.531557623223713e-16,
+      "normalized": 80.91668229850565
+    },
+    "weights/p=1 l=3 (6x6x6 cube, cold)": {
+      "ms": 792.9287080000013,
+      "solves": 11,
+      "unknowns": 1458,
+      "entries": 374802,
+      "iterations": 261,
+      "residual": 1.4393713172405972e-12,
+      "stationarity": 3.5339868243237196e-15,
+      "dualityGap": 1.5102965814108992e-15,
+      "normalized": 198.31894153692278
+    },
+    "bounded/lowest-order all coefficients (3x3x3 cube)": {
+      "ms": 5042.573874999998,
+      "entities": 883,
+      "msPerEntity": 5.710729190260474,
+      "normalized": 1261.1952416682298
+    },
+    "boundary/p=1 operator, all coefficients of l=0 and l=2 (2x2x2 cube)": {
+      "ms": 11947.659,
+      "coefficients": 242,
+      "msPerCoefficient": 49.370491735537186,
+      "normalized": 2988.2220971675115
+    },
+    "canonical/Projector build + 2000 projections (6x6x6 cube)": {
+      "ms": 94.499917000001,
+      "checksum": 1330.0316762265436,
+      "normalized": 23.635319702370044
+    },
+    "parallel/CoefficientPool strong scaling (4x4x4 cube, all faces)": {
+      "ms": 12837.674916000004,
+      "cores": 12,
+      "entities": 864,
+      "speedup": 3.2930466438437582,
+      "efficiency": 0.4116308304804698,
+      "workersAtTop": 8,
+      "normalized": 3210.823464265618
+    }
+  }
+}

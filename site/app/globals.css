@@ -410,10 +410,12 @@
 }
 .doc a {
   color: var(--primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--primary) 45%, transparent);
   text-underline-offset: 3px;
 }
 .doc a:hover {
-  text-decoration: underline;
+  text-decoration-color: currentColor;
 }
 .doc code {
   font-family: var(--font-jetbrains), ui-monospace, monospace;

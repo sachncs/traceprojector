@@ -49,6 +49,7 @@ export class HigherOrderProjector {
    */
   constructor(vertices, tetrahedra, options = {}) {
     this.weights = new HighOrderWeights(vertices, tetrahedra, options);
+    this.boundaryConditions = this.weights.boundaryConditions;
     this.degree = this.weights.degree;
     this.r = this.weights.r;
     this.base = this.weights.base;
@@ -118,6 +119,10 @@ export class HigherOrderProjector {
 
   /** @private */
   buildBubbleForms(l, m, entity) {
+    if (this.boundaryConditions && m < 3 &&
+        this.weights.topology.isBoundary(m, entity)) {
+      return [];
+    }
     const cells = this.starCells(m, entity);
     const first = cells[0];
     const patch = this.weights.patch(cells, false);
@@ -126,6 +131,9 @@ export class HigherOrderProjector {
         patch.vertices, patch.tetrahedra, {degree: this.degree});
     const splitSpace = new AgSpace(
         split.vertices, split.tetrahedra, {degree: this.degree});
+    const boundaryFaces = [...new Set(cells.flatMap(
+        (c) => this.base.cellFaces[c]))]
+        .filter((f) => this.base.isBoundaryFace(f));
     const mu = this.weights.bubbleWeights(splitSpace, split.centroids);
     const subCells = splitSpace.complex.cells.length;
     const rules = Array.from({length: subCells}, (_, s) => tetrahedronRule(
@@ -138,8 +146,10 @@ export class HigherOrderProjector {
       const info = patchSpace.dofInfo(degree);
       const index = new Int32Array(info.length).fill(-1);
       const members = [];
+      const outside = this.boundaryConditions ? this.weights.closureDofs(
+          patchSpace, degree, patch, boundaryFaces) : [];
       info.forEach(({kind}, a) => {
-        if (kind === 'closed' || kind === 'coclosed') {
+        if ((kind === 'closed' || kind === 'coclosed') && !outside[a]) {
           index[a] = members.length;
           members.push(a);
         }
@@ -345,6 +355,10 @@ export class HigherOrderProjector {
     const correctionOf = (dof, m, entity) => {
       if (!corrections.has(dof)) {
         const item = this.bubbleForms(l, m, entity).find((i) => i.dof === dof);
+        if (!item) {
+          corrections.set(dof, 0);
+          return 0;
+        }
         let sum = 0;
         for (const {cell, points, form} of item.pieces) {
           for (const {x, weight} of tetrahedronRule(points, this.order)) {

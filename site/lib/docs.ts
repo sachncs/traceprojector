@@ -132,15 +132,28 @@ export interface RenderedDoc {
 function slugify(text: string): string {
   return text
     .toLowerCase()
-    .replace(/<[^>]*>/g, "")
-    .replace(/&[a-z]+;/g, "")
     .replace(/[^a-z0-9 -]/g, "")
     .trim()
     .replace(/\s+/g, "-");
 }
 
 const escapeHtml = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/\x27/g, "&#39;");
+
+/** Whether a link leaves the site (its host is not on github.io). */
+function isExternal(href: string): boolean {
+  if (!/^https?:/.test(href)) return false;
+  try {
+    return new URL(href).hostname !== "sachncs.github.io";
+  } catch {
+    return true;
+  }
+}
 
 /** Where a link written in a Markdown file points on the site. */
 function rewrite(href: string, from: DocPage): string {
@@ -175,7 +188,8 @@ export function loadDoc(slug: string): RenderedDoc {
         if (token.depth > 1) {
           headings.push({ id, text: token.text, depth: token.depth });
         }
-        return `<h${token.depth} id="${id}"><a class="anchor" href="#${id}" aria-label="Link to this section">#</a>${text}</h${token.depth}>\n`;
+        const safe = escapeHtml(id);
+        return `<h${token.depth} id="${safe}"><a class="anchor" href="#${safe}" aria-label="Link to this section">#</a>${text}</h${token.depth}>\n`;
       },
       code(token: Tokens.Code) {
         const lang = (token.lang ?? "").split(/\s/)[0];
@@ -199,7 +213,7 @@ export function loadDoc(slug: string): RenderedDoc {
       },
       link(this, token: Tokens.Link) {
         const href = rewrite(token.href, page);
-        const external = /^https?:/.test(href) && !href.includes("github.io");
+        const external = isExternal(href);
         const text = this.parser.parseInline(token.tokens);
         return `<a href="${escapeHtml(href)}"${external ? ' rel="noreferrer" target="_blank"' : ""}>${text}</a>`;
       },

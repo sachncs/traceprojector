@@ -153,4 +153,23 @@ export class StableProjector {
     });
     return total;
   }
+
+  /**
+   * Number of entities of form degree l in the projector's numbering (see
+   * {@link ZeroTraceProjector#count}).
+   * @param {number} l - Form degree, 0 to 3.
+   * @return {number}
+   */
+  count(l) {
+    return this.interior.count(l);
+  }
+
+  /**
+   * The two vertices of an edge, in the numbering of the input mesh.
+   * @param {number} index - Edge number, from 0 to `count(1) - 1`.
+   * @return {!Array<number>}
+   */
+  edge(index) {
+    return this.interior.edge(index);
+  }
 }

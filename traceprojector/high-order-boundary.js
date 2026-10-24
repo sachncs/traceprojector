@@ -24,7 +24,7 @@ import {AgSpace} from './ag-space.js';
 import {BoundaryProjector} from './boundary-projector.js';
 import {referenceRule} from './reference-element.js';
 import {ValidateError} from './errors.js';
-import {Polynomial} from './polynomial-forms.js';
+import {Polynomial, monomialValues} from './polynomial-forms.js';
 import {
   BoundaryTraces,
   faceTrace,
@@ -375,9 +375,85 @@ export class HighOrderBoundary {
     // field vanishes elsewhere, so the other dofs are zero by construction.
     const coefficients = space.coefficients(
         (x) => u(x), lY, (x) => du(x));
-    const result = {space, split, coefficients, cellList, lY};
+    const result = {
+      space,
+      split,
+      cellList,
+      lY,
+      evaluate: this.sparseEvaluator(space, coefficients, lY),
+    };
     this.extensions.set(key, result);
     return result;
+  }
+
+  /**
+   * A fast evaluator of an extension: of its (few) nonzero degrees of
+   * freedom only, with the monomials of the reference point tabulated once
+   * per point and the Piola map applied once to the sum.
+   * @private
+   */
+  sparseEvaluator(space, coefficients, l) {
+    const basis = space.element(l).basis;
+    const derivatives = space.derivativeBasis(l);
+    const top = Math.max(...basis.map(
+        (psi) => Math.max(...(Array.isArray(psi) ? psi : [psi])
+            .map((p) => p.degree))));
+    const cells = new Map();
+    const prepare = (c) => {
+      if (!cells.has(c)) {
+        const terms = [];
+        space.cellDofs(c, l).forEach((dof, i) => {
+          if (coefficients[dof] !== 0) {
+            terms.push(
+                {psi: basis[i], d: derivatives[i], w: coefficients[dof]});
+          }
+        });
+        cells.set(c, {frame: space.frame(c), terms});
+      }
+      return cells.get(c);
+    };
+    return (c, x) => {
+      const {frame, terms} = prepare(c);
+      const {columns, det, inverse} = frame;
+      if (terms.length === 0) {
+        return {y: l === 0 ? 0 : [0, 0, 0], dy: l === 2 ? 0 : [0, 0, 0]};
+      }
+      const s = space.referencePoint(c, x);
+      const row = monomialValues(s, top);
+      // Values and derivatives on the reference cell.
+      let value = l === 0 ? 0 : [0, 0, 0];
+      let derivative = l === 2 ? 0 : [0, 0, 0];
+      for (const {psi, d, w} of terms) {
+        if (l === 0) {
+          value += w * psi.dot(row);
+        } else {
+          for (let k = 0; k < 3; k++) value[k] += w * psi[k].dot(row);
+        }
+        if (l === 2) {
+          derivative += w * d.dot(row);
+        } else {
+          for (let k = 0; k < 3; k++) derivative[k] += w * d[k].dot(row);
+        }
+      }
+      // Piola maps (as in CanonicalProjector).
+      let y;
+      let dy;
+      if (l === 0) {
+        y = value;
+        dy = [0, 1, 2].map((a) => inverse[0][a] * derivative[0] +
+          inverse[1][a] * derivative[1] + inverse[2][a] * derivative[2]);
+      } else if (l === 1) {
+        y = [0, 1, 2].map((a) => inverse[0][a] * value[0] +
+          inverse[1][a] * value[1] + inverse[2][a] * value[2]);
+        dy = [0, 1, 2].map((a) => (columns[0][a] * derivative[0] +
+          columns[1][a] * derivative[1] + columns[2][a] * derivative[2]) / det);
+      } else {
+        y = [0, 1, 2].map((a) => (columns[0][a] * value[0] +
+          columns[1][a] * value[1] + columns[2][a] * value[2]) / det);
+        dy = derivative / det;
+      }
+      return {y, dy};
+    };
   }
 
   /**
@@ -392,15 +468,14 @@ export class HighOrderBoundary {
    */
   alpha(l, dof, u, du) {
     const weight = this.weight(l, dof);
-    const {space, split, coefficients, cellList, lY} = this.extension(weight);
+    const {split, cellList, evaluate} = this.extension(weight);
     const order = this.extensionDegree + 3;
     let sum = 0;
     split.cells.forEach((tet, s) => {
       const parent = cellList[split.parent[s]];
       const points = tet.map((v) => split.vertices[v]);
       for (const {x, weight: q} of tetrahedronRule(points, order)) {
-        const y = space.evaluate(coefficients, x, s, lY);
-        const dy = space.derivative(coefficients, x, s, lY);
+        const {y, dy} = evaluate(s, x);
         const w = u(x, parent);
         const dw = du(x, parent);
         if (l === 0) sum += q * (w * dy + dot(dw, y));

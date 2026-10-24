@@ -67,6 +67,9 @@ describe('orientation of the tetrahedra', () => {
   const mixed = tetrahedra.map(
       (t, i) => (i % 2 ? [t[0], t[2], t[1], t[3]] : t));
   const field = (p) => Math.sin(p[0]) * Math.cos(p[1]) + p[2] * p[2];
+  // Equal to roundoff: relative 1e-13.
+  const same = (a, b) => expect(a).to.be.closeTo(
+      b, 1e-13 * Math.max(1, Math.abs(b)));
 
   it('is not required by the operators, which accept either', () => {
     for (const make of Object.values(operators)) {
@@ -74,12 +77,11 @@ describe('orientation of the tetrahedra', () => {
     }
   });
 
-  it('does not change the coefficients of the bounded operators', () => {
+  it('does not change the coefficients of the bounded operators (to roundoff)', () => {
     const a = new ZeroTraceProjector(vertices, tetrahedra);
     const b = new ZeroTraceProjector(vertices, mixed);
     for (const entity of [0, 5, 11, 20]) {
-      expect(b.coefficient(field, 0, entity)).to.equal(
-          a.coefficient(field, 0, entity));
+      same(b.coefficient(field, 0, entity), a.coefficient(field, 0, entity));
     }
   });
 
@@ -89,6 +91,6 @@ describe('orientation of the tetrahedra', () => {
     const ca = a.coefficients(field, 0);
     const cb = b.coefficients(field, 0);
     expect(cb.length).to.equal(ca.length);
-    for (let i = 0; i < ca.length; i++) expect(cb[i]).to.equal(ca[i]);
+    for (let i = 0; i < ca.length; i++) same(cb[i], ca[i]);
   });
 });

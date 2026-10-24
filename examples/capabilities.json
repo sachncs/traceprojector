@@ -204,5 +204,10 @@
   },
   "numericalGradient": {
     "reference": "A numerical utility the library itself uses"
+  },
+  "validateMeshInput": {
+    "recipes": [
+      "own-mesh"
+    ]
   }
 }

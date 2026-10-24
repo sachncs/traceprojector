@@ -9,6 +9,7 @@ import {expect} from 'chai';
 import {existsSync, readFileSync} from 'node:fs';
 import {dirname, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {exampleNames} from '../scripts/run-examples.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
@@ -57,14 +58,13 @@ describe('the showcase of the public API', () => {
     }
   });
 
-  it('points every recipe at an example that exists', function() {
+  it('points every recipe at an example that exists, and shows every example', () => {
     const slugs = new Set(Object.values(inventory)
         .flatMap((entry) => entry.recipes ?? []));
     const missing = [...slugs]
         .filter((s) => !existsSync(resolve(root, 'examples', `${s}.js`)));
-    // The examples are written in the next step; until they exist this
-    // lists what is still to be shown instead of failing the build.
-    if (missing.length) this.skip();
-    expect(missing).to.deep.equal([]);
+    expect(missing, 'recipes with no example').to.deep.equal([]);
+    const orphans = exampleNames().filter((n) => !slugs.has(n));
+    expect(orphans, 'examples no export points to').to.deep.equal([]);
   });
 });

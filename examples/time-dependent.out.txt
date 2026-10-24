@@ -1,0 +1,6 @@
+t = 0.0  projected 0.287 0.455 0.747  largest error 0.018
+t = 0.5  projected -0.430 0.000 0.415  largest error 0.016
+t = 1.0  projected -0.752 -0.455 -0.298  largest error 0.012
+t = 1.5  projected -0.383 -0.491 -0.737  largest error 0.016
+points outside the mesh are an error, found when you build the sampler:
+  ProjectError: Point [3, 3, 3] not found in any tetrahedron

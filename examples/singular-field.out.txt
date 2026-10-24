@@ -1,0 +1,5 @@
+canonical: ProjectError, a degree of freedom is not finite
+stable coefficient at the singular vertex: 3.575
+at 0.4, 0.45, 0.5   u = 2.991  stable projection = 2.907
+at 0.3, 0.3, 0.3    u = 1.699  stable projection = 1.920
+at 0.8, 0.7, 0.6    u = 1.635  stable projection = 1.659

@@ -1,4 +1,15 @@
 /**
+ * Checks vertices and tetrahedra and throws a ValidateError naming the first
+ * problem: a malformed or non-finite coordinate, an index that is not an
+ * integer or does not name a vertex, a repeated vertex, or a tetrahedron with
+ * non-positive or degenerate volume. Every constructor that takes the two
+ * arrays calls it, so use it to check a mesh without building anything.
+ * @param vertices - Vertex coordinates.
+ * @param tetrahedra - Four vertex numbers per tetrahedron.
+ */
+export function validateMeshInput(vertices: number[][], tetrahedra: number[][]): void;
+
+/**
  * Tetrahedral mesh data structure with topological connectivity and boundary
  * extraction.
  */

@@ -6,8 +6,8 @@ else. For which operator to use, see [Choosing an operator](operators.md).
 
 | Import path | Exports |
 |---|---|
-| `traceprojector` | `Projector`, `Mesh`, `Whitney`, `Locator`, `Refinement`, `Weight`, `Bubble`, `Solver`, `ValidateError`, `ProjectError`, `SingularError`, `H1`, `Hcurl`, `Hdiv`, `L2`, `ZeroTraceProjector`, `BoundedCommutingProjector`, `StableProjector`, `refineTetrahedra`, `CanonicalProjector`, `HigherOrderProjector`, `TracePreservingProjector` |
-| `traceprojector/mesh` | `Mesh` |
+| `traceprojector` | `Projector`, `Mesh`, `validateMeshInput`, `Whitney`, `Locator`, `Refinement`, `Weight`, `Bubble`, `Solver`, `ValidateError`, `ProjectError`, `SingularError`, `H1`, `Hcurl`, `Hdiv`, `L2`, `ZeroTraceProjector`, `BoundedCommutingProjector`, `StableProjector`, `refineTetrahedra`, `CanonicalProjector`, `HigherOrderProjector`, `TracePreservingProjector` |
+| `traceprojector/mesh` | `validateMeshInput`, `Mesh` |
 | `traceprojector/whitney` | `Whitney` |
 | `traceprojector/quadrature` | `triangleQuadrature`, `tetrahedronQuadrature`, `integrateTriangle`, `barycentricToCartesian`, `lineQuadrature`, `compositeTetrahedronQuadrature`, `integrateTetrahedron` |
 | `traceprojector/utils` | `dot`, `cross`, `subtract`, `norm`, `subtractInto`, `crossInto`, `triangleArea`, `zeros`, `infinityNorm`, `luSolve`, `inverse3x3`, `solve3x3`, `MAX_SAFE_FACTORIAL`, `tetDeterminant`, `tetVolume`, `MIN_RELATIVE_VOLUME`, `longestEdge`, `relativeVolume`, `factorial`, `numericalGradient` |
@@ -654,6 +654,23 @@ getFaceOutwardNormal(fIdx: number): number[]
 
 Computes the outward-pointing unit normal for a boundary face.
 For interior faces the orientation is arbitrary.
+
+### `validateMeshInput`
+
+```ts
+function validateMeshInput(vertices: number[][], tetrahedra: number[][]): void
+```
+
+Checks vertices and tetrahedra and throws a ValidateError naming the first
+problem: a malformed or non-finite coordinate, an index that is not an
+integer or does not name a vertex, a repeated vertex, or a tetrahedron with
+non-positive or degenerate volume. Every constructor that takes the two
+arrays calls it, so use it to check a mesh without building anything.
+
+**Parameters**
+
+- `vertices`: Vertex coordinates.
+- `tetrahedra`: Four vertex numbers per tetrahedron.
 
 ### `Whitney`
 
@@ -1834,6 +1851,10 @@ Value of the projection at a point of a cell.
 - `l`: Form degree.
 
 ## `traceprojector/mesh`
+
+### `validateMeshInput`
+
+The same as [`validateMeshInput`](#validatemeshinput) above.
 
 ### `Mesh`
 

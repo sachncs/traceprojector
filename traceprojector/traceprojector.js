@@ -629,6 +629,7 @@ export class Projector {
 
 export {Mesh, Whitney};
 export {validateMeshInput} from './mesh.js';
+export {parseGmsh} from './gmsh.js';
 export {Locator} from './locator.js';
 export {Refinement} from './refinement.js';
 export {Weight} from './weight.js';

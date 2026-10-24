@@ -172,7 +172,7 @@ export function Hero() {
             </Button>
           </motion.div>
 
-          <motion.div
+          <motion.dl
             initial={mounted && !reduce ? { opacity: 0, y: 18 } : false}
             animate={mounted && !reduce ? { opacity: 1, y: 0 } : undefined}
             transition={{
@@ -193,12 +193,12 @@ export function Hero() {
                 <dd className="font-mono text-2xl font-medium tracking-tight text-foreground">
                   {s.k}
                 </dd>
-                <dd className="text-[11px] text-muted-foreground/80">
+                <dd className="text-[11px] text-muted-foreground">
                   {s.sub}
                 </dd>
               </div>
             ))}
-          </motion.div>
+          </motion.dl>
         </div>
       </div>
     </section>

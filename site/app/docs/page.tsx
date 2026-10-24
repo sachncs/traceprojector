@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { SECTIONS } from "@/lib/docs";
+import { pageHref, SECTIONS } from "@/lib/docs";
 
 export const metadata: Metadata = {
   title: "Documentation · traceprojector",
@@ -39,7 +39,7 @@ export default function DocsHome() {
                 {section.pages.map((page) => (
                   <Link
                     key={page.slug}
-                    href={`/docs/${page.slug}/`}
+                    href={pageHref(page)}
                     className="group rounded-xl border border-border/60 bg-card/40 p-5 transition-colors hover:border-primary/50 hover:bg-card"
                   >
                     <div className="flex items-center justify-between">

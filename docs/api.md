@@ -6,7 +6,7 @@ else. For which operator to use, see [Choosing an operator](operators.md).
 
 | Import path | Exports |
 |---|---|
-| `traceprojector` | `Projector`, `Mesh`, `validateMeshInput`, `Whitney`, `Locator`, `Refinement`, `Weight`, `Bubble`, `Solver`, `ValidateError`, `ProjectError`, `SingularError`, `H1`, `Hcurl`, `Hdiv`, `L2`, `ZeroTraceProjector`, `BoundedCommutingProjector`, `StableProjector`, `refineTetrahedra`, `CanonicalProjector`, `HigherOrderProjector`, `TracePreservingProjector` |
+| `traceprojector` | `Projector`, `Mesh`, `validateMeshInput`, `parseGmsh`, `Whitney`, `Locator`, `Refinement`, `Weight`, `Bubble`, `Solver`, `ValidateError`, `ProjectError`, `SingularError`, `H1`, `Hcurl`, `Hdiv`, `L2`, `ZeroTraceProjector`, `BoundedCommutingProjector`, `StableProjector`, `refineTetrahedra`, `CanonicalProjector`, `HigherOrderProjector`, `TracePreservingProjector` |
 | `traceprojector/mesh` | `validateMeshInput`, `Mesh` |
 | `traceprojector/whitney` | `Whitney` |
 | `traceprojector/quadrature` | `triangleQuadrature`, `tetrahedronQuadrature`, `integrateTriangle`, `barycentricToCartesian`, `lineQuadrature`, `compositeTetrahedronQuadrature`, `integrateTetrahedron` |
@@ -678,6 +678,32 @@ for either orientation.
 - `vertices`: Vertex coordinates.
 - `tetrahedra`: Four vertex numbers per tetrahedron.
 - `options.allowFlipped`: Accept negatively oriented tetrahedra (default false).
+
+### `parseGmsh`
+
+```ts
+function parseGmsh(
+  text: string,
+  options?: { orient?: boolean },
+): {
+  vertices: number[][];
+  tetrahedra: number[][];
+  skipped: Record<string, number>;
+}
+```
+
+Reads a Gmsh mesh file (ASCII formats 2.x and 4.1) into the two arrays every
+operator takes. Only first-order tetrahedra (element type 4) become cells;
+points, lines and triangles are counted in `skipped`. Binary files, other
+versions, hexahedra, prisms, pyramids and second-order tetrahedra raise a
+`ValidateError`, as does any file whose tetrahedra do not make a valid mesh.
+
+**Parameters**
+
+- `text`: The contents of the `.msh` file.
+- `options.orient`: Reorder the vertices of negatively oriented tetrahedra so that all are positively oriented, as `Mesh` and `Projector` require (default true).
+
+**Returns** The mesh and how many elements of each ignored kind the file held.
 
 ### `Whitney`
 
@@ -1473,6 +1499,32 @@ Value of the projection at a point of a cell.
 - `cell`: Cell number.
 - `l`: Form degree.
 
+#### `count`
+
+```ts
+count(l: number): number
+```
+
+Number of entities of form degree l in the projector's numbering: the
+vertices (0), edges (1), faces (2) or cells (3). The entity numbers that
+`coefficient` takes run from 0 to this count minus one.
+
+**Parameters**
+
+- `l`: Form degree, 0 to 3.
+
+#### `edge`
+
+```ts
+edge(index: number): [number, number]
+```
+
+The two vertices of an edge, in the numbering of the input mesh.
+
+**Parameters**
+
+- `index`: Edge number, from 0 to `count(1) - 1`.
+
 ### `BoundedCommutingProjector`
 
 ```ts
@@ -1562,6 +1614,32 @@ Value of the projection at a point of a cell.
 - `point`: Cartesian point inside the cell.
 - `cell`: Cell number.
 - `l`: Form degree.
+
+#### `count`
+
+```ts
+count(l: number): number
+```
+
+Number of entities of form degree l in the projector's numbering: the
+vertices (0), edges (1), faces (2) or cells (3). The entity numbers that
+`coefficient` takes run from 0 to this count minus one.
+
+**Parameters**
+
+- `l`: Form degree, 0 to 3.
+
+#### `edge`
+
+```ts
+edge(index: number): [number, number]
+```
+
+The two vertices of an edge, in the numbering of the input mesh.
+
+**Parameters**
+
+- `index`: Edge number, from 0 to `count(1) - 1`.
 
 ### `refineTetrahedra`
 

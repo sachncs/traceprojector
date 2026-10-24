@@ -1,0 +1,79 @@
+[
+  {
+    "slug": "quick-start",
+    "title": "Project a function in ten lines",
+    "summary": "Build a mesh, project a smooth function onto the lowest-order space and read the value at a point.",
+    "assumes": "A smooth function of a point; a tetrahedral mesh.",
+    "cost": "Milliseconds for a mesh of a few hundred cells."
+  },
+  {
+    "slug": "own-mesh",
+    "title": "Use your own mesh, and see what bad input does",
+    "summary": "Pass vertex and tetrahedron arrays from Gmsh, TetGen or your own code, check them, and find the cell that contains a point.",
+    "assumes": "Positively oriented tetrahedra that meet in whole faces.",
+    "cost": "Linear in the number of cells."
+  },
+  {
+    "slug": "gmsh-mesh",
+    "title": "Read a mesh from Gmsh",
+    "summary": "Load a .msh file (ASCII, format 2.2 or 4.1, first-order tetrahedra) with parseGmsh and use it like any other mesh. What cannot be used is an error that says why.",
+    "assumes": "An ASCII .msh file with first-order tetrahedra; no binary, no hexahedra, prisms, pyramids or second-order elements.",
+    "cost": "Linear in the size of the file."
+  },
+  {
+    "slug": "form-degrees",
+    "title": "The four form degrees",
+    "summary": "A potential, an edge field, a flux and a density: what each one projects to and where it lives.",
+    "assumes": "Input regular enough for point values, edge integrals and face fluxes (the canonical operator).",
+    "cost": "Microseconds per point once the projector is built."
+  },
+  {
+    "slug": "singular-field",
+    "title": "A field that is infinite at a vertex",
+    "summary": "The canonical interpolation refuses it; the stable operator integrates against a weight and stays finite. This is what the bounded operators are for.",
+    "assumes": "A field in L2, finite on the boundary (the stable operator).",
+    "cost": "Milliseconds per entity: a local solve around each one, cached."
+  },
+  {
+    "slug": "commuting",
+    "title": "Check that the projection commutes with the derivative",
+    "summary": "The gradient of the projection is the projection of the gradient, so curl-free fields stay curl-free. Two ways to see it.",
+    "assumes": "Canonical operator: smooth input. Bounded operator: any input in L2. The trace-preserving and stable operators commute for fields whose boundary trace is a lowest-order trace; outside that class commuting fails (by about 5e-3 on a 4x4x4 cube), which the papers' proof does not cover (see Limits).",
+    "cost": "The bounded operator solves a local problem per entity."
+  },
+  {
+    "slug": "boundary-trace",
+    "title": "Keep the values on the boundary",
+    "summary": "Which operators reproduce boundary values exactly, and which trade that for needing less of the input.",
+    "assumes": "Stable operator: finite point values on the boundary. Trace-preserving operator: only L2 data near it. The trace-preserving operator above the lowest order is validated at degrees 1 and 2 on cubes; its stability constant there is measured only in part (see Validation).",
+    "cost": "The trace-preserving operator costs more per boundary entity."
+  },
+  {
+    "slug": "refinement",
+    "title": "Refine where it matters",
+    "summary": "Bisect the cells around a feature, keep the mesh conforming, and watch the error near the feature fall.",
+    "assumes": "A conforming mesh; marked cells chosen by you.",
+    "cost": "Each refinement rebuilds the topology: linear in the cells."
+  },
+  {
+    "slug": "time-dependent",
+    "title": "Time-dependent data",
+    "summary": "Locate the evaluation points once, then project each new time step cheaply.",
+    "assumes": "Fixed evaluation points inside the mesh.",
+    "cost": "Point location once; then a few microseconds per point and step."
+  },
+  {
+    "slug": "parallel",
+    "title": "Use all the cores",
+    "summary": "Project one field at many points on worker threads, or compute the coefficients of a bounded operator on a pool. The result is bitwise the same as on one thread.",
+    "assumes": "Node.js; the field is a module with a default export.",
+    "cost": "Speed-up is modest and machine dependent (3.4 times on 8 workers on the measured machine): each worker computes its own weights."
+  },
+  {
+    "slug": "higher-order",
+    "title": "Higher polynomial degree",
+    "summary": "Canonical interpolation of any degree, the locally bounded higher-order projection, and the trace-preserving operator above the lowest order.",
+    "assumes": "A mesh fine enough that the extended stars are balls (at least about 6 cells per side for a cube).",
+    "cost": "Seconds per weight at degree 1; the trace-preserving operator costs seconds to tens of seconds per point near the boundary. Its stability above the lowest order is measured only in part (see Validation)."
+  }
+]

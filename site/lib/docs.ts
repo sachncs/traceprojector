@@ -15,7 +15,34 @@ export interface DocPage {
   /** Path relative to the repository root. */
   file: string;
   summary: string;
+  /** Where the page is served: `docs` (the default) or `recipes`. */
+  base?: "recipes";
 }
+
+interface Recipe {
+  slug: string;
+  title: string;
+  summary: string;
+  assumes: string;
+  cost: string;
+}
+
+/** The runnable examples, in the order of examples/recipes.json. */
+const RECIPES: Recipe[] = JSON.parse(
+  fs.readFileSync(path.join(root, "examples/recipes.json"), "utf8"),
+);
+
+const RECIPE_PAGES: DocPage[] = RECIPES.map((r) => ({
+  slug: r.slug,
+  title: r.title,
+  file: `examples/${r.slug}.js`,
+  summary: r.summary,
+  base: "recipes",
+}));
+
+/** The route of a page. */
+export const pageHref = (page: DocPage) =>
+  `/${page.base ?? "docs"}/${page.slug}/`;
 
 export interface DocSection {
   title: string;
@@ -23,6 +50,10 @@ export interface DocSection {
 }
 
 export const SECTIONS: DocSection[] = [
+  {
+    title: "Recipes",
+    pages: RECIPE_PAGES,
+  },
   {
     title: "Start here",
     pages: [
@@ -112,6 +143,7 @@ export const SECTIONS: DocSection[] = [
 ];
 
 export const PAGES: DocPage[] = SECTIONS.flatMap((s) => s.pages);
+export { RECIPE_PAGES };
 
 const bySource = new Map(
   PAGES.map((p) => [path.posix.basename(p.file).toLowerCase(), p]),
@@ -158,6 +190,13 @@ function isExternal(href: string): boolean {
 /** Where a link written in a Markdown file points on the site. */
 function rewrite(href: string, from: DocPage): string {
   if (/^(https?:|mailto:|#)/.test(href)) return href;
+  // A path on the site itself, written by this file for the recipes.
+  if (href.startsWith("site:")) return basePath + href.slice(5);
+  // A program in examples/ is a recipe on the site.
+  const example = href.match(/^(?:\.\.\/)?examples\/([a-z0-9-]+)\.js$/);
+  if (example && RECIPES.some((r) => r.slug === example[1])) {
+    return `${basePath}/recipes/${example[1]}/`;
+  }
   const [target, hash = ""] = href.split("#");
   const page = bySource.get(path.posix.basename(target).toLowerCase());
   if (page && target.endsWith(".md")) {
@@ -170,10 +209,61 @@ function rewrite(href: string, from: DocPage): string {
   return `${REPO}/blob/master/${resolved}${hash ? `#${hash}` : ""}`;
 }
 
-export function loadDoc(slug: string): RenderedDoc {
-  const page = PAGES.find((p) => p.slug === slug);
+/** The exports a recipe uses, from examples/capabilities.json. */
+function usedBy(slug: string): string[] {
+  const inventory: Record<string, { recipes?: string[] }> = JSON.parse(
+    fs.readFileSync(path.join(root, "examples/capabilities.json"), "utf8"),
+  );
+  return Object.entries(inventory)
+    .filter(([, entry]) => entry.recipes?.includes(slug))
+    .map(([name]) => name);
+}
+
+/** A recipe as Markdown: its text, the program, and what it prints. */
+function recipeMarkdown(slug: string): string {
+  const recipe = RECIPES.find((r) => r.slug === slug);
+  if (!recipe) throw new Error(`no recipe "${slug}"`);
+  const code = fs.readFileSync(
+    path.join(root, `examples/${slug}.js`), "utf8").trimEnd();
+  const printed = fs.readFileSync(
+    path.join(root, `examples/${slug}.out.txt`), "utf8").trimEnd();
+  const uses = usedBy(slug)
+    .map((name) => `[\`${name}\`](site:/docs/api/#${name.toLowerCase()})`)
+    .join(", ");
+  return [
+    `# ${recipe.title}`,
+    "",
+    recipe.summary,
+    "",
+    "| | |",
+    "|---|---|",
+    `| **Assumes** | ${recipe.assumes} |`,
+    `| **Costs** | ${recipe.cost} |`,
+    `| **Uses** | ${uses} |`,
+    "",
+    "## The program",
+    "",
+    "Save it as `example.mjs` next to a `package.json` with `traceprojector` installed, and run `node example.mjs`. It is the file [`examples/" + slug + ".js`](" + REPO + "/blob/master/examples/" + slug + ".js) of the repository, which the test suite runs.",
+    "",
+    "```javascript",
+    code,
+    "```",
+    "",
+    "## What it prints",
+    "",
+    "```text",
+    printed,
+    "```",
+    "",
+  ].join("\n");
+}
+
+export function loadDoc(slug: string, base?: "recipes"): RenderedDoc {
+  const page = PAGES.find((p) => p.slug === slug && p.base === base);
   if (!page) throw new Error(`no documentation page "${slug}"`);
-  const source = fs.readFileSync(path.join(root, page.file), "utf8");
+  const source = page.base === "recipes"
+    ? recipeMarkdown(slug)
+    : fs.readFileSync(path.join(root, page.file), "utf8");
   const headings: Heading[] = [];
   const seen = new Map<string, number>();
   const marked = new Marked({
@@ -223,10 +313,11 @@ export function loadDoc(slug: string): RenderedDoc {
   return { page, html, headings };
 }
 
-export function neighbours(slug: string): {
+export function neighbours(slug: string, base?: "recipes"): {
   previous?: DocPage;
   next?: DocPage;
 } {
-  const i = PAGES.findIndex((p) => p.slug === slug);
-  return { previous: PAGES[i - 1], next: PAGES[i + 1] };
+  const group = PAGES.filter((p) => p.base === base);
+  const i = group.findIndex((p) => p.slug === slug);
+  return { previous: group[i - 1], next: group[i + 1] };
 }

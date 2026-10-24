@@ -65,35 +65,37 @@ export function PlaygroundShowcase() {
             </div>
 
             <h2 className="mt-5 text-balance text-4xl font-semibold tracking-[-0.025em] sm:text-5xl">
-              Pick a function.
+              Compare the operators.
               <br />
               <span className="text-muted-foreground">
-                Watch the projector do the math.
+                On your own mesh, in your browser.
               </span>
             </h2>
 
             <p className="mt-5 text-base text-muted-foreground">
-              The bundled playground runs the full library in your browser.
-              Rotate the mesh, change the function, change the form degree,
-              and watch the L² error converge as you refine the mesh.
+              The playground runs the library in your browser. Give five
+              operators a field that is infinite at a vertex and see which
+              ones can read it, measure the commuting and boundary-value
+              residuals with their cost, load a Gmsh mesh, refine it, and copy
+              the program that reproduces the run.
             </p>
 
             <div className="mt-7 space-y-3">
               {[
                 {
                   icon: Box,
-                  title: "3D tetrahedral viewer",
-                  body: "Inspect the projected field on a live rotating mesh.",
+                  title: "Operators side by side",
+                  body: "Canonical, bounded, stable and trace-preserving, in a worker, with the cost shown.",
                 },
                 {
                   icon: Sparkles,
-                  title: "Five canonical test functions",
-                  body: "Sincos, quadratic, linear, trig, exponential.",
+                  title: "Your mesh",
+                  body: "A cube, pasted JSON or an ASCII Gmsh .msh file; bad input is an error that says why.",
                 },
                 {
                   icon: ArrowRight,
-                  title: "Convergence plot",
-                  body: "L² error vs. mesh size, h = 1/n on the unit cube.",
+                  title: "3D viewer and convergence plot",
+                  body: "Still there, under “Project a function”.",
                 },
               ].map((f) => (
                 <div

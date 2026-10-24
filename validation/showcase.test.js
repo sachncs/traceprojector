@@ -15,6 +15,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
 const inventory = JSON.parse(
     readFileSync(resolve(root, 'examples/capabilities.json'), 'utf8'));
+const recipes = JSON.parse(
+    readFileSync(resolve(root, 'examples/recipes.json'), 'utf8'));
 const api = readFileSync(resolve(root, 'docs/api.md'), 'utf8');
 
 /** Every runtime export of every public entry point, with where it is. */
@@ -66,5 +68,17 @@ describe('the showcase of the public API', () => {
     expect(missing, 'recipes with no example').to.deep.equal([]);
     const orphans = exampleNames().filter((n) => !slugs.has(n));
     expect(orphans, 'examples no export points to').to.deep.equal([]);
+  });
+
+  it('describes every example in recipes.json, in a stated order', () => {
+    const described = recipes.map((r) => r.slug);
+    expect([...described].sort(), 'recipes.json against examples/')
+        .to.deep.equal(exampleNames());
+    for (const r of recipes) {
+      for (const key of ['title', 'summary', 'assumes', 'cost']) {
+        expect(r[key], `${r.slug}.${key}`).to.be.a('string').with.length
+            .above(10);
+      }
+    }
   });
 });

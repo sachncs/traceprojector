@@ -14,7 +14,9 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- `examples/`: ten runnable programs (quick start, your own mesh, the four form degrees, a singular field, commuting, boundary values, refinement, time-dependent data, worker threads, higher order), each with its recorded output; `validation/examples.test.js` runs them. `validateMeshInput` is exported, to check a mesh without building anything.
+- `examples/`: ten runnable programs (quick start, your own mesh, the four form degrees, a singular field, commuting, boundary values, refinement, time-dependent data, worker threads, higher order), each with its recorded output; `validation/examples.test.js` runs them. `validateMeshInput` is exported, to check a mesh without building anything, and `parseGmsh` reads an ASCII Gmsh `.msh` file (formats 2.2 and 4.1, first-order tetrahedra) into the two arrays the operators take, refusing anything else with a `ValidateError`.
+- The playground compares operators: a Web Worker runs `Projector`, `CanonicalProjector`, `BoundedCommutingProjector`, `StableProjector` and `TracePreservingProjector` on smooth, singular and localized fields, on a cube, a pasted JSON mesh or an uploaded Gmsh `.msh`, shows what each one cannot answer, measures the commuting and boundary-value residuals with their cost, refines near the centre, and exports a program that reproduces the run (`scripts/verify-lab-code.mjs` runs every exported program).
+- `ZeroTraceProjector`, `BoundedCommutingProjector` and `StableProjector` have `count(l)` and `edge(index)`, so a caller can loop over every coefficient without reaching into the weights.
 - `validation/showcase.test.js`: every public export must have an API reference entry and a recipe or a stated reason it needs none.
 
 
@@ -123,6 +125,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The playground's exported program imported `generateUnitCubeMesh` from `traceprojector`, where it is not exported, and passed a placeholder cell index; it now runs as written. Two accessibility issues in the site footer (a skipped heading level and an aria-label that did not contain its visible text) are fixed.
 - The operators that take vertices and tetrahedra (`ZeroTraceProjector`, `BoundedCommutingProjector`, `StableProjector`, `CanonicalProjector`, `HigherOrderProjector`, `TracePreservingProjector`) accepted NaN or infinite coordinates, repeated vertices and flat tetrahedra silently, and raised a bare `TypeError` for a vertex that does not exist. They now check the mesh on construction and raise `ValidateError`, as `Mesh` does and as the getting-started guide says. **Behaviour change:** a mesh that used to be accepted by accident and is broken in one of these ways now fails at construction. Orientation is *not* checked by these operators, because they sort the vertices of each cell and give the same answer, to roundoff, for either orientation (`validation/orientation.test.js`), so meshes from Gmsh or TetGen with mixed orientation keep working. `Mesh` and `Projector`, which use the sign, still require positive orientation.
 
 

@@ -34,7 +34,7 @@ const FEATURES: Feature[] = [
   {
     icon: Target,
     title: "Exact boundary traces",
-    body: "Vertex values u(v), edge tangentials ∫_e u·t ds, and face normal fluxes ∫_f u·n dA reproduced to machine precision on every boundary simplex.",
+    body: "StableProjector and the canonical operators reproduce the vertex values u(v), edge circulations ∫_e u·t ds and face fluxes ∫_f u·n dA on every boundary simplex to machine precision. TracePreservingProjector keeps the discrete trace while asking for less of u there.",
     tag: "Section 6.3",
     accent: "cyan",
   },
@@ -63,7 +63,7 @@ const FEATURES: Feature[] = [
   {
     icon: Code2,
     title: "Any polynomial degree",
-    body: "Canonical interpolation and the locally bounded Arnold–Guzmán projection onto Lagrange, Nédélec, Raviart–Thomas and discontinuous spaces of any degree. Hand-written .d.ts for every module.",
+    body: "Canonical interpolation of any degree is cheap. The locally bounded Arnold–Guzmán projection and the trace-preserving operator reach any degree too, at the cost of a local solve per entity (seconds at degree 1). Hand-written .d.ts for every module.",
     tag: "Extensibility",
     accent: "violet",
   },

@@ -4,7 +4,7 @@ import { Reveal, RevealStagger } from "@/components/motion/reveal";
 
 const METRICS = [
   {
-    kpi: "500+",
+    kpi: "600+",
     unit: "unit tests",
     label: "Plus a numerical validation suite",
     sub: "One test per claim of the papers, fixed tolerances",

@@ -36,6 +36,7 @@ import {
   timesPolynomial,
   zeroLike,
 } from './physical-forms.js';
+import {validateMeshInput} from './mesh.js';
 
 const dot = (a, b) => (typeof a === 'number' ? a * b :
   a.reduce((s, q, i) => s + q * b[i], 0));
@@ -48,6 +49,7 @@ export class HigherOrderProjector {
    *     (number|undefined)}=} options `degree` is p; r = p + 1.
    */
   constructor(vertices, tetrahedra, options = {}) {
+    validateMeshInput(vertices, tetrahedra, {allowFlipped: true});
     this.weights = new HighOrderWeights(vertices, tetrahedra, options);
     this.boundaryConditions = this.weights.boundaryConditions;
     this.degree = this.weights.degree;

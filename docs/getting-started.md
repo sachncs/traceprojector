@@ -46,7 +46,8 @@ projector and raises a `ValidateError` naming the offending tetrahedron if:
 |---|---|
 | a coordinate is `NaN` or infinite | repair the mesh generator's output |
 | a tetrahedron repeats a vertex, or names a vertex that does not exist | check the index base (it must start at 0) |
-| a tetrahedron has zero or **negative** volume | swap two of its vertex numbers to flip its orientation |
+| a tetrahedron has zero volume (flat) | move a vertex; or drop the tetrahedron |
+| a tetrahedron has **negative** volume | only `Mesh` and `Projector` object; swap two of its vertex numbers to flip it. The other projectors accept either orientation |
 | the mesh is not conforming (hanging nodes, overlapping cells) | neighbouring tetrahedra must share whole faces |
 
 Very flat slivers are accepted but cost accuracy; see [Limits](limits.md).

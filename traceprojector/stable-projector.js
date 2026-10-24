@@ -21,6 +21,7 @@
 import {ZeroTraceProjector} from './zero-trace-projector.js';
 import {tetrahedronRule, dot} from './simplicial-complex.js';
 import {ProjectError} from './errors.js';
+import {validateMeshInput} from './mesh.js';
 
 /** Quadrature order for the overlap of weights and boundary Whitney forms
  * (degree 2). */
@@ -37,6 +38,7 @@ export class StableProjector {
    *   zero-trace projector on the same mesh, to share its computed weights.
    */
   constructor(vertices, tetrahedra, options = {}) {
+    validateMeshInput(vertices, tetrahedra, {allowFlipped: true});
     this.interior =
       options.interior ?? new ZeroTraceProjector(vertices, tetrahedra, options);
     this.weights = this.interior.weights;

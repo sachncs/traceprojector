@@ -1,0 +1,11 @@
+vertex 0 at 0.00, 0.00, 0.00
+  value of u                  0.000000
+  stable coefficient          0.000000
+  bounded commuting           -0.020024
+vertex 1 at 0.33, 0.00, 0.00
+  value of u                  0.327195
+  stable coefficient          0.327195
+  bounded commuting           0.323249
+trace preserving, vertex 1:
+  u (a weighted average, not the point value) 0.329096
+  a linear function, which is in the space    1.666667 against 1.666667

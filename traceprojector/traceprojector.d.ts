@@ -219,7 +219,7 @@ export class Projector {
   refine(marked: number[]): { projector: Projector; parent: number[] };
 }
 
-export { Mesh } from './mesh.js';
+export { Mesh, validateMeshInput } from './mesh.js';
 export { Whitney } from './whitney.js';
 export { Locator } from './locator.js';
 export { Refinement } from './refinement.js';

@@ -1,0 +1,4 @@
+points projected on 2 workers: 5
+identical to one thread: true
+coefficients computed on the pool: 12
+identical to one thread, bit for bit: true

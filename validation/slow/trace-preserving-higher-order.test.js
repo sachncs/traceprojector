@@ -150,3 +150,20 @@ describe('the trace-preserving projection above the lowest order (p = 1)',
         }
       }
     });
+
+describe('the trace-preserving projection at p = 2', function() {
+  this.timeout(7200000);
+  const high = new TracePreservingProjector(
+      vertices, tetrahedra, {degree: 2});
+  // Cubic scalars lie in the degree-3 space.
+  const u = (x) => x[0] ** 3 - x[1] * x[2] * x[0] + 0.5 * x[2] ** 2 + x[1];
+  const du = (x) => [3 * x[0] ** 2 - x[1] * x[2], -x[0] * x[2] + 1,
+    -x[1] * x[0] + x[2]];
+  for (const [name, {cell, x}] of places) {
+    it(`l = 0 is a projection: Pi u = u for a cubic, ${name}`, () => {
+      const error = Math.abs(high.local(u, du, 0).value(x, cell) - u(x));
+      console.log(`      p = 2, l = 0, ${name}: ${error.toExponential(1)}`);
+      expect(error).to.be.below(1e-8);
+    });
+  }
+});

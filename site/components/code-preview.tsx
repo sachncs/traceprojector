@@ -38,11 +38,18 @@ console.log(projector.project(u, point, tIdx, 0)) // 0.3875  (u = 0.3811)`,
     id: "boundary",
     label: "Exact boundary",
     filename: "verify.mjs",
-    code: `// Π⁰ reproduces u(v) at every boundary vertex,
+    code: `import { Projector, Whitney } from 'traceprojector'
+import { generateUnitCubeMesh } from 'traceprojector/generator'
+
+// Π⁰ reproduces u(v) at every boundary vertex,
 // Π¹ reproduces ∫ₑ u·t ds at every boundary edge,
 // Π² reproduces ∫f u·n dA at every boundary face.
-projector.verifyBoundaryWeights()
-// → no output: every weight reproduces its canonical DoF`,
+const mesh = generateUnitCubeMesh(3)
+const projector = new Projector(mesh, new Whitney(mesh))
+projector.computeBoundaryWeights()
+
+const { ok, passed } = projector.verifyBoundaryWeights()
+console.log(ok, passed) // true 542: every weight reproduces its canonical DoF`,
   },
   {
     id: "browser",

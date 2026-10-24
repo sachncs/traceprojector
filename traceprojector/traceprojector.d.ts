@@ -220,6 +220,7 @@ export class Projector {
 }
 
 export { Mesh, validateMeshInput } from './mesh.js';
+export { parseGmsh } from './gmsh.js';
 export { Whitney } from './whitney.js';
 export { Locator } from './locator.js';
 export { Refinement } from './refinement.js';

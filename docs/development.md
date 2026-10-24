@@ -14,8 +14,8 @@ This repository follows a zero-config philosophy: every script is a single `npm 
 | Build | `npm run build` | Build Rollup bundles: ESM, CJS, UMD |
 | Docs | `npm run docs` | Regenerate `docs/api.md` from JSDoc comments |
 | Full Build | `npm run build:full` | Build + docs in one step |
-| Web Dev | `npm run web:dev` | Start the Next.js 16 playground in `web/` |
-| Web Build | `npm run web:build` | Build the Next.js 16 playground for production |
+| Web Dev | `npm run site:dev` | Start the Next.js 16 playground in `site/` |
+| Web Build | `npm run site:build` | Build the Next.js 16 playground for production |
 
 ## Typical PR Workflow
 
@@ -43,11 +43,15 @@ describe('My new feature', () => {
 
 ## Code Style
 
-We use [StandardJS](https://standardjs.com). There is no `.eslintrc` or `.prettierrc`; the style is enforced entirely by the `standard` CLI.
+We follow the [Google JavaScript Style Guide](https://google.github.io/styleguide/jsguide.html),
+enforced by ESLint with `eslint-config-google` (see `eslint.config.js`).
+`npm run lint` checks; `npm run lint:fix` applies the automatic fixes.
 
 Key rules:
-- 2 spaces indentation
-- No semicolons
+- 2 spaces indentation, lines of at most 80 columns (long strings, template
+  literals and regular expressions are exempt)
+- Semicolons
 - Single quotes
-- No trailing commas in function parameters
+- Trailing commas in multi-line literals and calls
+- No spaces inside braces of object literals and imports: `{a, b}`
 - Camel case identifiers

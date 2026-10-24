@@ -27,7 +27,7 @@ On a simplicial mesh, the lowest-order finite-element spaces that form a discret
 
 ## Projection Operators
 
-The library implements bounded, commuting, discrete-trace preserving projections `Pi^l` for `l = 0,1,2,3`.
+The library implements commuting, discrete-trace preserving projections `Pi^l` for `l = 0,1,2,3`. Both parts of the decomposition below use canonical degrees of freedom (point values, edge integrals, face fluxes); the boundary weights of Section 6.3 are computed to cross-check those degrees of freedom and do not enter the projection, so the stability bounds proved in the paper for its weight-based operator do not apply to this implementation.
 
 ### Decomposition
 
@@ -159,4 +159,4 @@ For polynomial degree `p > 0`:
 - **H^1 (l=0)**: Enriched with bubble functions that vanish on the element boundary.
 - **L^2 (l=3)**: Enriched with monomials of total degree up to `p`.
 
-Vector-valued higher-order (`l = 1, 2`, `p > 0`) is not yet implemented.
+`Projector` itself enriches only `l = 0` and `l = 3`. For all form degrees and any `p`, `CanonicalProjector` interpolates onto `P_r^- Λ^k` with `r = p + 1`, using the Arnold–Falk–Winther degrees of freedom: on each sub-simplex of dimension `m` (`k ≤ m ≤ r + k − 1`), the moments of the pull-back of the form against the polynomials of degree `r + k − m − 1`. The reference basis is the dual basis of those functionals, mapped to each cell by the Piola transform (identity, covariant, contravariant, or divided by the Jacobian for `l = 0..3`). It is a projection, commutes with the exterior derivative and is conforming; it is not `L²`-stable.

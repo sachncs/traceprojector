@@ -10,10 +10,10 @@ export class ValidateError extends Error {
    * @param {string} message
    * @param {number=} index - The offending element index, if applicable.
    */
-  constructor (message, index) {
-    super(message)
-    this.name = 'ValidateError'
-    this.index = index
+  constructor(message, index) {
+    super(message);
+    this.name = 'ValidateError';
+    this.index = index;
   }
 }
 
@@ -24,9 +24,9 @@ export class ProjectError extends Error {
   /**
    * @param {string} message - Description of the projection failure.
    */
-  constructor (message) {
-    super(message)
-    this.name = 'ProjectError'
+  constructor(message) {
+    super(message);
+    this.name = 'ProjectError';
   }
 }
 
@@ -37,8 +37,8 @@ export class SingularError extends Error {
   /**
    * @param {string} message - Description of the singularity condition.
    */
-  constructor (message) {
-    super(message)
-    this.name = 'SingularError'
+  constructor(message) {
+    super(message);
+    this.name = 'SingularError';
   }
 }

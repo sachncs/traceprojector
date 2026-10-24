@@ -85,7 +85,7 @@ export function SiteFooter() {
           <div className="col-span-2 lg:col-span-5">
             <Logo size="lg" />
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-muted-foreground">
-              Bounded, commuting, discrete-trace preserving projections for
+              Commuting, discrete-trace preserving projections for
               the 3D de Rham complex. Pure JavaScript, MIT-licensed, open
               source.
             </p>

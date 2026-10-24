@@ -4,8 +4,9 @@
  * Cell-based scalar projection (average over tetrahedron).
  */
 
-import { integrateTetrahedron } from '../quadrature.js'
-import { ProjectError } from '../errors.js'
+import {integrateTetrahedron} from '../quadrature.js';
+import {relativeVolume, MIN_RELATIVE_VOLUME} from '../utils.js';
+import {ProjectError} from '../errors.js';
 
 /**
  * Lowest-order L2 (l=3) cell-based projector implementing Pi^3.
@@ -20,10 +21,10 @@ export class L2 {
    * @param {!Whitney} whitney
    * @param {number} quadratureOrder
    */
-  constructor (mesh, whitney, quadratureOrder) {
-    this.mesh = mesh
-    this.whitney = whitney
-    this.quadratureOrder = quadratureOrder
+  constructor(mesh, whitney, quadratureOrder) {
+    this.mesh = mesh;
+    this.whitney = whitney;
+    this.quadratureOrder = quadratureOrder;
   }
 
   /**
@@ -31,18 +32,22 @@ export class L2 {
    * @param {number} tIdx
    * @return {number}
    */
-  project (u, tIdx) {
-    const tet = this.mesh.getTetrahedra()[tIdx]
-    const verts = tet.map((i) => this.mesh.getVertices()[i])
-    const vol = this.mesh.getVolume(tIdx)
-    if (vol < 1e-12) {
+  project(u, tIdx) {
+    const tet = this.mesh.getTetrahedra()[tIdx];
+    const verts = tet.map((i) => this.mesh.getVertices()[i]);
+    const vol = this.mesh.getVolume(tIdx);
+    if (!(Math.abs(relativeVolume(verts)) >= MIN_RELATIVE_VOLUME)) {
       throw new ProjectError(
-        `Cannot perform L2 projection on degenerate tetrahedron ${tIdx}`
-      )
+          `Cannot perform L2 projection on degenerate tetrahedron ${tIdx}`,
+      );
     }
 
-    const integrand = (pt) => u(pt)
-    const integral = integrateTetrahedron(verts, integrand, this.quadratureOrder)
-    return integral / vol
+    const integrand = (pt) => u(pt);
+    const integral = integrateTetrahedron(
+        verts,
+        integrand,
+        this.quadratureOrder,
+    );
+    return integral / vol;
   }
 }

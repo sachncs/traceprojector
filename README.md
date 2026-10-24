@@ -1,6 +1,6 @@
 <p align="center">
   <h1 align="center">traceprojector</h1>
-  <p align="center">Bounded, Commuting, Discrete-trace Preserving Projections for the 3D de Rham complex on simplicial meshes.</p>
+  <p align="center">Commuting, Discrete-trace Preserving Projections for the 3D de Rham complex on simplicial meshes.</p>
   <p align="center">
     <a href="#installation"><img src="https://img.shields.io/badge/node-%E2%89%A526.0.0-43853d" alt="Node 26+"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green" alt="License"></a>
@@ -8,7 +8,7 @@
     <a href="https://github.com/sachncs/traceprojector/actions"><img src="https://img.shields.io/github/actions/workflow/status/sachncs/traceprojector/ci.yml?branch=master" alt="CI"></a>
     <a href="https://www.npmjs.com/package/traceprojector"><img src="https://img.shields.io/npm/v/traceprojector" alt="npm"></a>
     <a href="https://github.com/sachncs/traceprojector/stargazers"><img src="https://img.shields.io/github/stars/sachncs/traceprojector" alt="Stars"></a>
-    <a href="https://standardjs.com/"><img src="https://img.shields.io/badge/code%20style-standard-brightgreen.svg" alt="StandardJS"></a>
+    <a href="https://google.github.io/styleguide/jsguide.html"><img src="https://img.shields.io/badge/code%20style-google-blue.svg" alt="Google JavaScript Style"></a>
   </p>
   <p align="center">
     <a href="https://github.com/sachncs/traceprojector/blob/master/CHANGELOG.md"><img src="https://img.shields.io/badge/changelog-0.1.0-blue" alt="Changelog"></a>
@@ -29,28 +29,75 @@ Then in your code:
 import { Mesh, Whitney, Projector } from 'traceprojector'
 ```
 
-Or skip the install and try the bundled [web playground](web/) — `npm run web:dev` opens a 3D mesh viewer, an API playground with code export, and a live convergence plot.
+Or skip the install and try the bundled [web playground](site/) — `npm run site:dev` opens a 3D mesh viewer, an API playground with code export, and a live convergence plot.
 
 ---
 
 ## What is this?
 
-**traceprojector** is a pure-JavaScript implementation of the
-**Bounded, Commuting, Discrete-trace Preserving Projections** `Π^l`
+**traceprojector** is a pure-JavaScript library of
+**Commuting, Discrete-trace Preserving Projections** `Π^l`
 for the discrete 3D de Rham complex. It builds, for `l = 0, 1, 2, 3`,
 the projection operators that
 
-> 1. are **bounded** in the natural `H^1`, `H(curl)`, `H(div)`, `L^2`
->    norms,
-> 2. **commute** with the exterior derivative `d^l` (`grad Π^0 =
+> 1. **commute** with the exterior derivative `d^l` (`grad Π^0 =
 >    Π^1 grad`, `curl Π^1 = Π^2 curl`, `div Π^2 = Π^3 div`),
-> 3. **preserve discrete traces** on the boundary: vertex values,
+> 2. **preserve discrete traces** on the boundary: vertex values,
 >    edge tangential integrals, and face normal fluxes are reproduced
->    exactly.
+>    exactly (to roundoff).
 
-It implements the construction from
+It follows the decomposition `Π^l = Π_∂^l + Π_ring^l (I − Π_∂^l)` of
 
 > *Ern, Guzmán, Potu (2026) — [arXiv:2604.28103v1](https://arxiv.org/abs/2604.28103).*
+
+> **Two operators.** `Projector` uses *canonical* degrees of freedom (point
+> values, edge integrals, face fluxes of the input). The paper's boundary
+> weights (Section 6.3) are computed there only to cross-check those degrees
+> of freedom, so the paper's stability results do **not** apply to it: the
+> input must have well-defined point values, edge integrals and face fluxes,
+> and a non-finite value raises `ProjectError`.
+>
+> `CanonicalProjector` interpolates onto the Lagrange, Nédélec,
+> Raviart–Thomas and discontinuous spaces of **any** degree `p` (Arnold–Falk–
+> Winther canonical degrees of freedom). It is a projection, preserves the
+> boundary trace and commutes with the exterior derivative (checked for
+> `p = 0, 1, 2`, all form degrees), with the expected convergence orders.
+> Like `Projector` it needs regular input and is not `L²`-stable.
+>
+> `HigherOrderProjector` (any degree `p`) is the locally `L²`-bounded
+> commuting projection of Arnold and Guzmán onto the same spaces. It commutes
+> with the exterior derivative for every `L²` input with an `L²` derivative,
+> reproduces its space, and its `L²` constant did not grow on narrow bumps
+> (1.007 at `p = 1`). It does not preserve boundary traces, needs a mesh fine
+> enough that its extended stars are balls, and is for validation-scale
+> meshes: minutes on 4×4×4 cells at `p = 1`.
+>
+> `TracePreservingProjector` (lowest order, `p = 0`) is the full operator
+> `Π = mΠ(I − Π_∂) + Π_∂`: a projection onto the Whitney forms that preserves
+> the discrete trace on the boundary and commutes with the exterior derivative
+> for fields whose trace is a lowest-order trace (checked to 4e-14). For other
+> fields the commuting residual is about 5e-3 on a 4×4×4 cube. It is for
+> validation-scale meshes: it takes minutes on 4×4×4 cells and needs a mesh
+> fine enough that the extended stars are balls.
+>
+, `p = 0`) implements the locally
+> L²-bounded interior part of the construction (Ern, Guzmán, Potu, Vohralík,
+> [arXiv:2502.03601](https://arxiv.org/abs/2502.03601)): interior coefficients
+> are integrals against local weight functions, so an input that is unbounded
+> at an interior mesh vertex is projected stably. Its boundary part still uses
+> canonical degrees of freedom, so it needs finite boundary values, and it
+> commutes with the exterior derivative for fields with a piecewise
+> polynomial trace (the class for which the paper's proof applies). The
+> boundary part is completed by `TracePreservingProjector`. It is slower
+> (iterative local solves on stars of up to several mesh rings) and is meant
+> for validation-scale meshes. `ZeroTraceProjector` is its zero-trace interior
+> part.
+>
+> `BoundedCommutingProjector` (lowest order) is the same construction without
+> any boundary condition (arXiv:2502.03601, Thm 5.1): it is locally
+> L²-bounded and commutes with the exterior derivative for **every** input,
+> boundary included, because it takes no point values, edge integrals or face
+> fluxes. It does **not** preserve traces.
 
 > **Disclaimer:** I am not an author of the paper above. This
 > repository is an independent JavaScript implementation of the
@@ -87,7 +134,7 @@ You, even if:
 - You're a numerical-analysis researcher looking for a small,
   dependency-free reference implementation of `Π^l`.
 - You teach an FEM course and want a live playground for your
-  students — the bundled [web playground](web/) has 3D mesh
+  students — the bundled [web playground](site/) has 3D mesh
   visualisation, a convergence plot, and a code exporter.
 
 If you can install Node 24 (or later) and type commands into a
@@ -150,12 +197,12 @@ npm install traceprojector
 
 ### Option 2 — Try it online (no install)
 
-The bundled [web playground](web/) is a Next.js 16 app that loads the
+The bundled [web playground](site/) is a Next.js 16 app that loads the
 library straight from this repo. Once you have the repo cloned (see
 Option 3), you can run it with:
 
 ```bash
-npm run web:dev          # open http://localhost:3000
+npm run site:dev          # open http://localhost:3000
 ```
 
 It gives you a 3D mesh viewer, an API playground with code export, and
@@ -388,9 +435,9 @@ dist/                          — Rollup bundles: ESM, CJS, UMD
 | Category | Technology |
 |---|---|
 | Language | JavaScript (ES2024, pure ESM) |
-| Runtime | Node.js ≥ 26 |
-| Build | [Rollup](https://rollupjs.org/) (ESM + CJS + UMD) |
-| Lint | [StandardJS](https://standardjs.com/) |
+| Runtime | Node.js ≥ 24 |
+| Build | [Rollup](https://rollupjs.org/) (ESM + UMD) |
+| Lint | [ESLint](https://eslint.org/) with the [Google JavaScript Style Guide](https://google.github.io/styleguide/jsguide.html) rules |
 | Testing | [Mocha](https://mochajs.org/) + [Chai](https://www.chaijs.com/) |
 | Coverage | [c8](https://github.com/bcoe/c8) |
 | Docs | [jsdoc-to-markdown](https://github.com/jsdoc2md/jsdoc-to-markdown) |
@@ -399,32 +446,27 @@ dist/                          — Rollup bundles: ESM, CJS, UMD
 
 ---
 
-## Roadmap
+## Beyond the basics
 
-### High priority
-
-- **Vector-valued higher-order projections** (`l = 1, 2`, `p > 0`) —
-  Nédélec and Raviart-Thomas enrichment for `H(curl)` and `H(div)`.
-- **Adaptive mesh refinement support** — integrate `Refinement` APIs
-  into `Projector` so boundary weights can be recomputed
-  incrementally as the mesh refines.
-
-### Medium priority
-
-- **Web Worker parallelization** — offload per-tet projection and
-  boundary weight solves to workers for large meshes.
-- **WASM acceleration** — port the dense linear-algebra routines
-  (`luSolve`, `inverse3x3`) to WebAssembly for a 2-5× speedup.
-
-### Low priority / Research
-
-- **Anisotropic mesh support** — generalize the point locator and
-  quadrature to handle highly stretched tets without loss of
-  precision.
-- **Time-dependent projections** — cache-friendly APIs for projecting
-  fields that evolve between time steps.
-- **Arbitrary polynomial degree `p`** — unify the scalar bubble and
-  L² monomial bases into a single hierarchical basis generator.
+- **Higher order and vector-valued spaces.** `CanonicalProjector` projects
+  onto Lagrange, Nédélec, Raviart–Thomas and discontinuous spaces of any
+  degree (`degree: p`).
+- **Adaptive refinement.** `refineTetrahedra(vertices, tetrahedra, marked)`
+  bisects the marked cells by longest edge and keeps the mesh conforming;
+  `projector.refine(marked)` returns a projector on the refined mesh. Its
+  boundary weights are recomputed, not updated incrementally.
+- **Time-dependent fields.** `projector.sampler(points, l, p)` locates the
+  points once and returns a function that projects each new field.
+- **Worker threads (Node.js).** `projectInParallel` from
+  `traceprojector/parallel` projects one field at many points on several
+  threads; the field is given as a module URL because functions cannot be
+  sent to a thread. Browsers are not covered.
+- **Stretched meshes.** Point location and projection are tested on cubes
+  stretched by 10⁴; an aspect ratio beyond about 10⁵ is rejected by the
+  relative-volume floor with a `ValidateError`.
+- **WebAssembly.** Not pursued: profiling a projection on a 3,072-cell mesh
+  puts the dense solver at 19% of the time, so even an infinitely fast one
+  would speed the whole up by at most 1.24×.
 
 ---
 

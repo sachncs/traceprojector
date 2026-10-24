@@ -12,6 +12,66 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- `ZeroTraceProjector` and `StableProjector` (lowest order): locally
+  L²-bounded projections built from the local weight functions of
+  arXiv:2502.03601. Interior coefficients are integrals against the weights,
+  so an input unbounded at an interior mesh vertex is projected stably. The
+  boundary part still uses canonical degrees of freedom; see
+  `docs/VALIDATION.md` for what is and is not established.
+- `BoundedCommutingProjector` (lowest order): the projection of
+  arXiv:2502.03601 Thm 5.1 without boundary condition. Locally L²-bounded and
+  commuting for every input, boundary included; does not preserve traces.
+- `HigherOrderProjector`: the locally bounded commuting projection of
+  Arnold and Guzmán for any degree `p` and every form degree, with
+  `HighOrderWeights` (weights of any degree), `AgSpace` (their degrees of
+  freedom) and the correction `Q_r`. Commutes with `d` to 2.5e-13 and keeps
+  its `L²` constant (1.007) on narrow bumps at `p = 1`.
+- `refineTetrahedra` and `Projector.refine` (conforming longest-edge
+  bisection), `Projector.sampler` (point location cached across time
+  steps) and `projectInParallel` (Node worker threads).
+- `CanonicalProjector`: canonical interpolation onto `P_r^- Λ^k` of any
+  degree for all form degrees (Lagrange, Nédélec, Raviart–Thomas, DG), with
+  the polynomial form spaces and the reference-element degrees of freedom it
+  is built from. Commutes with `d` and preserves the trace.
+- `TracePreservingProjector` (lowest order): the full operator
+  `Π = mΠ(I − Π_∂) + Π_∂` of the boundary-preserving paper: a projection onto
+  the Whitney forms that preserves the discrete trace and commutes with the
+  exterior derivative for fields with a lowest-order trace (4e-14 measured).
+  Built from the boundary weights, the Worsey–Farin extension and
+  `ZeroTraceProjector`.
+- `docs/VALIDATION.md` and a `validation/` suite with tolerances fixed before
+  the first run (`validation/tolerances.json`).
+- `npm run verify`: lint, tests, build, export parity, types parity (`tsd` and
+  a JS-versus-declaration check), `publint`, `attw`, and a consumer test that
+  installs the packed tarball into an empty directory.
+
+### Fixed
+
+- Projections returned `Infinity` or `NaN` silently when the input field was
+  not finite at a degree of freedom; they now throw `ProjectError`.
+- Geometry depended on the unit system. Meshes with edges below about 0.1 mm
+  (in metres) were rejected as degenerate, point location failed on them, face
+  normals were silently replaced by `[0, 0, 1]`, and small 3x3 systems were
+  declared singular. Degeneracy is now judged by the volume relative to the
+  longest edge cubed (`MIN_RELATIVE_VOLUME`, 1e-10), and a degenerate surface
+  triangle raises an error instead of inventing a normal.
+
+### Changed
+
+- Code style follows the Google JavaScript Style Guide (ESLint with
+  `eslint-config-google`) instead of StandardJS. The reformat is mechanical:
+  the unit tests and the bit-exact determinism output are unchanged.
+- The package is ESM-only (`sideEffects: false`). The CommonJS bundle was
+  never reachable through the `exports` map and is no longer built; on
+  Node 22.12 and later `require('traceprojector')` loads the ESM entry.
+- The README and package description no longer claim that `Projector` is
+  bounded: it uses canonical degrees of freedom, and the paper's boundary
+  weights only cross-check them.
+- CI runs on Node 24 and 26, audits production dependencies, and builds the
+  site; the `web:build` script reference is now `site:build`.
+
 ## [0.1.0] — 2026-09-03
 
 The first release under the **traceprojector** name on Node 26. Adds

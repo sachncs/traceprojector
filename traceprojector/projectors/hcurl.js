@@ -4,9 +4,9 @@
  * Edge-based vector projection with boundary-aware tangential trace DoFs.
  */
 
-import { dot, subtract } from '../utils.js'
-import { lineQuadrature } from '../quadrature.js'
-import { Mesh } from '../mesh.js'
+import {dot, subtract} from '../utils.js';
+import {lineQuadrature} from '../quadrature.js';
+import {Mesh} from '../mesh.js';
 
 /**
  * Lowest-order H(curl) (l=1) edge-based projector implementing Pi^1.
@@ -22,10 +22,10 @@ export class Hcurl {
    * @param {!Whitney} whitney
    * @param {number} quadratureOrder
    */
-  constructor (mesh, whitney, quadratureOrder) {
-    this.mesh = mesh
-    this.whitney = whitney
-    this.quadratureOrder = quadratureOrder
+  constructor(mesh, whitney, quadratureOrder) {
+    this.mesh = mesh;
+    this.whitney = whitney;
+    this.quadratureOrder = quadratureOrder;
   }
 
   /**
@@ -35,31 +35,40 @@ export class Hcurl {
    * @param {!Set<number>} boundaryEdgeSet
    * @return {!Array<number>}
    */
-  project (u, point, tIdx, boundaryEdgeSet) {
-    const tet = this.mesh.getTetrahedra()[tIdx]
-    const bary = this.whitney.getBarycentric(tIdx, point)
-    const edgeBasis = this.whitney.getEdgeBasis(tIdx, bary)
+  project(u, point, tIdx, boundaryEdgeSet) {
+    const tet = this.mesh.getTetrahedra()[tIdx];
+    const bary = this.whitney.getBarycentric(tIdx, point);
+    const edgeBasis = this.whitney.getEdgeBasis(tIdx, bary);
 
     const localEdges = [
-      [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]
-    ]
-    const result = [0, 0, 0]
+      [0, 1],
+      [0, 2],
+      [0, 3],
+      [1, 2],
+      [1, 3],
+      [2, 3],
+    ];
+    const result = [0, 0, 0];
 
     for (let e = 0; e < 6; e++) {
-      const [i, j] = localEdges[e]
-      const globalEdge = [tet[i], tet[j]]
-      const eKey = Mesh.computeEdgeKey(globalEdge[0], globalEdge[1], this.mesh.getOriginalVertexCount())
-      const eIdx = this.mesh.getEdgeIndex(eKey)
-      const sigma = this.mesh.getTetEdgeSign(tIdx, e)
+      const [i, j] = localEdges[e];
+      const globalEdge = [tet[i], tet[j]];
+      const eKey = Mesh.computeEdgeKey(
+          globalEdge[0],
+          globalEdge[1],
+          this.mesh.getOriginalVertexCount(),
+      );
+      const eIdx = this.mesh.getEdgeIndex(eKey);
+      const sigma = this.mesh.getTetEdgeSign(tIdx, e);
 
-      const coefficient = this.computeEdgeDof(u, eIdx) * sigma
+      const coefficient = this.computeEdgeDof(u, eIdx) * sigma;
 
-      result[0] += coefficient * edgeBasis[e][0]
-      result[1] += coefficient * edgeBasis[e][1]
-      result[2] += coefficient * edgeBasis[e][2]
+      result[0] += coefficient * edgeBasis[e][0];
+      result[1] += coefficient * edgeBasis[e][1];
+      result[2] += coefficient * edgeBasis[e][2];
     }
 
-    return result
+    return result;
   }
 
   /**
@@ -69,28 +78,28 @@ export class Hcurl {
    * @param {number} eIdx
    * @return {number}
    */
-  computeEdgeDof (u, eIdx) {
-    const e = this.mesh.getEdges()[eIdx]
-    const v0 = this.mesh.getVertices()[e[0]]
-    const v1 = this.mesh.getVertices()[e[1]]
-    const edgeVec = subtract(v1, v0)
+  computeEdgeDof(u, eIdx) {
+    const e = this.mesh.getEdges()[eIdx];
+    const v0 = this.mesh.getVertices()[e[0]];
+    const v1 = this.mesh.getVertices()[e[1]];
+    const edgeVec = subtract(v1, v0);
 
     if (typeof u(v0) === 'number') {
-      return u(v1) - u(v0)
+      return u(v1) - u(v0);
     }
 
-    const { points, weights } = lineQuadrature(this.quadratureOrder)
-    let integral = 0
+    const {points, weights} = lineQuadrature(this.quadratureOrder);
+    let integral = 0;
     for (let q = 0; q < points.length; q++) {
-      const s = points[q]
+      const s = points[q];
       const pt = [
         v0[0] + s * edgeVec[0],
         v0[1] + s * edgeVec[1],
-        v0[2] + s * edgeVec[2]
-      ]
-      integral += weights[q] * dot(u(pt), edgeVec)
+        v0[2] + s * edgeVec[2],
+      ];
+      integral += weights[q] * dot(u(pt), edgeVec);
     }
-    return integral
+    return integral;
   }
 
   /**
@@ -104,30 +113,39 @@ export class Hcurl {
    * @param {!Set<number>} boundaryEdgeSet
    * @return {!Array<number>}
    */
-  projectRing (u, point, tIdx, boundaryEdgeSet) {
-    const tet = this.mesh.getTetrahedra()[tIdx]
-    const bary = this.whitney.getBarycentric(tIdx, point)
-    const edgeBasis = this.whitney.getEdgeBasis(tIdx, bary)
+  projectRing(u, point, tIdx, boundaryEdgeSet) {
+    const tet = this.mesh.getTetrahedra()[tIdx];
+    const bary = this.whitney.getBarycentric(tIdx, point);
+    const edgeBasis = this.whitney.getEdgeBasis(tIdx, bary);
     const localEdges = [
-      [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]
-    ]
-    const result = [0, 0, 0]
+      [0, 1],
+      [0, 2],
+      [0, 3],
+      [1, 2],
+      [1, 3],
+      [2, 3],
+    ];
+    const result = [0, 0, 0];
 
     for (let e = 0; e < 6; e++) {
-      const [i, j] = localEdges[e]
-      const globalEdge = [tet[i], tet[j]]
-      const eKey = Mesh.computeEdgeKey(globalEdge[0], globalEdge[1], this.mesh.getOriginalVertexCount())
-      const eIdx = this.mesh.getEdgeIndex(eKey)
+      const [i, j] = localEdges[e];
+      const globalEdge = [tet[i], tet[j]];
+      const eKey = Mesh.computeEdgeKey(
+          globalEdge[0],
+          globalEdge[1],
+          this.mesh.getOriginalVertexCount(),
+      );
+      const eIdx = this.mesh.getEdgeIndex(eKey);
       if (boundaryEdgeSet.has(eIdx)) {
-        continue
+        continue;
       }
-      const sigma = this.mesh.getTetEdgeSign(tIdx, e)
-      const coefficient = this.computeEdgeDof(u, eIdx) * sigma
-      result[0] += coefficient * edgeBasis[e][0]
-      result[1] += coefficient * edgeBasis[e][1]
-      result[2] += coefficient * edgeBasis[e][2]
+      const sigma = this.mesh.getTetEdgeSign(tIdx, e);
+      const coefficient = this.computeEdgeDof(u, eIdx) * sigma;
+      result[0] += coefficient * edgeBasis[e][0];
+      result[1] += coefficient * edgeBasis[e][1];
+      result[2] += coefficient * edgeBasis[e][2];
     }
-    return result
+    return result;
   }
 
   /**
@@ -138,29 +156,38 @@ export class Hcurl {
    * @param {!Set<number>} boundaryEdgeSet
    * @return {!Array<number>}
    */
-  extendBoundary (boundaryData, point, tIdx, boundaryEdgeSet) {
-    const tet = this.mesh.getTetrahedra()[tIdx]
-    const bary = this.whitney.getBarycentric(tIdx, point)
-    const edgeBasis = this.whitney.getEdgeBasis(tIdx, bary)
+  extendBoundary(boundaryData, point, tIdx, boundaryEdgeSet) {
+    const tet = this.mesh.getTetrahedra()[tIdx];
+    const bary = this.whitney.getBarycentric(tIdx, point);
+    const edgeBasis = this.whitney.getEdgeBasis(tIdx, bary);
     const localEdges = [
-      [0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]
-    ]
-    const result = [0, 0, 0]
+      [0, 1],
+      [0, 2],
+      [0, 3],
+      [1, 2],
+      [1, 3],
+      [2, 3],
+    ];
+    const result = [0, 0, 0];
 
     for (let e = 0; e < 6; e++) {
-      const [i, j] = localEdges[e]
-      const globalEdge = [tet[i], tet[j]]
-      const eKey = Mesh.computeEdgeKey(globalEdge[0], globalEdge[1], this.mesh.getOriginalVertexCount())
-      const eIdx = this.mesh.getEdgeIndex(eKey)
-      const sigma = this.mesh.getTetEdgeSign(tIdx, e)
+      const [i, j] = localEdges[e];
+      const globalEdge = [tet[i], tet[j]];
+      const eKey = Mesh.computeEdgeKey(
+          globalEdge[0],
+          globalEdge[1],
+          this.mesh.getOriginalVertexCount(),
+      );
+      const eIdx = this.mesh.getEdgeIndex(eKey);
+      const sigma = this.mesh.getTetEdgeSign(tIdx, e);
       if (!boundaryEdgeSet.has(eIdx) || !boundaryData.has(eIdx)) {
-        continue
+        continue;
       }
-      const coefficient = boundaryData.get(eIdx) * sigma
-      result[0] += coefficient * edgeBasis[e][0]
-      result[1] += coefficient * edgeBasis[e][1]
-      result[2] += coefficient * edgeBasis[e][2]
+      const coefficient = boundaryData.get(eIdx) * sigma;
+      result[0] += coefficient * edgeBasis[e][0];
+      result[1] += coefficient * edgeBasis[e][1];
+      result[2] += coefficient * edgeBasis[e][2];
     }
-    return result
+    return result;
   }
 }

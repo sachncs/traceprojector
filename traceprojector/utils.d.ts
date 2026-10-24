@@ -77,6 +77,25 @@ export function tetDeterminant(v0: number[], v1: number[], v2: number[], v3: num
 export function tetVolume(v0: number[], v1: number[], v2: number[], v3: number[]): number;
 
 /**
+ * Smallest accepted ratio of a tetrahedron's volume determinant to the cube of
+ * its longest edge. Independent of the unit system.
+ */
+export const MIN_RELATIVE_VOLUME: number;
+
+/**
+ * Length of the longest edge of a tetrahedron.
+ * @param vertices - The four vertices.
+ */
+export function longestEdge(vertices: number[][]): number;
+
+/**
+ * Signed volume determinant divided by the cube of the longest edge: a
+ * dimensionless measure of how far a tetrahedron is from flat.
+ * @param vertices - The four vertices.
+ */
+export function relativeVolume(vertices: number[][]): number;
+
+/**
  * Computes the factorial n!.
  * @throws Error if n > MAX_SAFE_FACTORIAL.
  */

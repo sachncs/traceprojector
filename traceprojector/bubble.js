@@ -5,12 +5,12 @@
  * projection Pi^l_0 by adding bubble corrections on Alfeld-split patches.
  */
 
-import { zeros, luSolve, factorial } from './utils.js'
+import {zeros, luSolve, factorial} from './utils.js';
 import {
   barycentricToCartesian,
   tetrahedronQuadrature,
-  compositeTetrahedronQuadrature
-} from './quadrature.js'
+  compositeTetrahedronQuadrature,
+} from './quadrature.js';
 
 /**
  * Higher-order projection framework implementing Section 7 of the paper.
@@ -32,15 +32,15 @@ export class Bubble {
    * @param {function=} onWarning - Callback invoked with a warning context
    *   object when a local solve fails (e.g. singular mass matrix).
    */
-  constructor (mesh, whitney, quadratureOrder = 3, onWarning = console.warn) {
-    this.mesh = mesh
-    this.whitney = whitney
-    this.quadratureOrder = quadratureOrder
+  constructor(mesh, whitney, quadratureOrder = 3, onWarning = console.warn) {
+    this.mesh = mesh;
+    this.whitney = whitney;
+    this.quadratureOrder = quadratureOrder;
     this.onWarning =
-      typeof onWarning === 'function'
-        ? onWarning
-        : (ctx) => console.warn(ctx.message ?? ctx)
-    this.bubbleExponentCache = new Map()
+      typeof onWarning === 'function' ?
+        onWarning :
+        (ctx) => console.warn(ctx.message ?? ctx);
+    this.bubbleExponentCache = new Map();
   }
 
   /**
@@ -55,27 +55,28 @@ export class Bubble {
    *
    * @param {number} p
    * @return {!Array<!Array<number>>} List of exponent tuples [a,b,c,d]
-   *   such that basis function = lambda0^a * lambda1^b * lambda2^c * lambda3^d * b.
+   *   such that basis function = lambda0^a * lambda1^b * lambda2^c * lambda3^d
+   * * b.
    */
-  getBubbleExponents (p) {
+  getBubbleExponents(p) {
     if (this.bubbleExponentCache.has(p)) {
-      return this.bubbleExponentCache.get(p)
+      return this.bubbleExponentCache.get(p);
     }
-    const exponents = []
+    const exponents = [];
     if (p >= 4) {
-      const m = p - 4
+      const m = p - 4;
       for (let a = 0; a <= m; a++) {
         for (let b = 0; b <= m - a; b++) {
           for (let c = 0; c <= m - a - b; c++) {
-            const d = m - a - b - c
+            const d = m - a - b - c;
             // Exponents for lambda_i include the +1 from b.
-            exponents.push([a + 1, b + 1, c + 1, d + 1])
+            exponents.push([a + 1, b + 1, c + 1, d + 1]);
           }
         }
       }
     }
-    this.bubbleExponentCache.set(p, exponents)
-    return exponents
+    this.bubbleExponentCache.set(p, exponents);
+    return exponents;
   }
 
   /**
@@ -85,9 +86,9 @@ export class Bubble {
    * @return {number}
    * @private
    */
-  static pow (base, exp) {
-    if (base === 0 && exp === 0) return 1
-    return Math.pow(base, exp)
+  static pow(base, exp) {
+    if (base === 0 && exp === 0) return 1;
+    return Math.pow(base, exp);
   }
 
   /**
@@ -96,17 +97,18 @@ export class Bubble {
    * @param {number} p
    * @return {!Array<number>}
    */
-  evaluateBubbleBasis (bary, p) {
-    const exponents = this.getBubbleExponents(p)
+  evaluateBubbleBasis(bary, p) {
+    const exponents = this.getBubbleExponents(p);
     if (exponents.length === 0) {
-      return []
+      return [];
     }
-    return exponents.map(([a, b, c, d]) =>
-      Bubble.pow(bary[0], a) *
-      Bubble.pow(bary[1], b) *
-      Bubble.pow(bary[2], c) *
-      Bubble.pow(bary[3], d)
-    )
+    return exponents.map(
+        ([a, b, c, d]) =>
+          Bubble.pow(bary[0], a) *
+        Bubble.pow(bary[1], b) *
+        Bubble.pow(bary[2], c) *
+        Bubble.pow(bary[3], d),
+    );
   }
 
   /**
@@ -115,30 +117,30 @@ export class Bubble {
    * @param {number} p
    * @return {!Array<!Array<number>>}
    */
-  assembleBubbleMass (tIdx, p) {
-    const exponents = this.getBubbleExponents(p)
+  assembleBubbleMass(tIdx, p) {
+    const exponents = this.getBubbleExponents(p);
     if (exponents.length === 0) {
-      return []
+      return [];
     }
 
-    const { bary, weights } = tetrahedronQuadrature(this.quadratureOrder)
-    const vol = this.mesh.getVolume(tIdx)
+    const {bary, weights} = tetrahedronQuadrature(this.quadratureOrder);
+    const vol = this.mesh.getVolume(tIdx);
 
     // Precompute basis values at quadrature points.
-    const basisAtPoints = bary.map((lam) => this.evaluateBubbleBasis(lam, p))
-    const n = basisAtPoints[0].length
-    const M = zeros(n, n)
+    const basisAtPoints = bary.map((lam) => this.evaluateBubbleBasis(lam, p));
+    const n = basisAtPoints[0].length;
+    const M = zeros(n, n);
 
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
-        let sum = 0
+        let sum = 0;
         for (let q = 0; q < bary.length; q++) {
-          sum += weights[q] * basisAtPoints[q][i] * basisAtPoints[q][j]
+          sum += weights[q] * basisAtPoints[q][i] * basisAtPoints[q][j];
         }
-        M[i][j] = sum * vol
+        M[i][j] = sum * vol;
       }
     }
-    return M
+    return M;
   }
 
   /**
@@ -148,28 +150,30 @@ export class Bubble {
    * @param {function(!Array<number>): number} residualFn
    * @return {!Array<number>}
    */
-  assembleBubbleRhs (tIdx, p, residualFn) {
-    const exponents = this.getBubbleExponents(p)
+  assembleBubbleRhs(tIdx, p, residualFn) {
+    const exponents = this.getBubbleExponents(p);
     if (exponents.length === 0) {
-      return []
+      return [];
     }
 
-    const { bary, weights } = tetrahedronQuadrature(this.quadratureOrder)
-    const vol = this.mesh.getVolume(tIdx)
+    const {bary, weights} = tetrahedronQuadrature(this.quadratureOrder);
+    const vol = this.mesh.getVolume(tIdx);
 
-    const n = exponents.length
-    const f = new Array(n).fill(0)
+    const n = exponents.length;
+    const f = new Array(n).fill(0);
 
     for (let q = 0; q < bary.length; q++) {
-      const basis = this.evaluateBubbleBasis(bary[q], p)
-      const verts = this.mesh.tetrahedra[tIdx].map((i) => this.mesh.vertices[i])
-      const pt = barycentricToCartesian(verts, bary[q])
-      const r = residualFn(pt)
+      const basis = this.evaluateBubbleBasis(bary[q], p);
+      const verts = this.mesh.tetrahedra[tIdx].map(
+          (i) => this.mesh.vertices[i],
+      );
+      const pt = barycentricToCartesian(verts, bary[q]);
+      const r = residualFn(pt);
       for (let i = 0; i < n; i++) {
-        f[i] += weights[q] * r * basis[i]
+        f[i] += weights[q] * r * basis[i];
       }
     }
-    return f.map((x) => x * vol)
+    return f.map((x) => x * vol);
   }
 
   /**
@@ -179,22 +183,21 @@ export class Bubble {
    * @param {function(!Array<number>): number} residualFn
    * @return {?Array<number>}
    */
-  solveBubbleProjection (tIdx, p, residualFn) {
+  solveBubbleProjection(tIdx, p, residualFn) {
     if (p < 4) {
-      return null
+      return null;
     }
     try {
-      const M = this.assembleBubbleMass(tIdx, p)
-      const f = this.assembleBubbleRhs(tIdx, p, residualFn)
-      return luSolve(M, f)
+      const M = this.assembleBubbleMass(tIdx, p);
+      const f = this.assembleBubbleRhs(tIdx, p, residualFn);
+      return luSolve(M, f);
     } catch (e) {
       this.onWarning({
         code: 'HOP_BUBBLE_SOLVE_FAILED',
         severity: 'warn',
-        message:
-          `Bubble: bubble solve failed for tet ${tIdx}, p=${p}: ${e.message}`
-      })
-      return null
+        message: `Bubble: bubble solve failed for tet ${tIdx}, p=${p}: ${e.message}`,
+      });
+      return null;
     }
   }
 
@@ -206,35 +209,36 @@ export class Bubble {
    * @param {!Array<number>} point
    * @return {number}
    */
-  evaluateBubble (tIdx, p, coeffs, point) {
+  evaluateBubble(tIdx, p, coeffs, point) {
     if (!coeffs || coeffs.length === 0) {
-      return 0
+      return 0;
     }
-    const bary = this.whitney.getBarycentric(tIdx, point)
-    const basis = this.evaluateBubbleBasis(bary, p)
-    return basis.reduce((sum, b, i) => sum + (coeffs[i] || 0) * b, 0)
+    const bary = this.whitney.getBarycentric(tIdx, point);
+    const basis = this.evaluateBubbleBasis(bary, p);
+    return basis.reduce((sum, b, i) => sum + (coeffs[i] || 0) * b, 0);
   }
 
   /**
    * Generates Bernstein exponents for P^p on a tetrahedron.
-   * Basis: {B_{i,j,k,l} = (p!/(i!j!k!l!)) lambda_0^i lambda_1^j lambda_2^k lambda_3^l
+   * Basis: {B_{i,j,k,l} = (p!/(i!j!k!l!)) lambda_0^i lambda_1^j lambda_2^k
+   * lambda_3^l
    * | i+j+k+l = p}.
    * This basis is well-conditioned and forms a partition of unity.
    * @param {number} p
    * @return {!Array<!Array<number>>}
    * @private
    */
-  getBernsteinExponents (p) {
-    const exponents = []
+  getBernsteinExponents(p) {
+    const exponents = [];
     for (let i = 0; i <= p; i++) {
       for (let j = 0; j <= p - i; j++) {
         for (let k = 0; k <= p - i - j; k++) {
-          const l = p - i - j - k
-          exponents.push([i, j, k, l])
+          const l = p - i - j - k;
+          exponents.push([i, j, k, l]);
         }
       }
     }
-    return exponents
+    return exponents;
   }
 
   /**
@@ -244,17 +248,17 @@ export class Bubble {
    * @return {number}
    * @private
    */
-  static multinomial (p, exps) {
-    let result = 1
-    let remaining = p
+  static multinomial(p, exps) {
+    let result = 1;
+    let remaining = p;
     for (const e of exps) {
       for (let i = 1; i <= e; i++) {
-        result *= remaining
-        result /= i
-        remaining--
+        result *= remaining;
+        result /= i;
+        remaining--;
       }
     }
-    return result
+    return result;
   }
 
   /**
@@ -263,23 +267,25 @@ export class Bubble {
    * @param {number} p
    * @return {!Array<number>}
    */
-  evaluateBernsteinBasis (bary, p) {
-    const exponents = this.getBernsteinExponents(p)
+  evaluateBernsteinBasis(bary, p) {
+    const exponents = this.getBernsteinExponents(p);
     return exponents.map(([i, j, k, l]) => {
-      const coeff = Bubble.multinomial(p, [i, j, k, l])
+      const coeff = Bubble.multinomial(p, [i, j, k, l]);
       return (
         coeff *
         Bubble.pow(bary[0], i) *
         Bubble.pow(bary[1], j) *
         Bubble.pow(bary[2], k) *
         Bubble.pow(bary[3], l)
-      )
-    })
+      );
+    });
   }
 
   /**
-   * Computes the analytical mass matrix for the Bernstein basis on a tetrahedron.
-   * M[(i,j,k,l), (i',j',k',l')] = vol * (p!)^2 * (i+i')! (j+j')! (k+k')! (l+l')!
+   * Computes the analytical mass matrix for the Bernstein basis on a
+   * tetrahedron.
+   * M[(i,j,k,l), (i',j',k',l')] = vol * (p!)^2 * (i+i')! (j+j')! (k+k')!
+   * (l+l')!
    *   / (i! j! k! l! i'! j'! k'! l'! * (2p+3)!)
    * @param {number} p
    * @param {number} vol
@@ -287,26 +293,21 @@ export class Bubble {
    * @return {!Array<!Array<number>>}
    * @private
    */
-  assembleBernsteinMass (p, vol, exponents) {
-    const n = exponents.length
-    const pFact = factorial(p)
-    const denom = factorial(2 * p + 3)
-    const M = zeros(n, n)
+  assembleBernsteinMass(p, vol, exponents) {
+    const n = exponents.length;
+    const pFact = factorial(p);
+    const denom = factorial(2 * p + 3);
+    const M = zeros(n, n);
     for (let i = 0; i < n; i++) {
-      const [a, b, c, d] = exponents[i]
-      const factI = [
-        factorial(a),
-        factorial(b),
-        factorial(c),
-        factorial(d)
-      ]
+      const [a, b, c, d] = exponents[i];
+      const factI = [factorial(a), factorial(b), factorial(c), factorial(d)];
       for (let j = 0; j < n; j++) {
-        const [a2, b2, c2, d2] = exponents[j]
+        const [a2, b2, c2, d2] = exponents[j];
         const num =
           factorial(a + a2) *
           factorial(b + b2) *
           factorial(c + c2) *
-          factorial(d + d2)
+          factorial(d + d2);
         const den =
           factI[0] *
           factI[1] *
@@ -315,11 +316,11 @@ export class Bubble {
           factorial(a2) *
           factorial(b2) *
           factorial(c2) *
-          factorial(d2)
-        M[i][j] = (6 * vol * pFact * pFact * num) / (den * denom)
+          factorial(d2);
+        M[i][j] = (6 * vol * pFact * pFact * num) / (den * denom);
       }
     }
-    return M
+    return M;
   }
 
   /**
@@ -335,48 +336,49 @@ export class Bubble {
    * @param {function(!Array<number>): number} u
    * @return {!Array<number>} Coefficients of the Bernstein basis.
    */
-  solveL2Projection (tIdx, p, u) {
-    const exponents = this.getBernsteinExponents(p)
-    const n = exponents.length
+  solveL2Projection(tIdx, p, u) {
+    const exponents = this.getBernsteinExponents(p);
+    const n = exponents.length;
     if (n === 0) {
-      return []
+      return [];
     }
 
-    const vol = this.mesh.getVolume(tIdx)
-    const verts = this.mesh.tetrahedra[tIdx].map((i) => this.mesh.vertices[i])
+    const vol = this.mesh.getVolume(tIdx);
+    const verts = this.mesh.tetrahedra[tIdx].map((i) => this.mesh.vertices[i]);
 
     // Use composite quadrature for RHS to ensure enough sample points.
-    const { bary, weights } =
-      p >= 2
-        ? compositeTetrahedronQuadrature(this.quadratureOrder)
-        : tetrahedronQuadrature(this.quadratureOrder)
-    const basisAtPoints = bary.map((lam) => this.evaluateBernsteinBasis(lam, p))
-    const f = new Array(n).fill(0)
+    const {bary, weights} =
+      p >= 2 ?
+        compositeTetrahedronQuadrature(this.quadratureOrder) :
+        tetrahedronQuadrature(this.quadratureOrder);
+    const basisAtPoints = bary.map((lam) =>
+      this.evaluateBernsteinBasis(lam, p),
+    );
+    const f = new Array(n).fill(0);
 
     for (let q = 0; q < bary.length; q++) {
-      const pt = barycentricToCartesian(verts, bary[q])
-      const uVal = u(pt)
-      const bq = basisAtPoints[q]
+      const pt = barycentricToCartesian(verts, bary[q]);
+      const uVal = u(pt);
+      const bq = basisAtPoints[q];
       for (let i = 0; i < n; i++) {
-        f[i] += weights[q] * uVal * bq[i]
+        f[i] += weights[q] * uVal * bq[i];
       }
     }
     for (let i = 0; i < n; i++) {
-      f[i] *= vol
+      f[i] *= vol;
     }
 
-    const M = this.assembleBernsteinMass(p, vol, exponents)
+    const M = this.assembleBernsteinMass(p, vol, exponents);
     try {
-      return luSolve(M, f)
+      return luSolve(M, f);
     } catch (e) {
       this.onWarning({
         code: 'HOP_L2_SOLVE_FAILED',
         severity: 'warn',
-        message:
-          `Bubble: L2 solve failed for tet ${tIdx}, p=${p}: ${e.message}`
-      })
-      const mean = this.cellMean(tIdx, u)
-      return new Array(n).fill(mean)
+        message: `Bubble: L2 solve failed for tet ${tIdx}, p=${p}: ${e.message}`,
+      });
+      const mean = this.cellMean(tIdx, u);
+      return new Array(n).fill(mean);
     }
   }
 
@@ -388,14 +390,16 @@ export class Bubble {
    * @return {number}
    * @private
    */
-  cellMean (tIdx, u) {
-    const { bary, weights } = compositeTetrahedronQuadrature(this.quadratureOrder)
-    const verts = this.mesh.tetrahedra[tIdx].map((i) => this.mesh.vertices[i])
-    let mean = 0
+  cellMean(tIdx, u) {
+    const {bary, weights} = compositeTetrahedronQuadrature(
+        this.quadratureOrder,
+    );
+    const verts = this.mesh.tetrahedra[tIdx].map((i) => this.mesh.vertices[i]);
+    let mean = 0;
     for (let q = 0; q < bary.length; q++) {
-      mean += weights[q] * u(barycentricToCartesian(verts, bary[q]))
+      mean += weights[q] * u(barycentricToCartesian(verts, bary[q]));
     }
-    return mean
+    return mean;
   }
 
   /**
@@ -405,11 +409,11 @@ export class Bubble {
    * @param {number} p
    * @return {number}
    */
-  evaluateL2Projection (coeffs, bary, p) {
+  evaluateL2Projection(coeffs, bary, p) {
     if (!coeffs || coeffs.length === 0) {
-      return 0
+      return 0;
     }
-    const basis = this.evaluateBernsteinBasis(bary, p)
-    return basis.reduce((sum, b, i) => sum + (coeffs[i] || 0) * b, 0)
+    const basis = this.evaluateBernsteinBasis(bary, p);
+    return basis.reduce((sum, b, i) => sum + (coeffs[i] || 0) * b, 0);
   }
 }

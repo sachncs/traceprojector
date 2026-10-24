@@ -123,7 +123,7 @@ export function Hero() {
           >
             A small, dependency-free JavaScript reference implementation of{" "}
             <span className="font-mono text-foreground">Π⁰, Π¹, Π², Π³</span>{" "}
-            for the 3D de Rham complex. Bounded, commuting, exact on the
+            for the 3D de Rham complex. Commuting, exact on the
             boundary. Built for engineers who care about the math.
           </motion.p>
 

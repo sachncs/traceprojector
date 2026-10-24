@@ -48,10 +48,18 @@ constrained linear systems during boundary weight computation.</p>
 system, so every stiffness row is preserved and the recovered solution
 satisfies the original equations up to the constraint multiplier.</p>
 </dd>
+<dt><a href="#SparseMatrix">SparseMatrix</a></dt>
+<dd><p>Compressed sparse row matrix.</p>
+</dd>
 <dt><a href="#Projector">Projector</a></dt>
-<dd><p>TRACEPROJECTOR: Bounded, Commuting, Discrete-trace Preserving Projections.</p>
+<dd><p>TRACEPROJECTOR: Commuting, Discrete-trace Preserving Projections.</p>
 <p>Implements the de Rham projection operators Pi^l for l = 0,1,2,3 on
 tetrahedral meshes with boundary-aware trace preservation.</p>
+<p>Both the boundary part and the interior part of Pi^l use canonical degrees
+of freedom (point values, edge integrals, face fluxes).  The Section 6.3
+boundary weights are computed only to cross-check those degrees of freedom
+(<a href="#Projector+verifyBoundaryWeights">verifyBoundaryWeights</a>); the paper&#39;s stability bounds for
+rough fields therefore do not apply.</p>
 <p><strong>Coupling note:</strong> This class accesses mesh data through the <a href="#Mesh">Mesh</a>
 public API (getters for vertices, faces, edges, boundary flags, orientation
 signs, etc.).  Swapping in a different mesh implementation requires only that
@@ -107,16 +115,99 @@ average of the function over each tetrahedron.</p>
 ## Constants
 
 <dl>
+<dt><a href="#ERROR_QUADRATURE_POINTS">ERROR_QUADRATURE_POINTS</a> : <code>number</code></dt>
+<dd><p>Gauss points per direction for the error integrals. The error norms use a
+positive-weight rule of their own, independent of the projector&#39;s quadrature:
+integrating a squared error with a rule that has a negative weight is
+unreliable on coarse meshes.</p>
+</dd>
+<dt><a href="#MASS_ORDER">MASS_ORDER</a></dt>
+<dd><p>Quadrature order that integrates products of two Whitney fields exactly.</p>
+</dd>
+<dt><a href="#MAX_RADIUS">MAX_RADIUS</a></dt>
+<dd><p>Largest number of cell rings tried when a star violates the assumptions.</p>
+</dd>
+<dt><a href="#RESIDUAL_FACTOR">RESIDUAL_FACTOR</a></dt>
+<dd><p>Pre-registered in validation/tolerances.json
+(stableOperator.localSolveResidual).</p>
+</dd>
+<dt><a href="#ITERATIVE_RELATIVE_BOUND">ITERATIVE_RELATIVE_BOUND</a></dt>
+<dd><p>Relative residual bound for the iterative solvers (see requireSmall).</p>
+</dd>
+<dt><a href="#components">components</a></dt>
+<dd><p>Number of components of a k-form on R^m.</p>
+</dd>
+<dt><a href="#EDGE_PAIRS">EDGE_PAIRS</a></dt>
+<dd><p>Oriented tetrahedral complex with Whitney forms, using the conventions of
+Ern, Guzman and Potu: every simplex is oriented by increasing vertex
+number, an edge [a, b] points from a to b, and a face [a, b, c] has the
+normal (b - a) x (c - a).</p>
+<p>The complex is self-contained: it needs only vertex coordinates and cells,
+so it can describe both the mesh and its Alfeld split.</p>
+</dd>
+<dt><a href="#FACE_EDGE_SIGNS">FACE_EDGE_SIGNS</a></dt>
+<dd><p>Incidence of the edges [ab, bc, ac] in the boundary of the face [a, b, c].</p>
+</dd>
+<dt><a href="#BREAKDOWN_RATIO">BREAKDOWN_RATIO</a></dt>
+<dd><p>Curvature below this fraction of the initial curvature per unit norm is
+breakdown.</p>
+</dd>
+<dt><a href="#STALL_ITERATIONS">STALL_ITERATIONS</a></dt>
+<dd><p>Iterations without a new best residual before conjugate gradients gives up.</p>
+</dd>
+<dt><a href="#OVERLAP_ORDER">OVERLAP_ORDER</a></dt>
+<dd><p>Quadrature order for the overlap of weights and boundary Whitney forms
+(degree 2).</p>
+</dd>
 <dt><a href="#EPSILON">EPSILON</a> : <code>number</code></dt>
 <dd></dd>
 <dt><a href="#Maximum">Maximum</a> : <code>number</code></dt>
-<dd><p>n for which n! fits in a JavaScript Number without overflowing.</p>
+<dd><p>n for which n! fits in a JavaScript Number without
+    overflowing.</p>
+</dd>
+<dt><a href="#MIN_RELATIVE_VOLUME">MIN_RELATIVE_VOLUME</a> : <code>number</code></dt>
+<dd><p>Smallest accepted ratio of a tetrahedron&#39;s volume determinant to the cube of
+its longest edge. The determinant of a tetrahedron with coordinates of
+size one carries a rounding error of a few times 1e-16, so above this floor
+its sign (the orientation) is reliable, and the barycentric gradients
+(which scale like the inverse of the height) keep about six digits. The
+ratio does not depend on the unit system, unlike an absolute volume.</p>
 </dd>
 </dl>
 
 ## Functions
 
 <dl>
+<dt><a href="#refineTetrahedra">refineTetrahedra(vertices, tetrahedra, marked)</a> ⇒ <code>Object</code></dt>
+<dd></dd>
+<dt><a href="#boundarySurface">boundarySurface(vertices, cells)</a> ⇒ <code>Object</code></dt>
+<dd></dd>
+<dt><a href="#alfeldSplit">alfeldSplit(vertices, triangles)</a> ⇒ <code>Object</code></dt>
+<dd><p>Alfeld split of a triangle surface: each triangle gets its barycentre and is
+cut into three children, each keeping the orientation of its parent.</p>
+</dd>
+<dt><a href="#triangleRule">triangleRule()</a></dt>
+<dd><p>Three-point rule exact for quadratics on a triangle. The points are interior,
+so a field that jumps across edges is evaluated unambiguously.</p>
+</dd>
+<dt><a href="#vertexBoundaryWeight">vertexBoundaryWeight(complex, v)</a> ⇒ <code>Object</code></dt>
+<dd></dd>
+<dt><a href="#edgeSign">edgeSign()</a></dt>
+<dd><p>+1 if the edge points along the triangle&#39;s orientation, else -1.</p>
+</dd>
+<dt><a href="#edgeBoundaryWeight">edgeBoundaryWeight(complex, e)</a> ⇒ <code>Object</code></dt>
+<dd><p>The lowest-order weight of a boundary edge: the normal-flux field
+eta - rot(mu curl psi) on the extended star of the edge, with
+div = -(zeta_b - zeta_a) for the weights of the edge&#39;s end vertices, and
+(zeta, W_e&#39;) = delta for every boundary Whitney 1-form W_e&#39;.</p>
+</dd>
+<dt><a href="#faceBoundaryWeight">faceBoundaryWeight(complex, f)</a> ⇒ <code>Object</code></dt>
+<dd><p>The lowest-order weight of a boundary face: the continuous piecewise-linear
+function on the Alfeld split of the extended star of the face, zero on its
+boundary, whose surface rotation is the signed sum of the weights of the
+face&#39;s edges. It satisfies (zeta, 1 / |f&#39;|)_f&#39; = delta for every boundary
+face f&#39;.</p>
+</dd>
 <dt><a href="#verifyBoundaryWeights">verifyBoundaryWeights(projector, [tol])</a> ⇒ <code>Object</code></dt>
 <dd><p>Verifies the wired boundary weights against the exact trace basis fields.</p>
 <p>For each boundary simplex σ the weight functional pair_σ is applied to σ&#39;s
@@ -160,9 +251,6 @@ to the vertex star: 1 at each star-face barycenter, 0 on the star boundary.</p>
 <p>The weight is exposed as the duality functional (Lemma 6.2)
     (zeta_{0,v}^0, u)_Gamma = (eta,u) + (mu_v grad psi, grad u)
 which reproduces phi_v^partial(u) = u(v) for P1 u.</p>
-</dd>
-<dt><a href="#integrateScalar">integrateScalar(frs, f, q)</a> ⇒ <code>number</code></dt>
-<dd><p>Integrates a scalar over all faces.</p>
 </dd>
 <dt><a href="#areaIntegralScalar">areaIntegralScalar(frs, f, q)</a> ⇒ <code>number</code></dt>
 <dd><p>Area-weighted integral of a scalar over all faces.</p>
@@ -227,6 +315,26 @@ Raviart-Thomas trace basis, its mass matrix, and the face-DoF vector</p>
 <pre><code>(zeta_{0,f}^2, tr^2 u)_Gamma = int_f u . n.
 </code></pre>
 </dd>
+<dt><a href="#solveSemidefinite">solveSemidefinite(a, n, b, [relativeTolerance])</a> ⇒ <code>Object</code></dt>
+<dd><p>Solves A x = b for a symmetric positive semidefinite A with a consistent
+right-hand side, by Cholesky with symmetric pivoting. Directions whose
+pivot is negligible (the null space) are left at zero, so the result is the
+component of the solution in the row space; any function of A x that does
+not depend on the null space is therefore unique.</p>
+</dd>
+<dt><a href="#cholesky">cholesky(a, n)</a> ⇒ <code>Float64Array</code></dt>
+<dd><p>Cholesky factorization of a symmetric positive definite matrix.</p>
+</dd>
+<dt><a href="#choleskySolveInPlace">choleskySolveInPlace(l, n, b)</a></dt>
+<dd><p>Solves L L^T x = b in place for a Cholesky factor.</p>
+</dd>
+<dt><a href="#residualNorm">residualNorm()</a></dt>
+<dd><p>Euclidean norm of A x - b.</p>
+</dd>
+<dt><a href="#minimumNormSolve">minimumNormSolve(rows, mass, n, r)</a> ⇒ <code>Object</code></dt>
+<dd><p>Minimum-norm solution of C x = r in the metric M: minimizes x^T M x.
+Computes x = M^-1 C^T lambda with (C M^-1 C^T) lambda = r.</p>
+</dd>
 <dt><a href="#generateUnitCubeMesh">generateUnitCubeMesh(n)</a> ⇒ <code><a href="#Mesh">Mesh</a></code></dt>
 <dd><p>Generates a uniform tetrahedral mesh of the unit cube [0,1]^3 using the
 Freudenthal (Kuhn) triangulation: each cube is split into 6 tets along
@@ -244,7 +352,8 @@ the body diagonal from (0,0,0) to (1,1,1).</p>
 <p>err_L2^2 = ΣT ∫_T |v_exact - v_proj|^2 dx</p>
 </dd>
 <dt><a href="#computeH1SemiError">computeH1SemiError(mesh, traceProjector, exactFn, projFn)</a> ⇒ <code>number</code></dt>
-<dd><p>Computes the H1 semi-norm error (L2 error of the gradient) for scalar projections.
+<dd><p>Computes the H1 semi-norm error (L2 error of the gradient) for scalar
+projections.
 Uses numerical differentiation of the exact function for comparison.</p>
 <p>err_H1^2 = ΣT ∫_T |grad(u_exact) - grad(u_proj)|^2 dx</p>
 </dd>
@@ -253,14 +362,47 @@ Uses numerical differentiation of the exact function for comparison.</p>
 scaled to unit volume, or more simply the maximum edge length.</p>
 </dd>
 <dt><a href="#computeRate">computeRate(err1, err2, h1, h2)</a> ⇒ <code>number</code></dt>
-<dd><p>Computes the observed convergence rate between two successive error measurements.</p>
+<dd><p>Computes the observed convergence rate between two successive error
+measurements.</p>
 <p>rate = log(err_1 / err_2) / log(h_1 / h_2)</p>
 </dd>
 <dt><a href="#runConvergenceStudy">runConvergenceStudy(meshes, config)</a> ⇒ <code>Array.&lt;{h: number, l2Err: number, h1Err: (number|undefined), rateL2: (number|undefined), rateH1: (number|undefined)}&gt;</code></dt>
 <dd><p>Runs a convergence study on a sequence of meshes.</p>
 </dd>
+<dt><a href="#accumulate">accumulate()</a></dt>
+<dd><p>Adds a value to a sparse row held as a column-to-value map.</p>
+</dd>
 <dt><a href="#sort3">sort3(a, b, c)</a> ⇒ <code>Array.&lt;number&gt;</code></dt>
 <dd><p>Sorts three numbers in ascending order.</p>
+</dd>
+<dt><a href="#projectInParallel">projectInParallel(job)</a> ⇒ <code>Promise.&lt;!Array.&lt;(number|!Array.&lt;number&gt;)&gt;&gt;</code></dt>
+<dd></dd>
+<dt><a href="#homogeneous">homogeneous()</a></dt>
+<dd><p>All exponent triples of total degree exactly d, in a fixed order.</p>
+</dd>
+<dt><a href="#upTo">upTo()</a></dt>
+<dd><p>All exponent triples of total degree at most d.</p>
+</dd>
+<dt><a href="#crossWithPosition">crossWithPosition()</a></dt>
+<dd><p>x cross q for a triple q of polynomials.</p>
+</dd>
+<dt><a href="#flatten">flatten()</a></dt>
+<dd><p>Flat coefficient vector of a form over monomials up to degree <code>top</code>, used to
+compare and rank forms.</p>
+</dd>
+<dt><a href="#rank">rank(forms)</a> ⇒ <code>number</code></dt>
+<dd><p>Rank of a set of forms (as coefficient vectors), by Gaussian elimination
+with partial pivoting.</p>
+</dd>
+<dt><a href="#eliminate">eliminate()</a></dt>
+<dd><p>Row echelon pivots of the rows; returns the indices of independent rows.</p>
+</dd>
+<dt><a href="#formSpace">formSpace(r, k)</a> ⇒ <code>Array.&lt;(Polynomial|Array.&lt;Polynomial&gt;)&gt;</code></dt>
+<dd><p>A basis of P_r^- Lambda^k on R^3 (as polynomials, not tied to a cell).</p>
+</dd>
+<dt><a href="#differential">differential(form, k)</a> ⇒ <code>Polynomial</code> | <code>Array.&lt;Polynomial&gt;</code></dt>
+<dd><p>The exterior derivative of a k-form in vector-proxy form: the gradient of a
+0-form, the curl of a 1-form and the divergence of a 2-form.</p>
 </dd>
 <dt><a href="#triangleQuadrature">triangleQuadrature(order)</a> ⇒ <code>Object</code></dt>
 <dd><p>Returns quadrature points and weights on the reference triangle.</p>
@@ -270,7 +412,8 @@ a different rule to avoid cancellation issues.</p>
 </dd>
 <dt><a href="#tetrahedronQuadrature">tetrahedronQuadrature(order)</a> ⇒ <code>Object</code></dt>
 <dd><p>Returns quadrature points and weights on the reference tetrahedron.</p>
-<p>Note: order 3 contains a negative weight (-4/5). Callers integrating
+<p>Order 3 is the five-point Keast rule: exact for cubics, with interior points
+and a negative weight (-4/5). Callers integrating
 non-smooth or sign-changing functions should consider a lower order or
 a different rule to avoid cancellation issues.</p>
 </dd>
@@ -291,6 +434,71 @@ for polynomial spaces up to degree 3 remains full-rank.</p>
 </dd>
 <dt><a href="#integrateTetrahedron">integrateTetrahedron(vertices, fn, [order])</a> ⇒ <code>number</code></dt>
 <dd><p>Integrates a scalar function over a tetrahedron using quadrature.</p>
+</dd>
+<dt><a href="#choose">choose()</a></dt>
+<dd><p>Binomial coefficient.</p>
+</dd>
+<dt><a href="#monomials">monomials()</a></dt>
+<dd><p>Exponent tuples of m variables with total degree at most d.</p>
+</dd>
+<dt><a href="#referenceRule">referenceRule()</a></dt>
+<dd><p>Quadrature on the reference simplex of dimension m (weights sum 1/m!).</p>
+</dd>
+<dt><a href="#carriers">carriers(r, k)</a> ⇒ <code>Array.&lt;{vertices: Array.&lt;number&gt;, dimension: number, degree: number}&gt;</code></dt>
+<dd><p>The sub-simplices that carry degrees of freedom of P_r^- Lambda^k, with the
+local vertex numbers (increasing) and the test degree.</p>
+</dd>
+<dt><a href="#countOn">countOn()</a></dt>
+<dd><p>Number of degrees of freedom attached to one carrier.</p>
+</dd>
+<dt><a href="#moments">moments(k, carrier, points, u, order)</a> ⇒ <code>Array.&lt;number&gt;</code></dt>
+<dd><p>Evaluates the degrees of freedom of one carrier on a field.</p>
+</dd>
+<dt><a href="#evaluate">evaluate()</a></dt>
+<dd><p>Evaluates a polynomial form (scalar or triple) at x.</p>
+</dd>
+<dt><a href="#referenceBasis">referenceBasis(r, k)</a> ⇒ <code>Object</code></dt>
+<dd><p>The dual basis of P_r^- Lambda^k on the reference tetrahedron: polynomial
+forms psi_i with dof_j(psi_i) = delta_ij, with the dofs ordered by carrier
+(see <code>carriers</code>) then by <code>moments</code>.</p>
+</dd>
+<dt><a href="#invert">invert()</a></dt>
+<dd><p>Gauss-Jordan inverse of a dense square matrix with partial pivoting.</p>
+</dd>
+<dt><a href="#combine">combine()</a></dt>
+<dd><p>Linear combination of polynomial forms.</p>
+</dd>
+<dt><a href="#gaussLegendre">gaussLegendre(n)</a> ⇒ <code>Object</code></dt>
+<dd></dd>
+<dt><a href="#tetrahedronRule">tetrahedronRule(points, order)</a> ⇒ <code>Array.&lt;{x: !Array.&lt;number&gt;, weight: number}&gt;</code></dt>
+<dd><p>Quadrature rule on a tetrahedron: a collapsed Gauss rule with order^3 points,
+exact for polynomials of total degree up to 2 * order - 3. Weights include
+the volume, so the integral of f is the sum of weight * f(x).</p>
+</dd>
+<dt><a href="#integrateTetrahedron">integrateTetrahedron(points, f, order)</a> ⇒ <code>number</code></dt>
+<dd><p>Integral of a scalar function over a tetrahedron.</p>
+</dd>
+<dt><a href="#conjugateGradient">conjugateGradient(apply, b, options)</a> ⇒ <code>Object</code></dt>
+<dd><p>Preconditioned conjugate gradients for a symmetric positive semidefinite
+operator with a consistent right-hand side. Started from zero, the
+iterates stay in the range of the operator.</p>
+</dd>
+<dt><a href="#solveConsistent">solveConsistent(apply, b, options)</a> ⇒ <code>Object</code></dt>
+<dd><p>Solves A x = b for a symmetric positive semidefinite A and a consistent
+right-hand side to near machine precision: conjugate gradients restarted on
+the true residual (iterative refinement), because a single run stagnates
+on ill-conditioned systems.</p>
+</dd>
+<dt><a href="#minimumNormSolveSparse">minimumNormSolveSparse(constraints, mass, r)</a> ⇒ <code>Object</code></dt>
+<dd><p>Minimum-norm solution of C x = r in the metric M (minimizes x^T M x), for a
+sparse C and sparse symmetric positive definite M: x = M^-1 C^T lambda with
+(C M^-1 C^T) lambda = r, solved by nested conjugate gradients.</p>
+</dd>
+<dt><a href="#sub">sub()</a></dt>
+<dd><p>Oriented triangle surface in three dimensions with Whitney forms of degree
+0, 1 and 2. Edges [a, b] point from the smaller to the larger vertex number,
+so edge forms need no sign; a triangle is oriented by its vertex order and
+its 2-form is the constant 1 / area.</p>
 </dd>
 <dt><a href="#triangleFrame">triangleFrame(verts)</a> ⇒ <code>Object</code></dt>
 <dd><p>Returns the unit outward normal and two orthonormal tangent directions of a
@@ -338,6 +546,13 @@ coordinate of m (the third sub-triangle vertex).</p>
 <dd><p>Computes the determinant (scalar triple product) of the tetrahedron with
 vertices v0, v1, v2, v3.  The absolute value divided by 6 equals the volume.</p>
 </dd>
+<dt><a href="#longestEdge">longestEdge(vertices)</a> ⇒ <code>number</code></dt>
+<dd><p>Length of the longest edge of a tetrahedron.</p>
+</dd>
+<dt><a href="#relativeVolume">relativeVolume(vertices)</a> ⇒ <code>number</code></dt>
+<dd><p>Signed volume determinant divided by the cube of the longest edge: a
+dimensionless measure of how far a tetrahedron is from flat.</p>
+</dd>
 <dt><a href="#tetVolume">tetVolume(v0, v1, v2, v3)</a> ⇒ <code>number</code></dt>
 <dd><p>Computes the geometric volume of a tetrahedron.</p>
 </dd>
@@ -371,6 +586,11 @@ equilibration (pivot scaling).</p>
 <p>The matrix is scaled so that each row has max-norm 1 before elimination,
 reducing the risk of false singularity claims on poorly scaled systems.</p>
 </dd>
+<dt><a href="#hadamardBound">hadamardBound(m)</a> ⇒ <code>number</code></dt>
+<dd><p>Product of the Euclidean norms of the rows of a 3x3 matrix: an upper bound
+on |det| (Hadamard), so comparing a determinant with a fraction of it is
+independent of the scale of the matrix.</p>
+</dd>
 <dt><a href="#inverse3x3">inverse3x3(m)</a> ⇒ <code>Array.&lt;!Array.&lt;number&gt;&gt;</code></dt>
 <dd><p>Computes the inverse of a 3x3 matrix.</p>
 </dd>
@@ -383,6 +603,8 @@ reducing the risk of false singularity claims on poorly scaled systems.</p>
 <dt><a href="#numericalGradient">numericalGradient(u, pt, [h])</a> ⇒ <code>Array.&lt;number&gt;</code></dt>
 <dd><p>Numerical gradient of a scalar function using central differences.</p>
 </dd>
+<dt><a href="#worseyFarinSplit">worseyFarinSplit(vertices, cells)</a> ⇒ <code>Object</code></dt>
+<dd></dd>
 </dl>
 
 <a name="Solver"></a>
@@ -436,6 +658,84 @@ a constant (lambda * 1) and is the true constrained solution.
 | b | <code>Array.&lt;number&gt;</code> |  |
 | [onWarning] | <code>function</code> | Callback invoked with a warning context   object when the matrix is ill-conditioned. |
 
+<a name="ERROR_QUADRATURE_POINTS"></a>
+
+## ERROR\_QUADRATURE\_POINTS : <code>number</code>
+Gauss points per direction for the error integrals. The error norms use a
+positive-weight rule of their own, independent of the projector's quadrature:
+integrating a squared error with a rule that has a negative weight is
+unreliable on coarse meshes.
+
+**Kind**: global constant  
+<a name="MASS_ORDER"></a>
+
+## MASS\_ORDER
+Quadrature order that integrates products of two Whitney fields exactly.
+
+**Kind**: global constant  
+<a name="MAX_RADIUS"></a>
+
+## MAX\_RADIUS
+Largest number of cell rings tried when a star violates the assumptions.
+
+**Kind**: global constant  
+<a name="RESIDUAL_FACTOR"></a>
+
+## RESIDUAL\_FACTOR
+Pre-registered in validation/tolerances.json
+(stableOperator.localSolveResidual).
+
+**Kind**: global constant  
+<a name="ITERATIVE_RELATIVE_BOUND"></a>
+
+## ITERATIVE\_RELATIVE\_BOUND
+Relative residual bound for the iterative solvers (see requireSmall).
+
+**Kind**: global constant  
+<a name="components"></a>
+
+## components
+Number of components of a k-form on R^m.
+
+**Kind**: global constant  
+<a name="EDGE_PAIRS"></a>
+
+## EDGE\_PAIRS
+Oriented tetrahedral complex with Whitney forms, using the conventions of
+Ern, Guzman and Potu: every simplex is oriented by increasing vertex
+number, an edge [a, b] points from a to b, and a face [a, b, c] has the
+normal (b - a) x (c - a).
+
+The complex is self-contained: it needs only vertex coordinates and cells,
+so it can describe both the mesh and its Alfeld split.
+
+**Kind**: global constant  
+<a name="FACE_EDGE_SIGNS"></a>
+
+## FACE\_EDGE\_SIGNS
+Incidence of the edges [ab, bc, ac] in the boundary of the face [a, b, c].
+
+**Kind**: global constant  
+<a name="BREAKDOWN_RATIO"></a>
+
+## BREAKDOWN\_RATIO
+Curvature below this fraction of the initial curvature per unit norm is
+breakdown.
+
+**Kind**: global constant  
+<a name="STALL_ITERATIONS"></a>
+
+## STALL\_ITERATIONS
+Iterations without a new best residual before conjugate gradients gives up.
+
+**Kind**: global constant  
+<a name="OVERLAP_ORDER"></a>
+
+## OVERLAP\_ORDER
+Quadrature order for the overlap of weights and boundary Whitney forms
+(degree 2).
+
+**Kind**: global constant  
 <a name="EPSILON"></a>
 
 ## EPSILON : <code>number</code>
@@ -443,9 +743,143 @@ a constant (lambda * 1) and is the true constrained solution.
 <a name="Maximum"></a>
 
 ## Maximum : <code>number</code>
-n for which n! fits in a JavaScript Number without overflowing.
+n for which n! fits in a JavaScript Number without
+    overflowing.
 
 **Kind**: global constant  
+<a name="MIN_RELATIVE_VOLUME"></a>
+
+## MIN\_RELATIVE\_VOLUME : <code>number</code>
+Smallest accepted ratio of a tetrahedron's volume determinant to the cube of
+its longest edge. The determinant of a tetrahedron with coordinates of
+size one carries a rounding error of a few times 1e-16, so above this floor
+its sign (the orientation) is reliable, and the barycentric gradients
+(which scale like the inverse of the height) keep about six digits. The
+ratio does not depend on the unit system, unlike an absolute volume.
+
+**Kind**: global constant  
+<a name="refineTetrahedra"></a>
+
+## refineTetrahedra(vertices, tetrahedra, marked) ⇒ <code>Object</code>
+**Kind**: global function  
+**Returns**: <code>Object</code> - The refined mesh (original vertices first), and for every
+    new cell the index of the cell of the input it came from.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| vertices | <code>Array.&lt;Array.&lt;number&gt;&gt;</code> | Vertex coordinates. |
+| tetrahedra | <code>Array.&lt;Array.&lt;number&gt;&gt;</code> | Tetrahedra as four vertex indices. |
+| marked | <code>Array.&lt;number&gt;</code> | Cells to bisect. |
+
+<a name="refineTetrahedra..longestEdge"></a>
+
+### refineTetrahedra~longestEdge()
+The longest edge of a cell; ties go to the smaller vertex pair.
+
+**Kind**: inner method of [<code>refineTetrahedra</code>](#refineTetrahedra)  
+<a name="boundarySurface"></a>
+
+## boundarySurface(vertices, cells) ⇒ <code>Object</code>
+**Kind**: global function  
+**Returns**: <code>Object</code> - The boundary vertex indices (sorted), the outward-oriented boundary
+    triangles in the numbering of `vertices`, and the cell each one
+    belongs to.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| vertices | <code>Array.&lt;Array.&lt;number&gt;&gt;</code> | Vertex coordinates. |
+| cells | <code>Array.&lt;Array.&lt;number&gt;&gt;</code> | Tetrahedra as four vertex indices. |
+
+<a name="alfeldSplit"></a>
+
+## alfeldSplit(vertices, triangles) ⇒ <code>Object</code>
+Alfeld split of a triangle surface: each triangle gets its barycentre and is
+cut into three children, each keeping the orientation of its parent.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - The new vertices follow the old ones, one per triangle.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| vertices | <code>Array.&lt;Array.&lt;number&gt;&gt;</code> | Vertex coordinates. |
+| triangles | <code>Array.&lt;Array.&lt;number&gt;&gt;</code> | Triangles as three vertex indices. |
+
+<a name="triangleRule"></a>
+
+## triangleRule()
+Three-point rule exact for quadratics on a triangle. The points are interior,
+so a field that jumps across edges is evaluated unambiguously.
+
+**Kind**: global function  
+<a name="vertexBoundaryWeight"></a>
+
+## vertexBoundaryWeight(complex, v) ⇒ <code>Object</code>
+**Kind**: global function  
+**Returns**: <code>Object</code> - The weight: the triangles of the
+    extended star and the pairing of the weight with a field, which
+    integrates over the barycentric sub-triangles.  
+**Throws**:
+
+- [<code>SingularError</code>](#SingularError) If the weighted problem is inconsistent, which means
+    the extended star is not contractible.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| complex | <code>Object</code> | A SurfaceComplex of the boundary triangles. |
+| v | <code>number</code> | A boundary vertex. |
+
+<a name="edgeSign"></a>
+
+## edgeSign()
++1 if the edge points along the triangle's orientation, else -1.
+
+**Kind**: global function  
+<a name="edgeBoundaryWeight"></a>
+
+## edgeBoundaryWeight(complex, e) ⇒ <code>Object</code>
+The lowest-order weight of a boundary edge: the normal-flux field
+eta - rot(mu curl psi) on the extended star of the edge, with
+div = -(zeta_b - zeta_a) for the weights of the edge's end vertices, and
+(zeta, W_e') = delta for every boundary Whitney 1-form W_e'.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - The weight: the triangles of the
+    extended star, its pairing with a vector field, its divergence on child
+    k of triangle t, and the end-vertex weights it was built from.  
+**Throws**:
+
+- [<code>SingularError</code>](#SingularError) If the extended star is not contractible.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| complex | <code>Object</code> | A SurfaceComplex of the boundary triangles. |
+| e | <code>number</code> | A boundary edge. |
+
+<a name="faceBoundaryWeight"></a>
+
+## faceBoundaryWeight(complex, f) ⇒ <code>Object</code>
+The lowest-order weight of a boundary face: the continuous piecewise-linear
+function on the Alfeld split of the extended star of the face, zero on its
+boundary, whose surface rotation is the signed sum of the weights of the
+face's edges. It satisfies (zeta, 1 / |f'|)_f' = delta for every boundary
+face f'.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - The
+    weight, with the largest deviation of its rotation from the edge
+    weights it was built from.  
+**Throws**:
+
+- [<code>SingularError</code>](#SingularError) If no such function exists.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| complex | <code>Object</code> | A SurfaceComplex of the boundary triangles. |
+| f | <code>number</code> | A boundary face. |
+
 <a name="verifyBoundaryWeights"></a>
 
 ## verifyBoundaryWeights(projector, [tol]) ⇒ <code>Object</code>
@@ -461,7 +895,7 @@ simplex that reproduces its DoF contributes an entry to `passed`.
 
 | Param | Type | Description |
 | --- | --- | --- |
-| projector | [<code>Projector</code>](#Projector) | A Projector with computeBoundaryWeights() done. |
+| projector | [<code>Projector</code>](#Projector) | A Projector with computeBoundaryWeights()     done. |
 | [tol] | <code>number</code> | Absolute tolerance for the DoF reproduction check. |
 
 <a name="rtBasis"></a>
@@ -576,19 +1010,6 @@ which reproduces phi_v^partial(u) = u(v) for P1 u.
 | verts | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> | Coords of the star's vertices. |
 | faces | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> | Star faces as index triples. |
 | vIdx | <code>number</code> | Index of v in verts. |
-
-<a name="integrateScalar"></a>
-
-## integrateScalar(frs, f, q) ⇒ <code>number</code>
-Integrates a scalar over all faces.
-
-**Kind**: global function  
-
-| Param | Type |
-| --- | --- |
-| frs | <code>Array.&lt;!Object&gt;</code> | 
-| f | <code>function</code> | 
-| q | <code>Object</code> | 
 
 <a name="areaIntegralScalar"></a>
 
@@ -751,6 +1172,83 @@ reproducing the face degree of freedom for H(div) traces in RT_0 (eq. 6.36):
 | faces | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> | Faces of the extended star incl. f. |
 | fFace | <code>Array.&lt;number&gt;</code> | Featured face as a global index triple. |
 
+<a name="solveSemidefinite"></a>
+
+## solveSemidefinite(a, n, b, [relativeTolerance]) ⇒ <code>Object</code>
+Solves A x = b for a symmetric positive semidefinite A with a consistent
+right-hand side, by Cholesky with symmetric pivoting. Directions whose
+pivot is negligible (the null space) are left at zero, so the result is the
+component of the solution in the row space; any function of A x that does
+not depend on the null space is therefore unique.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - The condition estimate is the ratio of the largest to the smallest accepted
+pivot.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| a | <code>Float64Array</code> | n x n matrix, row-major. Not modified. |
+| n | <code>number</code> |  |
+| b | <code>Float64Array</code> | Length n. Not modified. |
+| [relativeTolerance] | <code>number</code> | Pivots below this fraction of the   largest diagonal entry are treated as zero. |
+
+<a name="cholesky"></a>
+
+## cholesky(a, n) ⇒ <code>Float64Array</code>
+Cholesky factorization of a symmetric positive definite matrix.
+
+**Kind**: global function  
+**Returns**: <code>Float64Array</code> - Lower-triangular factor, row-major.  
+**Throws**:
+
+- [<code>SingularError</code>](#SingularError) If the matrix is not positive definite.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| a | <code>Float64Array</code> | n x n, row-major. Not modified. |
+| n | <code>number</code> |  |
+
+<a name="choleskySolveInPlace"></a>
+
+## choleskySolveInPlace(l, n, b)
+Solves L L^T x = b in place for a Cholesky factor.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| l | <code>Float64Array</code> |  |
+| n | <code>number</code> |  |
+| b | <code>Float64Array</code> | Overwritten with the solution. |
+
+<a name="residualNorm"></a>
+
+## residualNorm()
+Euclidean norm of A x - b.
+
+**Kind**: global function  
+<a name="minimumNormSolve"></a>
+
+## minimumNormSolve(rows, mass, n, r) ⇒ <code>Object</code>
+Minimum-norm solution of C x = r in the metric M: minimizes x^T M x.
+Computes x = M^-1 C^T lambda with (C M^-1 C^T) lambda = r.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - Residual is |C x - r|; scale is |r| + |C| |x|, for a relative check;
+  condition estimates that of C M^-1 C^T.  
+**Throws**:
+
+- [<code>SingularError</code>](#SingularError) If M is not positive definite.
+
+
+| Param | Type | Description |
+| --- | --- | --- |
+| rows | <code>Array.&lt;!Float64Array&gt;</code> | The m rows of C, each of length n. |
+| mass | <code>Float64Array</code> | n x n symmetric positive definite M. |
+| n | <code>number</code> |  |
+| r | <code>Float64Array</code> | Length m; must lie in the range of C. |
+
 <a name="generateUnitCubeMesh"></a>
 
 ## generateUnitCubeMesh(n) ⇒ [<code>Mesh</code>](#Mesh)
@@ -805,7 +1303,8 @@ err_L2^2 = ΣT ∫_T |v_exact - v_proj|^2 dx
 <a name="computeH1SemiError"></a>
 
 ## computeH1SemiError(mesh, traceProjector, exactFn, projFn) ⇒ <code>number</code>
-Computes the H1 semi-norm error (L2 error of the gradient) for scalar projections.
+Computes the H1 semi-norm error (L2 error of the gradient) for scalar
+projections.
 Uses numerical differentiation of the exact function for comparison.
 
 err_H1^2 = ΣT ∫_T |grad(u_exact) - grad(u_proj)|^2 dx
@@ -834,7 +1333,8 @@ scaled to unit volume, or more simply the maximum edge length.
 <a name="computeRate"></a>
 
 ## computeRate(err1, err2, h1, h2) ⇒ <code>number</code>
-Computes the observed convergence rate between two successive error measurements.
+Computes the observed convergence rate between two successive error
+measurements.
 
 rate = log(err_1 / err_2) / log(h_1 / h_2)
 
@@ -858,12 +1358,18 @@ Runs a convergence study on a sequence of meshes.
 | --- | --- | --- |
 | meshes | <code>Array.&lt;!Mesh&gt;</code> | Sequence of progressively finer meshes. |
 | config | <code>Object</code> |  |
-| config.exactScalar | <code>function</code> | Exact scalar function. |
-| config.exactVector | <code>function</code> | Exact vector function. |
+| config.exactScalar | <code>function</code> | Exact scalar     function. |
+| config.exactVector | <code>function</code> | Exact     vector function. |
 | [config.l] | <code>number</code> | Form degree (default 0). |
 | [config.p] | <code>number</code> | Polynomial degree (default 0). |
 | [config.quadratureOrder] | <code>number</code> | Quadrature order (default 3). |
 
+<a name="accumulate"></a>
+
+## accumulate()
+Adds a value to a sparse row held as a column-to-value map.
+
+**Kind**: global function  
 <a name="sort3"></a>
 
 ## sort3(a, b, c) ⇒ <code>Array.&lt;number&gt;</code>
@@ -876,6 +1382,85 @@ Sorts three numbers in ascending order.
 | a | <code>number</code> | 
 | b | <code>number</code> | 
 | c | <code>number</code> | 
+
+<a name="projectInParallel"></a>
+
+## projectInParallel(job) ⇒ <code>Promise.&lt;!Array.&lt;(number\|!Array.&lt;number&gt;)&gt;&gt;</code>
+**Kind**: global function  
+**Returns**: <code>Promise.&lt;!Array.&lt;(number\|!Array.&lt;number&gt;)&gt;&gt;</code> - The values, in the order
+    of `points`.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| job | <code>Object</code> | `field` is the `file:` URL (or an absolute path) of the module that     default-exports the field; `workers` defaults to the number of cores. |
+
+<a name="homogeneous"></a>
+
+## homogeneous()
+All exponent triples of total degree exactly d, in a fixed order.
+
+**Kind**: global function  
+<a name="upTo"></a>
+
+## upTo()
+All exponent triples of total degree at most d.
+
+**Kind**: global function  
+<a name="crossWithPosition"></a>
+
+## crossWithPosition()
+x cross q for a triple q of polynomials.
+
+**Kind**: global function  
+<a name="flatten"></a>
+
+## flatten()
+Flat coefficient vector of a form over monomials up to degree `top`, used to
+compare and rank forms.
+
+**Kind**: global function  
+<a name="rank"></a>
+
+## rank(forms) ⇒ <code>number</code>
+Rank of a set of forms (as coefficient vectors), by Gaussian elimination
+with partial pivoting.
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| forms | <code>Array.&lt;(Polynomial\|Array.&lt;Polynomial&gt;)&gt;</code> | 
+
+<a name="eliminate"></a>
+
+## eliminate()
+Row echelon pivots of the rows; returns the indices of independent rows.
+
+**Kind**: global function  
+<a name="formSpace"></a>
+
+## formSpace(r, k) ⇒ <code>Array.&lt;(Polynomial\|Array.&lt;Polynomial&gt;)&gt;</code>
+A basis of P_r^- Lambda^k on R^3 (as polynomials, not tied to a cell).
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| r | <code>number</code> | Polynomial degree, at least 1. |
+| k | <code>number</code> | Form degree, 0 to 3. |
+
+<a name="differential"></a>
+
+## differential(form, k) ⇒ <code>Polynomial</code> \| <code>Array.&lt;Polynomial&gt;</code>
+The exterior derivative of a k-form in vector-proxy form: the gradient of a
+0-form, the curl of a 1-form and the divergence of a 2-form.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| form | <code>Polynomial</code> \| <code>Array.&lt;Polynomial&gt;</code> |  |
+| k | <code>number</code> | Form degree, 0 to 2. |
 
 <a name="triangleQuadrature"></a>
 
@@ -897,7 +1482,8 @@ a different rule to avoid cancellation issues.
 ## tetrahedronQuadrature(order) ⇒ <code>Object</code>
 Returns quadrature points and weights on the reference tetrahedron.
 
-Note: order 3 contains a negative weight (-4/5). Callers integrating
+Order 3 is the five-point Keast rule: exact for cubics, with interior points
+and a negative weight (-4/5). Callers integrating
 non-smooth or sign-changing functions should consider a lower order or
 a different rule to avoid cancellation issues.
 
@@ -975,6 +1561,182 @@ Integrates a scalar function over a tetrahedron using quadrature.
 | fn | <code>function</code> | Scalar function. |
 | [order] | <code>number</code> | Quadrature order (default 2). |
 
+<a name="choose"></a>
+
+## choose()
+Binomial coefficient.
+
+**Kind**: global function  
+<a name="monomials"></a>
+
+## monomials()
+Exponent tuples of m variables with total degree at most d.
+
+**Kind**: global function  
+<a name="referenceRule"></a>
+
+## referenceRule()
+Quadrature on the reference simplex of dimension m (weights sum 1/m!).
+
+**Kind**: global function  
+<a name="carriers"></a>
+
+## carriers(r, k) ⇒ <code>Array.&lt;{vertices: Array.&lt;number&gt;, dimension: number, degree: number}&gt;</code>
+The sub-simplices that carry degrees of freedom of P_r^- Lambda^k, with the
+local vertex numbers (increasing) and the test degree.
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| r | <code>number</code> | 
+| k | <code>number</code> | 
+
+<a name="countOn"></a>
+
+## countOn()
+Number of degrees of freedom attached to one carrier.
+
+**Kind**: global function  
+<a name="moments"></a>
+
+## moments(k, carrier, points, u, order) ⇒ <code>Array.&lt;number&gt;</code>
+Evaluates the degrees of freedom of one carrier on a field.
+
+**Kind**: global function  
+**Returns**: <code>Array.&lt;number&gt;</code> - The moments, ordered by test component then monomial.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| k | <code>number</code> | Form degree. |
+| carrier | <code>Object</code> |  |
+| points | <code>Array.&lt;Array.&lt;number&gt;&gt;</code> | The four vertices of the cell, in order. |
+| u | <code>function</code> | The field, with a scalar     value for k = 0, 3 and a triple for k = 1, 2. |
+| order | <code>number</code> | Gauss points per direction. |
+
+<a name="evaluate"></a>
+
+## evaluate()
+Evaluates a polynomial form (scalar or triple) at x.
+
+**Kind**: global function  
+<a name="referenceBasis"></a>
+
+## referenceBasis(r, k) ⇒ <code>Object</code>
+The dual basis of P_r^- Lambda^k on the reference tetrahedron: polynomial
+forms psi_i with dof_j(psi_i) = delta_ij, with the dofs ordered by carrier
+(see `carriers`) then by `moments`.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| r | <code>number</code> | Degree, at least 1. |
+| k | <code>number</code> | Form degree. |
+
+<a name="invert"></a>
+
+## invert()
+Gauss-Jordan inverse of a dense square matrix with partial pivoting.
+
+**Kind**: global function  
+<a name="combine"></a>
+
+## combine()
+Linear combination of polynomial forms.
+
+**Kind**: global function  
+<a name="gaussLegendre"></a>
+
+## gaussLegendre(n) ⇒ <code>Object</code>
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| n | <code>number</code> | 
+
+<a name="tetrahedronRule"></a>
+
+## tetrahedronRule(points, order) ⇒ <code>Array.&lt;{x: !Array.&lt;number&gt;, weight: number}&gt;</code>
+Quadrature rule on a tetrahedron: a collapsed Gauss rule with order^3 points,
+exact for polynomials of total degree up to 2 * order - 3. Weights include
+the volume, so the integral of f is the sum of weight * f(x).
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| points | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> | The four vertices. |
+| order | <code>number</code> |  |
+
+<a name="integrateTetrahedron"></a>
+
+## integrateTetrahedron(points, f, order) ⇒ <code>number</code>
+Integral of a scalar function over a tetrahedron.
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| points | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> | 
+| f | <code>function</code> | 
+| order | <code>number</code> | 
+
+<a name="conjugateGradient"></a>
+
+## conjugateGradient(apply, b, options) ⇒ <code>Object</code>
+Preconditioned conjugate gradients for a symmetric positive semidefinite
+operator with a consistent right-hand side. Started from zero, the
+iterates stay in the range of the operator.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| apply | <code>function</code> | Writes A x into     the second argument. |
+| b | <code>Float64Array</code> |  |
+| options | <code>Object</code> |  |
+
+<a name="solveConsistent"></a>
+
+## solveConsistent(apply, b, options) ⇒ <code>Object</code>
+Solves A x = b for a symmetric positive semidefinite A and a consistent
+right-hand side to near machine precision: conjugate gradients restarted on
+the true residual (iterative refinement), because a single run stagnates
+on ill-conditioned systems.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| apply | <code>function</code> | Writes A x into     the second argument. |
+| b | <code>Float64Array</code> |  |
+| options | <code>Object</code> |  |
+
+<a name="minimumNormSolveSparse"></a>
+
+## minimumNormSolveSparse(constraints, mass, r) ⇒ <code>Object</code>
+Minimum-norm solution of C x = r in the metric M (minimizes x^T M x), for a
+sparse C and sparse symmetric positive definite M: x = M^-1 C^T lambda with
+(C M^-1 C^T) lambda = r, solved by nested conjugate gradients.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| constraints | [<code>SparseMatrix</code>](#SparseMatrix) | C, m x n. |
+| mass | [<code>SparseMatrix</code>](#SparseMatrix) | M, n x n. |
+| r | <code>Float64Array</code> | Length m, in the range of C. |
+
+<a name="sub"></a>
+
+## sub()
+Oriented triangle surface in three dimensions with Whitney forms of degree
+0, 1 and 2. Edges [a, b] point from the smaller to the larger vertex number,
+so edge forms need no sign; a triangle is oriented by its vertex order and
+its 2-form is the constant 1 / area.
+
+**Kind**: global function  
 <a name="triangleFrame"></a>
 
 ## triangleFrame(verts) ⇒ <code>Object</code>
@@ -1034,7 +1796,7 @@ in the tangent frame.
 | --- | --- | --- |
 | pt | <code>Array.&lt;number&gt;</code> |  |
 | verts | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> |  |
-| v | <code>function</code> | Tangential R^3 vector field. |
+| v | <code>function</code> | Tangential R^3 vector     field. |
 | [h] | <code>number</code> |  |
 
 <a name="divGamma"></a>
@@ -1049,7 +1811,7 @@ under the L2 inner product (eq. 2.14b).
 | --- | --- | --- |
 | pt | <code>Array.&lt;number&gt;</code> |  |
 | verts | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> |  |
-| v | <code>function</code> | Tangential R^3 vector field. |
+| v | <code>function</code> | Tangential R^3 vector     field. |
 | [h] | <code>number</code> |  |
 
 <a name="muTent"></a>
@@ -1108,6 +1870,29 @@ vertices v0, v1, v2, v3.  The absolute value divided by 6 equals the volume.
 | v1 | <code>Array.&lt;number&gt;</code> | 
 | v2 | <code>Array.&lt;number&gt;</code> | 
 | v3 | <code>Array.&lt;number&gt;</code> | 
+
+<a name="longestEdge"></a>
+
+## longestEdge(vertices) ⇒ <code>number</code>
+Length of the longest edge of a tetrahedron.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| vertices | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> | The four vertices. |
+
+<a name="relativeVolume"></a>
+
+## relativeVolume(vertices) ⇒ <code>number</code>
+Signed volume determinant divided by the cube of the longest edge: a
+dimensionless measure of how far a tetrahedron is from flat.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| vertices | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> | The four vertices. |
 
 <a name="tetVolume"></a>
 
@@ -1236,6 +2021,19 @@ reducing the risk of false singularity claims on poorly scaled systems.
 | a | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> | Dense square matrix (not modified). |
 | b | <code>Array.&lt;number&gt;</code> |  |
 
+<a name="hadamardBound"></a>
+
+## hadamardBound(m) ⇒ <code>number</code>
+Product of the Euclidean norms of the rows of a 3x3 matrix: an upper bound
+on |det| (Hadamard), so comparing a determinant with a fraction of it is
+independent of the scale of the matrix.
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| m | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> | 
+
 <a name="inverse3x3"></a>
 
 ## inverse3x3(m) ⇒ <code>Array.&lt;!Array.&lt;number&gt;&gt;</code>
@@ -1286,4 +2084,19 @@ Numerical gradient of a scalar function using central differences.
 | u | <code>function</code> | 
 | pt | <code>Array.&lt;number&gt;</code> | 
 | [h] | <code>number</code> | 
+
+<a name="worseyFarinSplit"></a>
+
+## worseyFarinSplit(vertices, cells) ⇒ <code>Object</code>
+**Kind**: global function  
+**Returns**: <code>Object</code> - The split mesh.
+    The original vertices come first, then one vertex per cell, then one per
+    face; `parent[i]` is the cell that child `i` came from, and
+    `faceVertex` maps a face's sorted vertex key `a_b_c` to its new vertex.
+    Children have positive orientation.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| vertices | <code>Array.&lt;Array.&lt;number&gt;&gt;</code> | Vertex coordinates. |
+| cells | <code>Array.&lt;Array.&lt;number&gt;&gt;</code> | Tetrahedra as four vertex indices. |
 

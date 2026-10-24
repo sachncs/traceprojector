@@ -4,113 +4,139 @@
  * Computes discrete error norms and convergence rates on a sequence of meshes.
  */
 
-import { integrateTetrahedron } from './quadrature.js'
-import { ProjectError } from './errors.js'
-import { Projector } from './traceprojector.js'
-import { Whitney } from './whitney.js'
+import {integrateTetrahedron} from './simplicial-complex.js';
+import {ProjectError} from './errors.js';
+import {Projector} from './traceprojector.js';
+import {Whitney} from './whitney.js';
+
+/**
+ * Gauss points per direction for the error integrals. The error norms use a
+ * positive-weight rule of their own, independent of the projector's quadrature:
+ * integrating a squared error with a rule that has a negative weight is
+ * unreliable on coarse meshes.
+ * @const {number}
+ */
+const ERROR_QUADRATURE_POINTS = 4;
 
 /**
  * Computes the L2 error between an exact function and its projection.
  *
-   * err_L2^2 = ΣT ∫_T |u_exact - u_proj|^2 dx
-   *
+ * err_L2^2 = ΣT ∫_T |u_exact - u_proj|^2 dx
+ *
  * @param {!Mesh} mesh
  * @param {!Projector} traceProjector
  * @param {function(!Array<number>): number} exactFn
  * @param {function(number, !Array<number>): number} projFn
- *   Function taking (tIdx, point) and returning the projected value at that point.
+ *   Function taking (tIdx, point) and returning the projected value at that
+ * point.
  * @return {number}
  */
-export function computeL2ErrorScalar (mesh, traceProjector, exactFn, projFn) {
-  let errSq = 0
+export function computeL2ErrorScalar(mesh, traceProjector, exactFn, projFn) {
+  let errSq = 0;
   for (let tIdx = 0; tIdx < mesh.tetrahedronCount; tIdx++) {
-    const verts = mesh.tetrahedra[tIdx].map((i) => mesh.vertices[i])
+    const verts = mesh.tetrahedra[tIdx].map((i) => mesh.vertices[i]);
     const integrand = (pt) => {
-      const exact = exactFn(pt)
-      const proj = projFn(tIdx, pt)
-      return (exact - proj) * (exact - proj)
-    }
-    errSq += integrateTetrahedron(verts, integrand, traceProjector.quadratureOrder)
+      const exact = exactFn(pt);
+      const proj = projFn(tIdx, pt);
+      return (exact - proj) * (exact - proj);
+    };
+    errSq += integrateTetrahedron(
+        verts,
+        integrand,
+        ERROR_QUADRATURE_POINTS,
+    );
   }
-  return Math.sqrt(Math.max(0, errSq))
+  return Math.sqrt(Math.max(0, errSq));
 }
 
 /**
  * Computes the L2 error for a vector-valued projection.
  *
-   * err_L2^2 = ΣT ∫_T |v_exact - v_proj|^2 dx
-   *
+ * err_L2^2 = ΣT ∫_T |v_exact - v_proj|^2 dx
+ *
  * @param {!Mesh} mesh
  * @param {!Projector} traceProjector
  * @param {function(!Array<number>): !Array<number>} exactFn
  * @param {function(number, !Array<number>): !Array<number>} projFn
  * @return {number}
  */
-export function computeL2ErrorVector (mesh, traceProjector, exactFn, projFn) {
-  let errSq = 0
+export function computeL2ErrorVector(mesh, traceProjector, exactFn, projFn) {
+  let errSq = 0;
   for (let tIdx = 0; tIdx < mesh.tetrahedronCount; tIdx++) {
-    const verts = mesh.tetrahedra[tIdx].map((i) => mesh.vertices[i])
+    const verts = mesh.tetrahedra[tIdx].map((i) => mesh.vertices[i]);
     const integrand = (pt) => {
-      const exact = exactFn(pt)
-      const proj = projFn(tIdx, pt)
-      const dx = exact[0] - proj[0]
-      const dy = exact[1] - proj[1]
-      const dz = exact[2] - proj[2]
-      return dx * dx + dy * dy + dz * dz
-    }
-    errSq += integrateTetrahedron(verts, integrand, traceProjector.quadratureOrder)
+      const exact = exactFn(pt);
+      const proj = projFn(tIdx, pt);
+      const dx = exact[0] - proj[0];
+      const dy = exact[1] - proj[1];
+      const dz = exact[2] - proj[2];
+      return dx * dx + dy * dy + dz * dz;
+    };
+    errSq += integrateTetrahedron(
+        verts,
+        integrand,
+        ERROR_QUADRATURE_POINTS,
+    );
   }
-  return Math.sqrt(Math.max(0, errSq))
+  return Math.sqrt(Math.max(0, errSq));
 }
 
 /**
- * Computes the H1 semi-norm error (L2 error of the gradient) for scalar projections.
+ * Computes the H1 semi-norm error (L2 error of the gradient) for scalar
+ * projections.
  * Uses numerical differentiation of the exact function for comparison.
  *
-   * err_H1^2 = ΣT ∫_T |grad(u_exact) - grad(u_proj)|^2 dx
-   *
+ * err_H1^2 = ΣT ∫_T |grad(u_exact) - grad(u_proj)|^2 dx
+ *
  * @param {!Mesh} mesh
  * @param {!Projector} traceProjector
  * @param {function(!Array<number>): number} exactFn
  * @param {function(number, !Array<number>): number} projFn
  * @return {number}
  */
-export function computeH1SemiError (mesh, traceProjector, exactFn, projFn) {
-  const h = 1e-6
+export function computeH1SemiError(mesh, traceProjector, exactFn, projFn) {
+  const h = 1e-6;
   const gradExact = (pt) => [
-    (exactFn([pt[0] + h, pt[1], pt[2]]) - exactFn([pt[0] - h, pt[1], pt[2]])) / (2 * h),
-    (exactFn([pt[0], pt[1] + h, pt[2]]) - exactFn([pt[0], pt[1] - h, pt[2]])) / (2 * h),
-    (exactFn([pt[0], pt[1], pt[2] + h]) - exactFn([pt[0], pt[1], pt[2] - h])) / (2 * h)
-  ]
+    (exactFn([pt[0] + h, pt[1], pt[2]]) - exactFn([pt[0] - h, pt[1], pt[2]])) /
+      (2 * h),
+    (exactFn([pt[0], pt[1] + h, pt[2]]) - exactFn([pt[0], pt[1] - h, pt[2]])) /
+      (2 * h),
+    (exactFn([pt[0], pt[1], pt[2] + h]) - exactFn([pt[0], pt[1], pt[2] - h])) /
+      (2 * h),
+  ];
 
-  let errSq = 0
+  let errSq = 0;
   for (let tIdx = 0; tIdx < mesh.tetrahedronCount; tIdx++) {
-    const verts = mesh.tetrahedra[tIdx].map((i) => mesh.vertices[i])
+    const verts = mesh.tetrahedra[tIdx].map((i) => mesh.vertices[i]);
     const gradProj = (pt) => {
-      const valXm = projFn(tIdx, [pt[0] - h, pt[1], pt[2]])
-      const valXp = projFn(tIdx, [pt[0] + h, pt[1], pt[2]])
-      const valYm = projFn(tIdx, [pt[0], pt[1] - h, pt[2]])
-      const valYp = projFn(tIdx, [pt[0], pt[1] + h, pt[2]])
-      const valZm = projFn(tIdx, [pt[0], pt[1], pt[2] - h])
-      const valZp = projFn(tIdx, [pt[0], pt[1], pt[2] + h])
+      const valXm = projFn(tIdx, [pt[0] - h, pt[1], pt[2]]);
+      const valXp = projFn(tIdx, [pt[0] + h, pt[1], pt[2]]);
+      const valYm = projFn(tIdx, [pt[0], pt[1] - h, pt[2]]);
+      const valYp = projFn(tIdx, [pt[0], pt[1] + h, pt[2]]);
+      const valZm = projFn(tIdx, [pt[0], pt[1], pt[2] - h]);
+      const valZp = projFn(tIdx, [pt[0], pt[1], pt[2] + h]);
       return [
         (valXp - valXm) / (2 * h),
         (valYp - valYm) / (2 * h),
-        (valZp - valZm) / (2 * h)
-      ]
-    }
+        (valZp - valZm) / (2 * h),
+      ];
+    };
 
     const integrand = (pt) => {
-      const gE = gradExact(pt)
-      const gP = gradProj(pt)
-      const dx = gE[0] - gP[0]
-      const dy = gE[1] - gP[1]
-      const dz = gE[2] - gP[2]
-      return dx * dx + dy * dy + dz * dz
-    }
-    errSq += integrateTetrahedron(verts, integrand, traceProjector.quadratureOrder)
+      const gE = gradExact(pt);
+      const gP = gradProj(pt);
+      const dx = gE[0] - gP[0];
+      const dy = gE[1] - gP[1];
+      const dz = gE[2] - gP[2];
+      return dx * dx + dy * dy + dz * dz;
+    };
+    errSq += integrateTetrahedron(
+        verts,
+        integrand,
+        ERROR_QUADRATURE_POINTS,
+    );
   }
-  return Math.sqrt(Math.max(0, errSq))
+  return Math.sqrt(Math.max(0, errSq));
 }
 
 /**
@@ -119,39 +145,40 @@ export function computeH1SemiError (mesh, traceProjector, exactFn, projFn) {
  * @param {!Mesh} mesh
  * @return {number}
  */
-export function estimateMeshSize (mesh) {
-  let maxEdgeLen = 0
+export function estimateMeshSize(mesh) {
+  let maxEdgeLen = 0;
   for (let eIdx = 0; eIdx < mesh.edges.length; eIdx++) {
-    const e = mesh.edges[eIdx]
-    const v0 = mesh.vertices[e[0]]
-    const v1 = mesh.vertices[e[1]]
-    const dx = v1[0] - v0[0]
-    const dy = v1[1] - v0[1]
-    const dz = v1[2] - v0[2]
-    const len = Math.sqrt(dx * dx + dy * dy + dz * dz)
+    const e = mesh.edges[eIdx];
+    const v0 = mesh.vertices[e[0]];
+    const v1 = mesh.vertices[e[1]];
+    const dx = v1[0] - v0[0];
+    const dy = v1[1] - v0[1];
+    const dz = v1[2] - v0[2];
+    const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
     if (len > maxEdgeLen) {
-      maxEdgeLen = len
+      maxEdgeLen = len;
     }
   }
-  return maxEdgeLen
+  return maxEdgeLen;
 }
 
 /**
- * Computes the observed convergence rate between two successive error measurements.
+ * Computes the observed convergence rate between two successive error
+ * measurements.
  *
-   * rate = log(err_1 / err_2) / log(h_1 / h_2)
-   *
+ * rate = log(err_1 / err_2) / log(h_1 / h_2)
+ *
  * @param {number} err1 - Error on finer mesh.
  * @param {number} err2 - Error on coarser mesh.
  * @param {number} h1 - Mesh size of finer mesh.
  * @param {number} h2 - Mesh size of coarser mesh.
  * @return {number}
  */
-export function computeRate (err1, err2, h1, h2) {
+export function computeRate(err1, err2, h1, h2) {
   if (err1 === 0 || err2 === 0 || h1 === 0 || h2 === 0 || h2 === h1) {
-    return 0
+    return 0;
   }
-  return Math.log(err1 / err2) / Math.log(h1 / h2)
+  return Math.log(err1 / err2) / Math.log(h1 / h2);
 }
 
 /**
@@ -159,62 +186,68 @@ export function computeRate (err1, err2, h1, h2) {
  *
  * @param {!Array<!Mesh>} meshes - Sequence of progressively finer meshes.
  * @param {Object} config
- * @param {function(!Array<number>): number} config.exactScalar - Exact scalar function.
- * @param {function(!Array<number>): !Array<number>=} config.exactVector - Exact vector function.
+ * @param {function(!Array<number>): number} config.exactScalar - Exact scalar
+ *     function.
+ * @param {function(!Array<number>): !Array<number>=} config.exactVector - Exact
+ *     vector function.
  * @param {number=} config.l - Form degree (default 0).
  * @param {number=} config.p - Polynomial degree (default 0).
  * @param {number=} config.quadratureOrder - Quadrature order (default 3).
- * @return {!Array<{h: number, l2Err: number, h1Err: number|undefined, rateL2: number|undefined, rateH1: number|undefined}>}
+ * @return {!Array<{h: number, l2Err: number, h1Err: number|undefined, rateL2:
+ *     number|undefined, rateH1: number|undefined}>}
  */
-export function runConvergenceStudy (meshes, config) {
-  const results = []
+export function runConvergenceStudy(meshes, config) {
+  const results = [];
   const {
     exactScalar,
     exactVector,
     l = 0,
     p = 0,
     quadratureOrder = 3,
-    projectors = new WeakMap()
-  } = config
+    projectors = new WeakMap(),
+  } = config;
 
   for (let i = 0; i < meshes.length; i++) {
-    const mesh = meshes[i]
-    let b = projectors.get(mesh)
+    const mesh = meshes[i];
+    let b = projectors.get(mesh);
     if (!b) {
       // Re-create Projector for each mesh since it holds mesh-specific data.
-      const w = new Whitney(mesh)
-      b = new Projector(mesh, w, { quadratureOrder })
-      b.computeBoundaryWeights()
-      b.buildLocator()
-      projectors.set(mesh, b)
+      const w = new Whitney(mesh);
+      b = new Projector(mesh, w, {quadratureOrder});
+      b.computeBoundaryWeights();
+      b.buildLocator();
+      projectors.set(mesh, b);
     }
 
-    const h = estimateMeshSize(mesh)
-    let l2Err
-    let h1Err
+    const h = estimateMeshSize(mesh);
+    let l2Err;
+    let h1Err;
 
     if (l === 0) {
-      const projFn = (tIdx, pt) => b.projectHp(exactScalar, pt, tIdx, l, p)
-      l2Err = computeL2ErrorScalar(mesh, b, exactScalar, projFn)
-      h1Err = computeH1SemiError(mesh, b, exactScalar, projFn)
+      const projFn = (tIdx, pt) => b.projectHp(exactScalar, pt, tIdx, l, p);
+      l2Err = computeL2ErrorScalar(mesh, b, exactScalar, projFn);
+      h1Err = computeH1SemiError(mesh, b, exactScalar, projFn);
     } else if (l === 3) {
-      const projFn = (tIdx, pt) => b.projectHp(exactScalar, pt, tIdx, l, p)
+      const projFn = (tIdx, pt) => b.projectHp(exactScalar, pt, tIdx, l, p);
       // For L2, H1 semi-norm is not meaningful; just compute L2 error.
-      l2Err = computeL2ErrorScalar(mesh, b, exactScalar, projFn)
+      l2Err = computeL2ErrorScalar(mesh, b, exactScalar, projFn);
     } else if (l === 1 || l === 2) {
       if (!exactVector) {
-        throw new ProjectError('exactVector is required for l=1 or l=2')
+        throw new ProjectError('exactVector is required for l=1 or l=2');
       }
-      const projFn = (tIdx, pt) => b.projectHp(exactVector, pt, tIdx, l, p)
-      l2Err = computeL2ErrorVector(mesh, b, exactVector, projFn)
+      const projFn = (tIdx, pt) => b.projectHp(exactVector, pt, tIdx, l, p);
+      l2Err = computeL2ErrorVector(mesh, b, exactVector, projFn);
     }
 
-    const prev = results.length > 0 ? results[results.length - 1] : null
-    const rateL2 = prev ? computeRate(l2Err, prev.l2Err, h, prev.h) : undefined
-    const rateH1 = prev && h1Err !== undefined ? computeRate(h1Err, prev.h1Err, h, prev.h) : undefined
+    const prev = results.length > 0 ? results[results.length - 1] : null;
+    const rateL2 = prev ? computeRate(l2Err, prev.l2Err, h, prev.h) : undefined;
+    const rateH1 =
+      prev && h1Err !== undefined ?
+        computeRate(h1Err, prev.h1Err, h, prev.h) :
+        undefined;
 
-    results.push({ h, l2Err, h1Err, rateL2, rateH1 })
+    results.push({h, l2Err, h1Err, rateL2, rateH1});
   }
 
-  return results
+  return results;
 }

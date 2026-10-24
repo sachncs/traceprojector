@@ -23,17 +23,29 @@ const UNSUPPORTED = new Map([
   [7, 'pyramids'], [29, 'third-order tetrahedra'],
 ]);
 
-/** Splits a section body into trimmed, non-empty lines. */
-function lines(text) {
-  return text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l !== '');
-}
-
-/** Sections of the file by name: `$Name ... $EndName`. */
+/**
+ * Sections of the file by name: `$Name ... $EndName`. One pass over the
+ * lines, so the time is linear in the size of the file.
+ */
 function sections(text) {
   const out = new Map();
-  const re = /\$([A-Za-z]+)[ \t]*\r?\n([\s\S]*?)\$End\1/g;
-  let m;
-  while ((m = re.exec(text)) !== null) out.set(m[1], lines(m[2]));
+  let name = null;
+  let body = [];
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (name === null) {
+      const open = /^\$([A-Za-z]+)$/.exec(trimmed);
+      if (open && !trimmed.startsWith('$End')) {
+        name = open[1];
+        body = [];
+      }
+    } else if (trimmed === '$End' + name) {
+      out.set(name, body);
+      name = null;
+    } else if (trimmed !== '') {
+      body.push(trimmed);
+    }
+  }
   return out;
 }
 

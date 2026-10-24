@@ -38,14 +38,14 @@
     "slug": "commuting",
     "title": "Check that the projection commutes with the derivative",
     "summary": "The gradient of the projection is the projection of the gradient, so curl-free fields stay curl-free. Two ways to see it.",
-    "assumes": "Canonical operator: smooth input. Bounded operator: any input in L2.",
+    "assumes": "Canonical operator: smooth input. Bounded operator: any input in L2. The trace-preserving and stable operators commute for fields whose boundary trace is a lowest-order trace; outside that class commuting fails (by about 5e-3 on a 4x4x4 cube), which the papers' proof does not cover (see Limits).",
     "cost": "The bounded operator solves a local problem per entity."
   },
   {
     "slug": "boundary-trace",
     "title": "Keep the values on the boundary",
     "summary": "Which operators reproduce boundary values exactly, and which trade that for needing less of the input.",
-    "assumes": "Stable operator: finite point values on the boundary. Trace-preserving operator: only L2 data near it.",
+    "assumes": "Stable operator: finite point values on the boundary. Trace-preserving operator: only L2 data near it. The trace-preserving operator above the lowest order is validated at degrees 1 and 2 on cubes; its stability constant there is measured only in part (see Validation).",
     "cost": "The trace-preserving operator costs more per boundary entity."
   },
   {

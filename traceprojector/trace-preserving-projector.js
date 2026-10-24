@@ -19,6 +19,7 @@ import {HighOrderTracePreserving} from './high-order-trace-preserving.js';
 import {BoundaryProjector} from './boundary-projector.js';
 import {ZeroTraceProjector} from './zero-trace-projector.js';
 import {integrateTetrahedron} from './simplicial-complex.js';
+import {validateMeshInput} from './mesh.js';
 
 const add = (a, b) => (typeof a === 'number' ?
   a + b : a.map((q, i) => q + b[i]));
@@ -30,6 +31,7 @@ export class TracePreservingProjector {
    * @param {{quadratureOrder: (number|undefined)}=} options
    */
   constructor(vertices, tetrahedra, options = {}) {
+    validateMeshInput(vertices, tetrahedra);
     this.degree = options.degree ?? 0;
     if (!Number.isInteger(this.degree) || this.degree < 0) {
       throw new ValidateError('degree must be a nonnegative integer');

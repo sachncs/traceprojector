@@ -26,10 +26,14 @@ const root = resolve(import.meta.dirname, '..');
  * once). Every page must be present, standalone, and carry the base path.
  */
 function checkOutput(out) {
+  const recipes = JSON.parse(readFileSync(
+      join(root, 'examples/recipes.json'), 'utf8')).map((r) => r.slug);
   const pages = [
     'index.html',
     'playground/index.html',
     'docs/index.html',
+    'recipes/index.html',
+    ...recipes.map((slug) => `recipes/${slug}/index.html`),
     ...['getting-started', 'operators', 'errors', 'api', 'performance',
       'limits', 'math', 'architecture', 'validation', 'developer-guide',
       'changelog'].map((slug) => `docs/${slug}/index.html`),
@@ -43,7 +47,7 @@ function checkOutput(out) {
       throw new Error(`${page} has links outside the base path: ${
         unprefixed.slice(0, 3).join(' ')}`);
     }
-    if (page.startsWith('docs/') && /github\.com\/[^"]*\/blob\/master\/docs\//.test(html)) {
+    if ((page.startsWith('docs/') || page.startsWith('recipes/')) && /github\.com\/[^"]*\/blob\/master\/docs\//.test(html)) {
       throw new Error(`${page} links to a Markdown file on GitHub`);
     }
   }
@@ -70,6 +74,7 @@ try {
   // The documentation pages are rendered from the repository's Markdown, which
   // the site reads from the directory above it.
   cpSync(join(root, 'docs'), join(work, 'docs'), {recursive: true});
+  cpSync(join(root, 'examples'), join(work, 'examples'), {recursive: true});
   cpSync(join(root, 'CHANGELOG.md'), join(work, 'CHANGELOG.md'));
   const manifestPath = join(copy, 'package.json');
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));

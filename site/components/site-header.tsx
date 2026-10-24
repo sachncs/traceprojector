@@ -9,6 +9,7 @@ import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
 const NAV = [
+  { label: "Recipes", href: "/recipes/" },
   { label: "Capabilities", href: "/#capabilities" },
   { label: "Architecture", href: "/#architecture" },
   { label: "Playground", href: "/playground" },

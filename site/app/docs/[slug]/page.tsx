@@ -6,7 +6,7 @@ import { PAGES, loadDoc, neighbours } from "@/lib/docs";
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return PAGES.map((p) => ({ slug: p.slug }));
+  return PAGES.filter((p) => !p.base).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({
@@ -15,7 +15,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const page = PAGES.find((p) => p.slug === slug);
+  const page = PAGES.find((p) => p.slug === slug && !p.base);
   return {
     title: page ? `${page.title} · traceprojector` : "traceprojector",
     description: page?.summary,

@@ -450,7 +450,13 @@ case.
   `TracePreservingProjector` at `p ≥ 1` is checked for being a projection, for
   preserving the trace and for commuting; the local `L²` bound of the boundary
   part (W6 for the higher-order weights) and of the whole operator under
-  refinement are not.
+  refinement are not. A single-point proxy was run once (not a test, not in
+  the suite): for a bump of width `h/2` one cell from a face, `l = 0`, `p = 1`,
+  `|Πu(x)|·h^{3/2}/‖u‖` was 0.015, 0.55, 0.015 and 0.55 for 5, 6, 7 and 8 cells
+  per side. It is bounded and shows no growth over that range, but it depends
+  on how the bump sits against the mesh (it alternates with the parity of `n`),
+  covers one point, one degree and four sizes, and so is evidence of no
+  blow-up, not an estimate of the constant.
 - **Commuting above the lowest order is tested on cubes** (`p = 1` for all
   form degrees, `p = 2` for 0-forms) and on one mesh size; no convergence rate
   is claimed.

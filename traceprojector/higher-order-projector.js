@@ -85,7 +85,7 @@ export class HigherOrderProjector {
   lowestCoefficients(u, l) {
     const out = new Float64Array(this.entityCount(l));
     for (let sigma = 0; sigma < out.length; sigma++) {
-      out[sigma] = this.weights.pair(l, sigma, (x) => u(x));
+      out[sigma] = this.weights.pair(l, sigma, (x, c) => u(x, c));
     }
     return out;
   }
@@ -301,7 +301,7 @@ export class HigherOrderProjector {
     const lowest = this.lowestCoefficients(u, l);
     const residual = (x, c) => {
       const part = this.evaluateLowest(lowest, x, c, l);
-      const value = u(x);
+      const value = u(x, c);
       return typeof value === 'number' ? value - part :
         value.map((q, i) => q - part[i]);
     };
@@ -330,7 +330,7 @@ export class HigherOrderProjector {
     const lowest = new Map();
     const lowestOf = (sigma) => {
       if (!lowest.has(sigma)) {
-        lowest.set(sigma, this.weights.pair(l, sigma, (x) => u(x)));
+        lowest.set(sigma, this.weights.pair(l, sigma, (x, c) => u(x, c)));
       }
       return lowest.get(sigma);
     };
@@ -347,7 +347,7 @@ export class HigherOrderProjector {
     };
     const residual = (x, c) => {
       const part = whitney(x, c);
-      const value = u(x);
+      const value = u(x, c);
       return typeof value === 'number' ? value - part :
         value.map((q, i) => q - part[i]);
     };

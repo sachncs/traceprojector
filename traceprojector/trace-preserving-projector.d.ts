@@ -1,23 +1,43 @@
 /**
- * The full lowest-order projection of Ern, Guzman, Potu and Vohralik:
+ * The full trace-preserving projection of Ern, Guzman, Potu and Vohralik:
  * Pi = mPi (I - Pi_boundary) + Pi_boundary. It is a projection onto the
- * lowest-order Whitney forms, preserves the discrete trace on the boundary and
- * commutes with the exterior derivative for fields whose trace is a
- * lowest-order trace; each coefficient depends on a patch of cells around its
- * entity. Validation-scale: it needs a mesh fine enough that the extended
- * stars are balls, and takes minutes on a 4 x 4 x 4 cube.
+ * finite element spaces of degree p + 1, preserves the discrete trace on the
+ * boundary and commutes with the exterior derivative for fields whose trace is
+ * a discrete trace; each value depends on a patch of cells around its point.
+ * It needs a mesh fine enough that the extended stars are balls.
+ *
+ * At `degree: 0` (the default) the spaces are the Whitney forms and the
+ * projection has coefficients on their basis. At `degree >= 1` the projection
+ * is evaluated field by field with `local`.
  */
 export class TracePreservingProjector {
   /**
    * @param vertices - Vertex coordinates.
    * @param tetrahedra - Four vertex numbers per tetrahedron.
    * @param options.quadratureOrder - Gauss points per direction (default 4).
+   *   The commuting identities hold up to the quadrature error of the field:
+   *   raise it for fields of high polynomial degree.
+   * @param options.degree - Polynomial degree p (default 0, the Whitney
+   *   forms; the spaces have degree p + 1).
    */
   constructor(
     vertices: number[][],
     tetrahedra: number[][],
-    options?: { quadratureOrder?: number },
+    options?: { quadratureOrder?: number; degree?: number },
   );
+
+  /**
+   * Pi u as a lazy field: its value and its exterior derivative at a point of
+   * a cell. At degree > 0 this is how the operator is evaluated.
+   */
+  local(
+    u: (point: number[]) => number | number[],
+    du: ((point: number[]) => number | number[]) | null,
+    l: number,
+  ): {
+    value: (point: number[], cell: number) => number | number[];
+    derivative: (point: number[], cell: number) => number | number[];
+  };
 
   /**
    * All Whitney coefficients of the projection in degree l.

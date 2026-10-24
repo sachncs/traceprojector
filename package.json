@@ -91,8 +91,6 @@
     "site:dev": "npm run -w site dev",
     "site:build": "npm run -w site build",
     "site:start": "npm run -w site start",
-    "docs:test-count": "node scripts/test-count.mjs",
-    "docs:test-count:check": "node scripts/test-count.mjs --check",
     "docs:warn": "node scripts/gen-warnings-doc.mjs",
     "docs:warn:check": "node scripts/gen-warnings-doc.mjs --check",
     "lint:package": "publint && attw --pack . --profile esm-only",
@@ -101,7 +99,10 @@
     "verify:package": "node scripts/verify-package.mjs",
     "verify": "npm run lint && npm run test:coverage && npm run build && node scripts/check-dist-exports.mjs && npm run verify:types && npm run test:types && npm run lint:package && npm run verify:package",
     "verify:site": "node scripts/verify-site.mjs",
-    "validate:slow": "mocha --config validation/.mocharc.slow.yml"
+    "validate:slow": "mocha --config validation/.mocharc.slow.yml",
+    "bench": "node --expose-gc scripts/bench.mjs",
+    "bench:check": "node --expose-gc scripts/bench.mjs --check",
+    "bench:update": "node --expose-gc scripts/bench.mjs --update"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",

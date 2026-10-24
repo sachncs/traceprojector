@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Check, Copy, Terminal } from "lucide-react";
 import { toast } from "sonner";
@@ -20,20 +21,18 @@ npm install traceprojector`,
     id: "project",
     label: "Project",
     filename: "trace.mjs",
-    code: `import {
-  Mesh, Whitney, Projector, generateUnitCubeMesh,
-} from 'traceprojector'
+    code: `import { Locator, StableProjector } from 'traceprojector'
+import { generateUnitCubeMesh } from 'traceprojector/generator'
 
-const mesh    = generateUnitCubeMesh(4)
-const whitney = new Whitney(mesh)
+const mesh = generateUnitCubeMesh(3) // or your own vertices and tetrahedra
+const projector = new StableProjector(
+  mesh.getVertices(), mesh.getTetrahedra())
 
-const projector = new Projector(mesh, whitney, { quadratureOrder: 3 })
-projector.computeBoundaryWeights()
-projector.buildLocator()
+const u = (p) => Math.sin(p[0]) * Math.cos(p[1]) * Math.exp(p[2])
+const point = [0.3, 0.3, 0.3]
+const { tIdx } = new Locator(mesh).findTetrahedron(point)
 
-const u     = (p) => Math.sin(p[0]) * Math.cos(p[1]) * Math.exp(p[2])
-const value = projector.projectH1(u, [0.5, 0.5, 0.5], 0)
-console.log(value)  // ≈ 1.365`,
+console.log(projector.project(u, point, tIdx, 0)) // 0.3875  (u = 0.3811)`,
   },
   {
     id: "boundary",
@@ -51,7 +50,7 @@ projector.verifyBoundaryWeights()
     filename: "index.html",
     code: `<script src="https://cdn.jsdelivr.net/npm/traceprojector/dist/traceprojector.umd.js"></script>
 <script>
-  const { Mesh, Whitney, Projector } = window.TraceProjector
+  const { StableProjector, Locator } = window.TraceProjector
   // ...same API as Node, zero build step
 </script>`,
   },
@@ -94,18 +93,17 @@ export function CodePreview() {
             </h2>
             <p className="mt-5 text-base text-muted-foreground">
               No build step. No transpiler. No peer-dep negotiation. Drop the
-              lib into any Node 24+ project and call{" "}
-              <code className="font-mono text-foreground">projectH1</code>,{" "}
-              <code className="font-mono text-foreground">projectHcurl</code>,
-              or{" "}
-              <code className="font-mono text-foreground">projectHdiv</code> —
-              the rest of the de Rham complex is just composition.
+              lib into any Node 24+ project, hand it your vertices and
+              tetrahedra, and call{" "}
+              <code className="font-mono text-foreground">project(u, point, cell, l)</code>{" "}
+              for the form degree you need — the guide shows how to choose the
+              operator and check the result.
             </p>
 
             <ul className="mt-7 space-y-3 text-sm">
               {[
                 "Pure ESM, ES2024 syntax — no Babel, no SWC",
-                "CJS and UMD bundles ship on npm",
+                "ESM and UMD bundles ship on npm",
                 "Hand-written .d.ts for every module",
                 "Runs in the browser via the UMD bundle on jsDelivr",
               ].map((line) => (
@@ -130,14 +128,12 @@ export function CodePreview() {
                   View on npm
                 </a>
               </Button>
-              <a
-                href="https://github.com/sachncs/traceprojector#readme"
-                target="_blank"
-                rel="noreferrer"
+              <Link
+                href="/docs/getting-started/"
                 className="text-sm text-muted-foreground transition-colors hover:text-foreground"
               >
                 Read the full guide →
-              </a>
+              </Link>
             </div>
           </Reveal>
 

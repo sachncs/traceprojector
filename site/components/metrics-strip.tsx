@@ -4,10 +4,10 @@ import { Reveal, RevealStagger } from "@/components/motion/reveal";
 
 const METRICS = [
   {
-    kpi: "192",
-    unit: "tests",
-    label: "Passing test cases",
-    sub: "Mocha + Chai across the full surface",
+    kpi: "500+",
+    unit: "unit tests",
+    label: "Plus a numerical validation suite",
+    sub: "One test per claim of the papers, fixed tolerances",
     icon: ShieldCheck,
     accent: "text-emerald-300",
     bg: "bg-emerald-400/10 border-emerald-400/30",

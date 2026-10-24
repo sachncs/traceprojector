@@ -77,6 +77,36 @@ export function bubbleFamily(r, m) {
   return family;
 }
 
+const sampleCache = new Map();
+
+/**
+ * The values and derivatives of one bubble at the points of the reference
+ * rule, tabulated once: they depend on the element and the rule alone, not on
+ * the cell.
+ * @param {number} r
+ * @param {number} k Form degree.
+ * @param {number} m Dimension of the simplex.
+ * @param {number} index Index in the bubble family.
+ * @param {!Array<{s: !Array<number>}>} rule The reference rule.
+ * @return {{values: !Array<!Array<number>>, derivatives:
+ *     !Array<!Array<number>>}} Per point.
+ */
+export function bubbleSamples(r, k, m, index, rule) {
+  const id = `${r}_${k}_${m}_${index}_${rule.length}`;
+  let out = sampleCache.get(id);
+  if (!out) {
+    const item = bubbleFamily(r, m)[k][index];
+    out = {
+      values: item.kind === 'coclosed' ? null :
+        rule.map(({s}) => item.value(s)),
+      derivatives: item.kind === 'coclosed' ?
+        rule.map(({s}) => item.derivative(s)) : null,
+    };
+    sampleCache.set(id, out);
+  }
+  return out;
+}
+
 /** Sub-simplices of the reference tetrahedron that carry dofs of degree k. */
 export function agCarriers(r, k) {
   const out = [];

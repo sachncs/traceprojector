@@ -13,7 +13,7 @@ const DECOMPOSITION = [
   {
     label: "Π_ringˡ",
     name: "Interior projector",
-    body: "Stable local problem with vanishing trace on the boundary. Decouples from boundary geometry.",
+    body: "Zero-trace interior operator: bounded local problems on stars of cells, vanishing trace on the boundary. Decouples from boundary geometry.",
     color: "text-accent",
     bg: "bg-accent/10 border-accent/30",
   },

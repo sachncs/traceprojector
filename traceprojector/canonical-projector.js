@@ -12,6 +12,7 @@
 import {ValidateError, ProjectError} from './errors.js';
 import {SimplicialComplex} from './simplicial-complex.js';
 import {moments, referenceBasis} from './reference-element.js';
+import {differential} from './polynomial-forms.js';
 
 const EDGE_PAIRS = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
 const FACE_TRIPLES = [[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]];
@@ -24,6 +25,9 @@ const cross = (a, b) => [
   a[0] * b[1] - a[1] * b[0],
 ];
 const matrixVector = (rows, v) => rows.map((row) => dot(row, v));
+
+// Keyed by the element (the canonical and the Arnold-Guzman bases differ).
+const derivativeCache = new WeakMap();
 
 export class CanonicalProjector {
   /**
@@ -199,37 +203,45 @@ export class CanonicalProjector {
    * the curl (l = 1) or the divergence (l = 2).
    */
   derivative(coefficients, point, c, l) {
-    const {basis} = this.element(l);
+    const derivatives = this.derivativeBasis(l);
     const dofs = this.cellDofs(c, l);
     const s = this.referencePoint(c, point);
     const {columns, det, inverse} = this.frame(c);
     let total = l === 2 ? 0 : [0, 0, 0];
-    basis.forEach((psi, i) => {
+    derivatives.forEach((d, i) => {
       const weight = coefficients[dofs[i]];
       if (weight === 0) return;
       let mapped;
       if (l === 0) {
-        const grad = [0, 1, 2].map((j) => psi.derivative(j).evaluate(s));
+        const grad = d.map((p) => p.evaluate(s));
         mapped = [0, 1, 2].map((a) => dot(inverse.map((row) => row[a]), grad));
       } else if (l === 1) {
-        const f = psi;
-        const curl = [
-          f[2].derivative(1).evaluate(s) - f[1].derivative(2).evaluate(s),
-          f[0].derivative(2).evaluate(s) - f[2].derivative(0).evaluate(s),
-          f[1].derivative(0).evaluate(s) - f[0].derivative(1).evaluate(s),
-        ];
+        const curl = d.map((p) => p.evaluate(s));
         mapped = [0, 1, 2].map((a) => columns.reduce(
             (acc, col, j) => acc + col[a] * curl[j], 0) / det);
       } else {
-        mapped = (psi[0].derivative(0).evaluate(s) +
-          psi[1].derivative(1).evaluate(s) +
-          psi[2].derivative(2).evaluate(s)) / det;
+        mapped = d.evaluate(s) / det;
       }
       total = typeof total === 'number' ?
         total + weight * mapped :
         total.map((q, a) => q + weight * mapped[a]);
     });
     return total;
+  }
+
+  /**
+   * The exterior derivatives of the reference basis functions of degree l
+   * (gradient, curl or divergence), differentiated once per element.
+   * @private
+   */
+  derivativeBasis(l) {
+    const element = this.element(l);
+    let out = derivativeCache.get(element);
+    if (!out) {
+      out = element.basis.map((psi) => differential(psi, l));
+      derivativeCache.set(element, out);
+    }
+    return out;
   }
 
   /**

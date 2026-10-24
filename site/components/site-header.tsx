@@ -9,10 +9,10 @@ import { Logo } from "@/components/logo";
 import { cn } from "@/lib/utils";
 
 const NAV = [
-  { label: "Capabilities", href: "#capabilities" },
-  { label: "Architecture", href: "#architecture" },
+  { label: "Capabilities", href: "/#capabilities" },
+  { label: "Architecture", href: "/#architecture" },
   { label: "Playground", href: "/playground" },
-  { label: "Docs", href: "https://github.com/sachncs/traceprojector#readme" },
+  { label: "Docs", href: "/docs/" },
 ];
 
 export function SiteHeader() {

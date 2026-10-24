@@ -46,8 +46,21 @@ export function monomials(m, d) {
   return out;
 }
 
-/** Quadrature on the reference simplex of dimension m (weights sum 1/m!). */
+const ruleCache = new Map();
+
+/** Quadrature on the reference simplex of dimension m (weights sum 1/m!); the
+ * rule is built once and must not be modified. */
 export function referenceRule(m, order) {
+  const id = `${m}_${order}`;
+  let rule = ruleCache.get(id);
+  if (!rule) {
+    rule = buildReferenceRule(m, order);
+    ruleCache.set(id, rule);
+  }
+  return rule;
+}
+
+function buildReferenceRule(m, order) {
   if (m === 0) return [{s: [], weight: 1}];
   if (m === 1) {
     const {nodes, weights} = gaussLegendre(order);

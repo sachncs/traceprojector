@@ -1,31 +1,32 @@
+import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 
 import { Reveal, RevealStagger } from "@/components/motion/reveal";
 
 const API = [
   {
-    sig: "new Projector(mesh, whitney, opts)",
-    desc: "Orchestrates the four form-degree projectors and precomputes everything you need.",
+    sig: "new StableProjector(vertices, tetrahedra)",
+    desc: "Bounded interior, exact boundary values. project(u, point, cell, l) evaluates the projection of a field at a point.",
   },
   {
-    sig: "projector.projectH1(u, point, p)",
-    desc: "Project onto P¹ at any point inside the unit cube. Returns the scalar field value.",
+    sig: "new BoundedCommutingProjector(vertices, tetrahedra)",
+    desc: "Locally L²-bounded and commuting for every input; keeps no boundary values.",
   },
   {
-    sig: "projector.projectHcurl(u, point, p)",
-    desc: "Project onto the Nédélec edge element space. Returns a 3-vector field.",
+    sig: "new CanonicalProjector(vertices, tetrahedra, { degree })",
+    desc: "Interpolation onto Lagrange, Nédélec, Raviart–Thomas or discontinuous spaces of any degree.",
   },
   {
-    sig: "projector.projectHdiv(u, point, p)",
-    desc: "Project onto the Raviart–Thomas face element space. Returns a 3-vector field.",
+    sig: "new HigherOrderProjector(vertices, tetrahedra, { degree })",
+    desc: "The Arnold–Guzmán projection: any degree, locally bounded, commuting for every L² field.",
   },
   {
-    sig: "projector.projectL2(u, point, p)",
-    desc: "Project onto cell-wise constants. Bounded in L² norm.",
+    sig: "new Locator(mesh).findTetrahedron(point)",
+    desc: "Point location in O(log N) after a one-time tree build. Returns the cell and the barycentric coordinates.",
   },
   {
-    sig: "projector.projectAtPoint(u, point, p)",
-    desc: "Project at any 3D point. AABB point location handled internally.",
+    sig: "new Projector(mesh, whitney).projectAtPoint(u, point, l)",
+    desc: "The canonical lowest-order projection with point location handled internally.",
   },
 ];
 
@@ -43,24 +44,22 @@ export function ApiGlance() {
                 API surface
               </p>
               <h2 className="mt-4 text-balance text-4xl font-semibold tracking-[-0.025em] sm:text-5xl">
-                Six methods.
+                A small surface.
                 <br />
                 <span className="text-muted-foreground">Four form degrees.</span>
               </h2>
               <p className="mt-5 text-base text-muted-foreground">
-                The whole public surface fits on a postcard. No event emitters,
-                no stream lifecycle, no hidden state — every call is
-                deterministic and side-effect-free.
+                Pick the operator that gives the guarantees you need, then call
+                project. No event emitters, no stream lifecycle — every call is
+                deterministic.
               </p>
-              <a
-                href="https://github.com/sachncs/traceprojector/blob/master/docs/api.md"
-                target="_blank"
-                rel="noreferrer"
+              <Link
+                href="/docs/api/"
                 className="mt-6 inline-flex items-center gap-1 text-sm text-foreground underline decoration-primary/40 decoration-2 underline-offset-4 transition-colors hover:decoration-primary"
               >
                 Read the full API reference
                 <ArrowUpRight className="h-3.5 w-3.5" />
-              </a>
+              </Link>
             </div>
 
             <div className="lg:col-span-8">

@@ -10,93 +10,212 @@ import {ValidateError} from './errors.js';
 
 const key = (e) => e.join(',');
 
-/** Exponent triples of keys already seen. */
-const parsed = new Map();
-const parse = (k) => {
-  let out = parsed.get(k);
-  if (!out) {
-    out = k.split(',').map(Number);
-    parsed.set(k, out);
-  }
-  return out;
+/**
+ * Monomials x^a y^b z^c are numbered by total degree, then by (b + c), then
+ * by c: the number of monomials of degree below d is d (d + 1) (d + 2) / 6.
+ */
+const offsetOf = (d) => (d * (d + 1) * (d + 2)) / 6;
+const indexOf = (a, b, c) => {
+  const t = b + c;
+  return offsetOf(a + t) + (t * (t + 1)) / 2 + c;
 };
+const MAX_DEGREE = 32;
+const TABLE_SIZE = offsetOf(MAX_DEGREE + 1);
+const EXPONENT_A = new Uint8Array(TABLE_SIZE);
+const EXPONENT_B = new Uint8Array(TABLE_SIZE);
+const EXPONENT_C = new Uint8Array(TABLE_SIZE);
+for (let d = 0; d <= MAX_DEGREE; d++) {
+  for (let t = 0; t <= d; t++) {
+    for (let c = 0; c <= t; c++) {
+      const i = offsetOf(d) + (t * (t + 1)) / 2 + c;
+      EXPONENT_A[i] = d - t;
+      EXPONENT_B[i] = t - c;
+      EXPONENT_C[i] = c;
+    }
+  }
+}
 
+const POWER_STRIDE = MAX_DEGREE + 1;
+const powers = new Float64Array(3 * POWER_STRIDE);
+
+/**
+ * A polynomial in x, y, z stored densely by monomial index up to its degree.
+ * Dense arrays make addition, scaling, products and derivatives plain loops
+ * over typed arrays, which is what the assembly of local problems spends its
+ * time on.
+ */
 export class Polynomial {
-  /** @param {Map<string, number>=} terms Exponent triple to coefficient. */
-  constructor(terms = new Map()) {
-    this.terms = terms;
+  /**
+   * @param {number=} degree Total degree; -1 for the zero polynomial.
+   * @param {Float64Array=} coefficients Length offsetOf(degree + 1).
+   */
+  constructor(degree = -1, coefficients = new Float64Array(0)) {
+    this.degree = degree;
+    this.coefficients = coefficients;
   }
 
   /** The monomial x^a y^b z^c. */
   static monomial(exponents, coefficient = 1) {
-    return new Polynomial(new Map([[key(exponents), coefficient]]));
+    const [a, b, c] = exponents;
+    const degree = a + b + c;
+    const out = new Float64Array(offsetOf(degree + 1));
+    out[indexOf(a, b, c)] = coefficient;
+    return new Polynomial(degree, out).trimmed();
   }
 
   static zero() {
     return new Polynomial();
   }
 
+  /** Exponent triple to coefficient, for the nonzero terms. */
+  get terms() {
+    const out = new Map();
+    const c = this.coefficients;
+    for (let i = 0; i < c.length; i++) {
+      if (c[i] !== 0) {
+        out.set(`${EXPONENT_A[i]},${EXPONENT_B[i]},${EXPONENT_C[i]}`, c[i]);
+      }
+    }
+    return out;
+  }
+
+  /** @private The same polynomial with leading zero degrees removed. */
+  trimmed() {
+    const c = this.coefficients;
+    let degree = this.degree;
+    while (degree >= 0) {
+      let any = false;
+      for (let i = offsetOf(degree); i < offsetOf(degree + 1); i++) {
+        if (c[i] !== 0) {
+          any = true;
+          break;
+        }
+      }
+      if (any) break;
+      degree--;
+    }
+    if (degree === this.degree) return this;
+    return new Polynomial(degree, c.slice(0, offsetOf(degree + 1)));
+  }
+
   add(other) {
-    const terms = new Map(this.terms);
-    for (const [e, c] of other.terms) terms.set(e, (terms.get(e) ?? 0) + c);
-    return new Polynomial(terms).clean();
+    if (other.degree < 0) return this;
+    if (this.degree < 0) return other;
+    const degree = Math.max(this.degree, other.degree);
+    const out = new Float64Array(offsetOf(degree + 1));
+    out.set(this.coefficients);
+    const c = other.coefficients;
+    for (let i = 0; i < c.length; i++) out[i] += c[i];
+    return new Polynomial(degree, out).trimmed();
   }
 
   scale(factor) {
-    const terms = new Map();
-    for (const [e, c] of this.terms) terms.set(e, c * factor);
-    return new Polynomial(terms);
+    if (this.degree < 0) return this;
+    const c = this.coefficients;
+    const out = new Float64Array(c.length);
+    for (let i = 0; i < c.length; i++) out[i] = c[i] * factor;
+    return new Polynomial(this.degree, out).trimmed();
   }
 
   multiply(other) {
-    const terms = new Map();
-    for (const [a, c] of this.terms) {
-      const [a0, a1, a2] = parse(a);
-      for (const [b, d] of other.terms) {
-        const [b0, b1, b2] = parse(b);
-        const e = `${a0 + b0},${a1 + b1},${a2 + b2}`;
-        terms.set(e, (terms.get(e) ?? 0) + c * d);
+    if (this.degree < 0 || other.degree < 0) return Polynomial.zero();
+    const degree = this.degree + other.degree;
+    const out = new Float64Array(offsetOf(degree + 1));
+    const p = this.coefficients;
+    const q = other.coefficients;
+    for (let i = 0; i < p.length; i++) {
+      const pi = p[i];
+      if (pi === 0) continue;
+      const a = EXPONENT_A[i];
+      const b = EXPONENT_B[i];
+      const c = EXPONENT_C[i];
+      for (let j = 0; j < q.length; j++) {
+        const qj = q[j];
+        if (qj !== 0) {
+          out[indexOf(a + EXPONENT_A[j], b + EXPONENT_B[j],
+              c + EXPONENT_C[j])] += pi * qj;
+        }
       }
     }
-    return new Polynomial(terms).clean();
+    return new Polynomial(degree, out).trimmed();
   }
 
   /** Partial derivative with respect to variable i. */
   derivative(i) {
-    const terms = new Map();
-    for (const [e, c] of this.terms) {
-      const exponents = parse(e).slice();
-      if (exponents[i] === 0) continue;
-      const factor = exponents[i];
-      exponents[i] -= 1;
-      const k = key(exponents);
-      terms.set(k, (terms.get(k) ?? 0) + c * factor);
+    if (this.degree <= 0) return Polynomial.zero();
+    const degree = this.degree - 1;
+    const out = new Float64Array(offsetOf(degree + 1));
+    const c = this.coefficients;
+    const table = [EXPONENT_A, EXPONENT_B, EXPONENT_C][i];
+    for (let k = 0; k < c.length; k++) {
+      const e = table[k];
+      if (e === 0 || c[k] === 0) continue;
+      const a = EXPONENT_A[k] - (i === 0 ? 1 : 0);
+      const b = EXPONENT_B[k] - (i === 1 ? 1 : 0);
+      const d = EXPONENT_C[k] - (i === 2 ? 1 : 0);
+      out[indexOf(a, b, d)] += c[k] * e;
     }
-    return new Polynomial(terms).clean();
+    return new Polynomial(degree, out).trimmed();
   }
 
-  evaluate(x) {
-    if (!this.compiled) {
-      const flat = [];
-      for (const [e, c] of this.terms) flat.push(...parse(e), c);
-      this.compiled = Float64Array.from(flat);
-    }
-    const t = this.compiled;
+  /**
+   * The value at a point whose monomials are tabulated by `monomialValues`
+   * (to at least this polynomial's degree).
+   */
+  dot(row) {
+    const c = this.coefficients;
     let sum = 0;
-    for (let i = 0; i < t.length; i += 4) {
-      sum += t[i + 3] * x[0] ** t[i] * x[1] ** t[i + 1] * x[2] ** t[i + 2];
-    }
+    for (let i = 0; i < c.length; i++) sum += c[i] * row[i];
     return sum;
   }
 
-  /** @private Drops zero coefficients. */
-  clean() {
-    for (const [e, c] of this.terms) {
-      if (Math.abs(c) < 1e-14) this.terms.delete(e);
+  evaluate(x) {
+    const c = this.coefficients;
+    const top = this.degree;
+    if (top < 0) return 0;
+    // Powers of each coordinate once, instead of three exponentiations per
+    // term.
+    powers[0] = powers[POWER_STRIDE] = powers[2 * POWER_STRIDE] = 1;
+    for (let k = 1; k <= top; k++) {
+      powers[k] = powers[k - 1] * x[0];
+      powers[POWER_STRIDE + k] = powers[POWER_STRIDE + k - 1] * x[1];
+      powers[2 * POWER_STRIDE + k] = powers[2 * POWER_STRIDE + k - 1] * x[2];
     }
-    this.compiled = undefined;
-    return this;
+    let sum = 0;
+    for (let i = 0; i < c.length; i++) {
+      const value = c[i];
+      if (value !== 0) {
+        sum += value * powers[EXPONENT_A[i]] *
+          powers[POWER_STRIDE + EXPONENT_B[i]] *
+          powers[2 * POWER_STRIDE + EXPONENT_C[i]];
+      }
+    }
+    return sum;
   }
+}
+
+/**
+ * The values of all monomials of degree up to `degree` at a point, in the
+ * order of the dense coefficient vectors. A polynomial is then evaluated by a
+ * dot product (`Polynomial.dot`), which is how many polynomials are
+ * evaluated at one point.
+ * @param {!Array<number>} x
+ * @param {number} degree
+ * @return {!Float64Array}
+ */
+export function monomialValues(x, degree) {
+  const out = new Float64Array(offsetOf(degree + 1));
+  powers[0] = powers[POWER_STRIDE] = powers[2 * POWER_STRIDE] = 1;
+  for (let k = 1; k <= degree; k++) {
+    powers[k] = powers[k - 1] * x[0];
+    powers[POWER_STRIDE + k] = powers[POWER_STRIDE + k - 1] * x[1];
+    powers[2 * POWER_STRIDE + k] = powers[2 * POWER_STRIDE + k - 1] * x[2];
+  }
+  for (let i = 0; i < out.length; i++) {
+    out[i] = powers[EXPONENT_A[i]] * powers[POWER_STRIDE + EXPONENT_B[i]] *
+      powers[2 * POWER_STRIDE + EXPONENT_C[i]];
+  }
+  return out;
 }
 
 /** All exponent triples of total degree exactly d, in a fixed order. */

@@ -31,8 +31,15 @@ import {LocalWeights} from './local-weights.js';
 import {tetrahedronRule} from './simplicial-complex.js';
 import {
   SparseMatrix,
+  forwardSubstitute,
   minimumNormSolveDense,
 } from './sparse-linear-algebra.js';
+import {
+  minimumNormSolveBanded,
+  solveSemidefiniteBanded,
+} from './banded-linear-algebra.js';
+import {cholesky} from './dense-linear-algebra.js';
+import {symmetricEigenvalues} from './small-linear-algebra.js';
 import {
   addForms,
   affine,
@@ -46,10 +53,56 @@ import {
   translateForm,
   zeroLike,
 } from './physical-forms.js';
-import {Polynomial} from './polynomial-forms.js';
+import {Polynomial, monomialValues} from './polynomial-forms.js';
 
 const dot = (a, b) => (typeof a === 'number' ? a * b :
   a.reduce((s, q, i) => s + q * b[i], 0));
+
+/**
+ * Values of forms at quadrature points as one flat array per form, so that
+ * inner products are plain loops.
+ * @param {!Array<function(number[]): (number|number[])>} forms
+ * @param {!Array<{x: !Array<number>}>} points
+ * @return {{values: !Array<!Float64Array>, size: number}}
+ */
+function sampled(forms, points) {
+  let top = 0;
+  for (const form of forms) {
+    for (const p of Array.isArray(form) ? form : [form]) {
+      top = Math.max(top, p.degree);
+    }
+  }
+  // The monomials of each point once, shared by all forms.
+  const rows = points.map(({x}) => monomialValues(x, top));
+  let size = 1;
+  const values = forms.map((form) => {
+    const components = Array.isArray(form) ? form : [form];
+    size = components.length;
+    const flat = new Float64Array(rows.length * size);
+    rows.forEach((row, q) => {
+      for (let k = 0; k < size; k++) {
+        flat[q * size + k] = components[k].dot(row);
+      }
+    });
+    return flat;
+  });
+  return {values, size};
+}
+
+/** sum over points of weight * <a, b>, for flat sampled values. */
+function inner(a, b, weights, size) {
+  let sum = 0;
+  if (size === 1) {
+    for (let q = 0; q < weights.length; q++) sum += weights[q] * a[q] * b[q];
+  } else {
+    for (let q = 0; q < weights.length; q++) {
+      const o = q * size;
+      sum += weights[q] * (a[o] * b[o] + a[o + 1] * b[o + 1] +
+        a[o + 2] * b[o + 2]);
+    }
+  }
+  return sum;
+}
 
 export class HighOrderWeights {
   /**
@@ -70,6 +123,21 @@ export class HighOrderWeights {
     // functions of degree r with a bubble exactly.
     this.exactOrder = this.r + 3;
     this.boundaryConditions = options.boundaryConditions === true;
+    // Test hook: also solve every minimum-norm problem densely and keep the
+    // discrepancy in `checks`.
+    this.crossCheck = options.crossCheck === true;
+    this.checks = [];
+    // One record per minimum-norm solve: size, time, certificate.
+    this.stats = [];
+    // Element matrices by the geometry of their cell: a cell shared by the
+    // stars of many entities has its matrices computed once.
+    this.blocks = new Map();
+    this.blockDoubles = 0;
+    this.blockLimit = options.blockCacheDoubles ?? 16 * 1024 * 1024;
+    this.formBank = new Map();
+    this.formBankLimit = options.formBankEntries ?? 1024;
+    this.blockHits = 0;
+    this.blockMisses = 0;
     this.topology = new LocalWeights(vertices, tetrahedra, {
       boundaryConditions: this.boundaryConditions,
     });
@@ -216,6 +284,72 @@ export class HighOrderWeights {
     return {vertices: coordinates, tetrahedra: tets, centroids, baseVertex};
   }
 
+  /**
+   * Physical forms of every local basis function of a cell. They depend on
+   * the element and the corner coordinates only, so they are shared by every
+   * space and every weight that meets the cell (in a bounded bank, oldest
+   * evicted first).
+   */
+  basisForms(space, c, l) {
+    if (!this.formCache.has(space)) this.formCache.set(space, new Map());
+    const cache = this.formCache.get(space);
+    const id = `${c}:${l}`;
+    if (!cache.has(id)) {
+      const frame = space.frame(c);
+      const key = `${this.r}|${l}|${frame.points.map((p) => p.join(','))
+          .join(';')}`;
+      let forms = this.formBank.get(key);
+      if (forms) {
+        this.formBank.delete(key);
+      } else {
+        forms = space.element(l).basis.map(
+            (psi) => physicalForm(psi, l, frame));
+        if (this.formBank.size >= this.formBankLimit) {
+          this.formBank.delete(this.formBank.keys().next().value);
+        }
+      }
+      this.formBank.set(key, forms);
+      cache.set(id, forms);
+    }
+    return cache.get(id);
+  }
+
+  // ---------------------------------------------------------------------
+  // Patches.
+
+  /** A compact tetrahedral mesh of some cells, with the base numbers. */
+  patch(cells, split) {
+    const ids = new Map();
+    const coordinates = [];
+    const baseVertex = [];
+    const vertex = (key, point) => {
+      if (!ids.has(key)) {
+        ids.set(key, coordinates.length);
+        coordinates.push(point);
+        baseVertex.push(key[0] === 'v' ? Number(key.slice(1)) : -1);
+      }
+      return ids.get(key);
+    };
+    const tets = [];
+    const centroids = [];
+    for (const c of cells) {
+      const corners = this.base.cells[c];
+      const points = this.base.geometry(c).points;
+      if (!split) {
+        tets.push(corners.map((v, i) => vertex(`v${v}`, points[i])));
+        continue;
+      }
+      const centre = vertex(`c${c}`, points[0].map(
+          (_, d) => points.reduce((s, q) => s + q[d], 0) / 4));
+      centroids.push(centre);
+      const ring = corners.map((v, i) => vertex(`v${v}`, points[i]));
+      for (let k = 0; k < 4; k++) {
+        tets.push([...ring.filter((_, i) => i !== k), centre]);
+      }
+    }
+    return {vertices: coordinates, tetrahedra: tets, centroids, baseVertex};
+  }
+
   /** Physical forms of every local basis function of a cell, cached. */
   basisForms(space, c, l) {
     if (!this.formCache.has(space)) this.formCache.set(space, new Map());
@@ -302,46 +436,49 @@ export class HighOrderWeights {
         differential(toFormOf(s), to), x) : null;
     const rhs = space.coefficients(targetFn, to, derivativeFn);
     const sign = [0, -1, 1, -1][l];
-    // Constraint matrix: coefficients of d(psi_a) in the basis of degree to.
-    const reference = space.referenceDerivative(from);
-    const fromSize = space.size(from);
-    const rows = Array.from({length: space.size(to)}, () => new Map());
-    space.complex.cells.forEach((_, c) => {
-      const columns = space.cellDofs(c, from);
-      const targets = space.cellDofs(c, to);
-      columns.forEach((a, i) => {
-        targets.forEach((b, j) => {
-          const value = reference[j][i];
-          if (value !== 0) rows[b].set(a, value);
-        });
-      });
-    });
     const onBoundary = this.closureDofs(space, from, patch, star.gammaCFaces);
-    const free = [];
-    const position = new Int32Array(fromSize).fill(-1);
-    for (let a = 0; a < fromSize; a++) {
-      if (!onBoundary[a]) {
-        position[a] = free.length;
-        free.push(a);
-      }
-    }
-    const constraints = new SparseMatrix(rows.length, free.length, rows.map(
-        (row) => {
-          const entries = new Map();
-          for (const [a, v] of row) {
-            if (position[a] >= 0) entries.set(position[a], v);
-          }
-          return entries;
-        }));
+    const {free, position} = this.freeDofs(space, from, onBoundary);
+    const constraints = this.differentialMatrix(space, from, free, position);
     const mass = this.massMatrix(space, from, free, position);
     const target0 = Float64Array.from(rhs, (q) => sign * q);
-    const solved = minimumNormSolveDense(constraints, mass, target0);
+    // The banded solve is exact up to rounding and far cheaper; the dense
+    // solve is the fallback for a system the banded one cannot factor or
+    // converge on.
+    let solved;
+    const started = performance.now();
+    let method = 'banded';
+    try {
+      solved = minimumNormSolveBanded(constraints, mass, target0);
+    } catch (error) {
+      solved = null;
+    }
+    if (!solved || !(solved.residual <= 1e-9 * Math.max(solved.scale, 1) &&
+        solved.stationarity <= 1e-8)) {
+      solved = minimumNormSolveDense(constraints, mass, target0);
+      method = 'dense';
+    }
+    this.stats.push({
+      l,
+      method,
+      unknowns: free.length,
+      constraints: constraints.rows,
+      milliseconds: performance.now() - started,
+      iterations: solved.iterations ?? 0,
+      entries: solved.entries ?? 0,
+      residual: solved.residual / Math.max(solved.scale, 1e-300),
+      stationarity: solved.stationarity ?? 0,
+      dualityGap: solved.dualityGap ?? 0,
+    });
+    if (this.crossCheck) {
+      this.recordCrossCheck(l, constraints, mass, target0,
+          solved);
+    }
     if (!(solved.residual <= 1e-9 * Math.max(solved.scale, 1))) {
       throw new SingularError(
           `no field with the required differential in the star of ` +
           `entity ${sigma} of degree ${l} (residual ${solved.residual})`);
     }
-    const coefficients = new Float64Array(fromSize);
+    const coefficients = new Float64Array(space.size(from));
     free.forEach((a, i) => (coefficients[a] = solved.x[i]));
     // Physical polynomial forms of eta on every sub-cell.
     return space.complex.cells.map((_, s) => {
@@ -355,6 +492,188 @@ export class HighOrderWeights {
       });
       return total;
     });
+  }
+
+  /**
+   * Diagnostic for Assumption 2.4 of Arnold and Guzman: the constant of the
+   * right inverse of d on the extended star of an entity, with vanishing
+   * trace on the whole boundary of the star, in the discrete space of the
+   * projector. It is
+   *
+   *   C = sup { |rho| : d rho = u, rho = 0 on the boundary } / (diam |u|)
+   *
+   * over u = d x in the range of d, which is 1 / (diam sqrt(mu)) for the
+   * smallest nonzero eigenvalue mu of  B^T M_to B x = mu M_from x.
+   * Dense: for stars of a few hundred unknowns.
+   *
+   * @param {number} l Degree of the entity.
+   * @param {number} sigma The entity.
+   * @param {number} from Degree k of rho, 0 to 2.
+   * @return {{constant: number, unknowns: number, diameter: number,
+   *     kernel: number}}
+   */
+  extensionConstant(l, sigma, from) {
+    const star = this.topology.extendedStar(
+        l, sigma, this.topology.radius(l, sigma));
+    const patch = this.patch(star.cells, false);
+    const space = new AgSpace(
+        patch.vertices, patch.tetrahedra, {degree: this.degree});
+    const boundaryFaces = [...star.gammaFaces, ...star.gammaCFaces];
+    const outside = (k) => this.closureDofs(space, k, patch, boundaryFaces);
+    const {free, position} = this.freeDofs(space, from, outside(from));
+    const target = this.freeDofs(space, from + 1, outside(from + 1));
+    const n = free.length;
+    if (n === 0) return {constant: 0, unknowns: 0, diameter: 0, kernel: 0};
+    const b = this.differentialMatrix(space, from, free, position);
+    const massFrom = this.massMatrix(space, from, free, position);
+    const massTo = this.massMatrix(
+        space, from + 1, target.free, target.position);
+    // B^T M_to B, with B restricted to the free target rows.
+    const dense = (matrix) => {
+      const out = new Float64Array(matrix.rows * matrix.columns);
+      for (let i = 0; i < matrix.rows; i++) {
+        for (let k = matrix.offsets[i]; k < matrix.offsets[i + 1]; k++) {
+          out[i * matrix.columns + matrix.indices[k]] += matrix.values[k];
+        }
+      }
+      return out;
+    };
+    const bDense = dense(b);
+    const rowsTo = b.rows;
+    const mt = dense(massTo);
+    const m = massTo.rows;
+    const bFree = new Float64Array(m * n);
+    for (let a = 0; a < rowsTo; a++) {
+      const p = target.position[a];
+      if (p >= 0) bFree.set(bDense.subarray(a * n, (a + 1) * n), p * n);
+    }
+    const mb = new Float64Array(m * n);
+    for (let i = 0; i < m; i++) {
+      for (let j = 0; j < m; j++) {
+        const v = mt[i * m + j];
+        if (v === 0) continue;
+        for (let c = 0; c < n; c++) mb[i * n + c] += v * bFree[j * n + c];
+      }
+    }
+    const gram = Array.from({length: n}, () => new Array(n).fill(0));
+    for (let i = 0; i < m; i++) {
+      for (let a = 0; a < n; a++) {
+        const v = bFree[i * n + a];
+        if (v === 0) continue;
+        for (let c = 0; c < n; c++) gram[a][c] += v * mb[i * n + c];
+      }
+    }
+    // A = L^-1 gram L^-T for M_from = L L^T.
+    const factor = cholesky(dense(massFrom), n);
+    const forward = (vector) => {
+      forwardSubstitute(factor, n, vector);
+      return vector;
+    };
+    const columns = gram.map((row) => forward(Float64Array.from(row)));
+    const a = Array.from({length: n}, (_, i) => forward(
+        Float64Array.from(columns, (c) => c[i])));
+    for (let i = 0; i < n; i++) {
+      for (let j = i + 1; j < n; j++) {
+        const avg = 0.5 * (a[i][j] + a[j][i]);
+        a[i][j] = avg;
+        a[j][i] = avg;
+      }
+    }
+    const values = symmetricEigenvalues(a);
+    const top = values[values.length - 1];
+    const threshold = 1e-9 * top;
+    const kernel = values.filter((v) => v <= threshold).length;
+    const mu = values.find((v) => v > threshold);
+    let diameter = 0;
+    for (const p of patch.vertices) {
+      for (const q of patch.vertices) {
+        diameter = Math.max(diameter, Math.hypot(
+            p[0] - q[0], p[1] - q[1], p[2] - q[2]));
+      }
+    }
+    return {
+      constant: 1 / (diameter * Math.sqrt(mu)),
+      unknowns: n,
+      diameter,
+      kernel,
+    };
+  }
+
+  /**
+   * @private Compares a minimum-norm solution with the dense one and keeps
+   * the discrepancy in `this.checks` (only when `crossCheck` is set). Both
+   * solutions satisfy the constraints; the minimizer has the smaller energy
+   * x'Mx, and the banded solver's own certificate (stationarity and duality
+   * gap) says how close to the minimizer it is.
+   */
+  recordCrossCheck(l, constraints, mass, rhs, solved) {
+    const dense = minimumNormSolveDense(constraints, mass, rhs);
+    const diff = Float64Array.from(solved.x, (q, i) => q - dense.x[i]);
+    const energy = (v) => {
+      const mv = mass.multiply(v);
+      return Math.sqrt(v.reduce((acc, q, i) => acc + q * mv[i], 0));
+    };
+    let largest = 0;
+    let scale = 0;
+    diff.forEach((q, i) => {
+      largest = Math.max(largest, Math.abs(q));
+      scale = Math.max(scale, Math.abs(dense.x[i]));
+    });
+    this.checks.push({
+      l,
+      unknowns: mass.rows,
+      constraints: constraints.rows,
+      relativeMax: largest / Math.max(scale, 1e-300),
+      relativeEnergy: energy(diff) / Math.max(energy(dense.x), 1e-300),
+      energyRatio: energy(solved.x) / Math.max(energy(dense.x), 1e-300),
+      residual: solved.residual / Math.max(solved.scale, 1e-300),
+      denseResidual: dense.residual / Math.max(dense.scale, 1e-300),
+      stationarity: solved.stationarity,
+      dualityGap: solved.dualityGap,
+      iterations: solved.iterations,
+    });
+  }
+
+  /** @private The dofs of degree l that are not excluded, and their place. */
+  freeDofs(space, l, excluded) {
+    const size = space.size(l);
+    const free = [];
+    const position = new Int32Array(size).fill(-1);
+    for (let a = 0; a < size; a++) {
+      if (!excluded[a]) {
+        position[a] = free.length;
+        free.push(a);
+      }
+    }
+    return {free, position};
+  }
+
+  /**
+   * The matrix of d from the free dofs of degree `from` to all dofs of
+   * degree from + 1.
+   * @private
+   */
+  differentialMatrix(space, from, free, position) {
+    const to = from + 1;
+    const reference = space.referenceDerivative(from);
+    const rows = Array.from({length: space.size(to)}, () => new Map());
+    space.complex.cells.forEach((_, c) => {
+      const columns = space.cellDofs(c, from);
+      const targets = space.cellDofs(c, to);
+      columns.forEach((a, i) => {
+        targets.forEach((b, j) => {
+          const value = reference[j][i];
+          if (value !== 0) rows[b].set(a, value);
+        });
+      });
+    });
+    return new SparseMatrix(rows.length, free.length, rows.map((row) => {
+      const entries = new Map();
+      for (const [a, v] of row) {
+        if (position[a] >= 0) entries.set(position[a], v);
+      }
+      return entries;
+    }));
   }
 
   /**
@@ -384,25 +703,61 @@ export class HighOrderWeights {
       dimension === 2 ? sets.faces.has(baseFace(entity)) : false));
   }
 
+  /**
+   * An element matrix, from the cache or computed. The key is the kind of
+   * matrix, the degrees and the corner coordinates in cell order, so equal
+   * geometry gives equal matrices (to the last bit).
+   * @private
+   */
+  block(kind, l, points, compute) {
+    const key = `${kind}|${this.r}|${l}|${points.map((p) => p.join(',')).join(';')}`;
+    const found = this.blocks.get(key);
+    if (found) {
+      this.blockHits++;
+      this.blocks.delete(key);
+      this.blocks.set(key, found);
+      return found;
+    }
+    this.blockMisses++;
+    const block = compute();
+    this.blocks.set(key, block);
+    this.blockDoubles += block.length;
+    for (const [oldest, value] of this.blocks) {
+      if (this.blockDoubles <= this.blockLimit || oldest === key) break;
+      this.blocks.delete(oldest);
+      this.blockDoubles -= value.length;
+    }
+    return block;
+  }
+
   /** Sparse L2 mass matrix of the free dofs of degree l. */
   massMatrix(space, l, free, position) {
     const entries = free.map(() => new Map());
     space.complex.cells.forEach((_, c) => {
-      const forms = this.basisForms(space, c, l);
+      const cellPoints = space.complex.geometry(c).points;
       const dofs = space.cellDofs(c, l);
-      const rule = tetrahedronRule(space.complex.geometry(c).points,
-          this.exactOrder);
-      const values = forms.map((f) => rule.map(({x}) => evaluateForm(f, x)));
+      const n = dofs.length;
+      const block = this.block('mass', l, cellPoints, () => {
+        const forms = this.basisForms(space, c, l);
+        const rule = tetrahedronRule(cellPoints, this.exactOrder);
+        const {values, size} = sampled(forms, rule);
+        const weights = Float64Array.from(rule, ({weight}) => weight);
+        const out = new Float64Array(n * n);
+        for (let i = 0; i < n; i++) {
+          for (let j = i; j < n; j++) {
+            const sum = inner(values[i], values[j], weights, size);
+            out[i * n + j] = sum;
+            out[j * n + i] = sum;
+          }
+        }
+        return out;
+      });
       dofs.forEach((a, i) => {
         if (position[a] < 0) return;
+        const row = entries[position[a]];
         dofs.forEach((b, j) => {
           if (position[b] < 0) return;
-          let sum = 0;
-          rule.forEach(({weight}, q) => {
-            sum += weight * dot(values[i][q], values[j][q]);
-          });
-          const row = entries[position[a]];
-          row.set(position[b], (row.get(position[b]) ?? 0) + sum);
+          row.set(position[b], (row.get(position[b]) ?? 0) + block[i * n + j]);
         });
       });
     });
@@ -430,28 +785,56 @@ export class HighOrderWeights {
       }
       return derivativeForms.get(c);
     };
+    // The stiffness of mu d psi_a . d psi_b depends on the cell alone (mu is
+    // the bump of its own centroid), so it is cached per cell.
+    const stiffness = new Map();
+    const cellStiffness = (c) => {
+      if (!stiffness.has(c)) {
+        const cellPoints = space.complex.geometry(c).points;
+        const n = space.cellDofs(c, l).length;
+        stiffness.set(c, this.block('potential', l, cellPoints, () => {
+          const out = new Float64Array(n * n);
+          const derived = dForms(c);
+          for (let k = 0; k < 4; k++) {
+            const s = 4 * c + k;
+            const points = rule(s);
+            const weights = Float64Array.from(
+                points, ({x, weight}) => weight * mu[s].evaluate(x));
+            const dv = sampled(derived, points);
+            for (let i = 0; i < n; i++) {
+              for (let j = i; j < n; j++) {
+                const sum = inner(dv.values[i], dv.values[j], weights, dv.size);
+                out[i * n + j] += sum;
+                if (j !== i) out[j * n + i] += sum;
+              }
+            }
+          }
+          return out;
+        }));
+      }
+      return stiffness.get(c);
+    };
+    for (let c = 0; c < cells.length; c++) {
+      const block = cellStiffness(c);
+      const dofs = space.cellDofs(c, l);
+      const n = dofs.length;
+      dofs.forEach((a, i) => {
+        dofs.forEach((b, j) => {
+          entries[a].set(b, (entries[a].get(b) ?? 0) + block[i * n + j]);
+        });
+      });
+    }
     splitSpace.complex.cells.forEach((_, s) => {
       const {cell} = subCell(s);
       const c = cells.indexOf(cell);
       const forms = this.basisForms(space, c, l);
-      const derived = dForms(c);
       const dofs = space.cellDofs(c, l);
       const points = rule(s);
-      const dv = derived.map((f) => points.map(({x}) => evaluateForm(f, x)));
-      const v = forms.map((f) => points.map(({x}) => evaluateForm(f, x)));
-      const weights = points.map(({x, weight}) => weight * mu[s].evaluate(x));
-      const etaValues = points.map(({x}) => evaluateForm(eta[s], x));
+      const quadrature = Float64Array.from(points, ({weight}) => weight);
+      const v = sampled(forms, points);
+      const etaValues = sampled([eta[s]], points).values[0];
       dofs.forEach((a, i) => {
-        points.forEach(({weight}, q) => {
-          rhs[a] -= weight * dot(etaValues[q], v[i][q]);
-        });
-        dofs.forEach((b, j) => {
-          let sum = 0;
-          points.forEach((_, q) => {
-            sum += weights[q] * dot(dv[i][q], dv[j][q]);
-          });
-          entries[a].set(b, (entries[a].get(b) ?? 0) + sum);
-        });
+        rhs[a] -= inner(etaValues, v.values[i], quadrature, v.size);
       });
     });
     // phi_sigma(psi_a): the lowest-order degree of freedom of the basis
@@ -474,16 +857,32 @@ export class HighOrderWeights {
       }
     }
     const n = free.length;
-    const dense = new Float64Array(n * n);
-    entries.forEach((row, a) => row.forEach((v, b) => {
-      if (at[a] >= 0 && at[b] >= 0) dense[at[a] * n + at[b]] = v;
-    }));
     const reduced = Float64Array.from(free, (a) => rhs[a]);
-    const direct = solveSemidefinite(dense, n, reduced, 1e-13);
+    const reducedEntries = free.map((a) => {
+      const row = new Map();
+      entries[a].forEach((v, c) => {
+        if (at[c] >= 0) row.set(at[c], v);
+      });
+      return row;
+    });
+    const matrix = new SparseMatrix(n, n, reducedEntries);
+    let direct = null;
+    try {
+      direct = solveSemidefiniteBanded(matrix, reduced);
+    } catch (error) {
+      direct = null;
+    }
+    const scaleOf = Math.max(Math.hypot(...reduced), 1e-300);
+    if (!direct || !(direct.residual / scaleOf < 1e-8)) {
+      const dense = new Float64Array(n * n);
+      reducedEntries.forEach((row, i) => row.forEach((v, c) => {
+        dense[i * n + c] = v;
+      }));
+      direct = solveSemidefinite(dense, n, reduced, 1e-13);
+    }
     const x = new Float64Array(size);
     free.forEach((a, i) => (x[a] = direct.x[i]));
-    const solved = {x, relativeResidual: direct.residual /
-      Math.max(Math.hypot(...reduced), 1e-300)};
+    const solved = {x, relativeResidual: direct.residual / scaleOf};
     if (!(solved.relativeResidual < 1e-8)) {
       throw new SingularError(
           `the potential problem of entity ${sigma} of degree ${l} is ` +

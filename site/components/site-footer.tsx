@@ -28,26 +28,11 @@ const COLUMNS = [
   {
     title: "Documentation",
     links: [
-      {
-        label: "README",
-        href: "https://github.com/sachncs/traceprojector#readme",
-        external: true,
-      },
-      {
-        label: "API reference",
-        href: "https://github.com/sachncs/traceprojector/blob/master/docs/api.md",
-        external: true,
-      },
-      {
-        label: "Math background",
-        href: "https://github.com/sachncs/traceprojector/blob/master/docs/math.md",
-        external: true,
-      },
-      {
-        label: "Architecture",
-        href: "https://github.com/sachncs/traceprojector/blob/master/docs/architecture.md",
-        external: true,
-      },
+      { label: "Getting started", href: "/docs/getting-started/", external: false },
+      { label: "Choosing an operator", href: "/docs/operators/", external: false },
+      { label: "API reference", href: "/docs/api/", external: false },
+      { label: "Mathematical background", href: "/docs/math/", external: false },
+      { label: "Validation", href: "/docs/validation/", external: false },
     ],
   },
   {
@@ -58,21 +43,10 @@ const COLUMNS = [
         href: "https://arxiv.org/abs/2604.28103",
         external: true,
       },
-      {
-        label: "Changelog",
-        href: "https://github.com/sachncs/traceprojector/blob/master/CHANGELOG.md",
-        external: true,
-      },
-      {
-        label: "Roadmap",
-        href: "https://github.com/sachncs/traceprojector#roadmap",
-        external: true,
-      },
-      {
-        label: "Contributing",
-        href: "https://github.com/sachncs/traceprojector/blob/master/CONTRIBUTING.md",
-        external: true,
-      },
+      { label: "Performance", href: "/docs/performance/", external: false },
+      { label: "Limits", href: "/docs/limits/", external: false },
+      { label: "Developer guide", href: "/docs/developer-guide/", external: false },
+      { label: "Changelog", href: "/docs/changelog/", external: false },
     ],
   },
 ];

@@ -305,15 +305,6 @@ export function forwardSubstitute(l, n, b) {
   }
 }
 
-/** Solves L^T x = y in place for a lower-triangular row-major L. */
-function backwardSubstitute(l, n, b) {
-  for (let i = n - 1; i >= 0; i--) {
-    let sum = b[i];
-    for (let k = i + 1; k < n; k++) sum -= l[k * n + i] * b[k];
-    b[i] = sum / l[i * n + i];
-  }
-}
-
 /**
  * Minimum-norm solution of C x = r in the metric M by dense linear algebra:
  * M is factored by Cholesky, and the smaller of the two equivalent systems
@@ -341,61 +332,36 @@ export function minimumNormSolveDense(constraints, mass, r) {
     e[j] = 1;
     return e;
   };
-  let x;
-  if (m <= n) {
-    // Columns of M^-1 C^T.
-    const lifted = [];
-    for (let j = 0; j < m; j++) {
-      const column = constraints.multiplyTranspose(unit(j, m),
-          new Float64Array(n));
-      choleskySolveInPlace(factor, n, column);
-      lifted.push(column);
+  // Columns of M^-1 C^T, and the Gram system C M^-1 C^T lambda = r. The
+  // multipliers are not unique when C has dependent rows, but x = M^-1 C^T
+  // lambda is, so any solution of the semidefinite Gram system will do. (The
+  // n x n normal equations of C L^-T are not equivalent here: they are
+  // singular whenever C has a null space, and a basic solution of a singular
+  // system is not the minimum-norm one.)
+  const lifted = [];
+  for (let j = 0; j < m; j++) {
+    const column = constraints.multiplyTranspose(unit(j, m),
+        new Float64Array(n));
+    choleskySolveInPlace(factor, n, column);
+    lifted.push(column);
+  }
+  const gram = new Float64Array(m * m);
+  for (let j = 0; j < m; j++) {
+    const image = constraints.multiply(lifted[j]);
+    for (let i = 0; i < m; i++) gram[i * m + j] = image[i];
+  }
+  for (let i = 0; i < m; i++) {
+    for (let j = i + 1; j < m; j++) {
+      const avg = 0.5 * (gram[i * m + j] + gram[j * m + i]);
+      gram[i * m + j] = avg;
+      gram[j * m + i] = avg;
     }
-    const gram = new Float64Array(m * m);
-    for (let j = 0; j < m; j++) {
-      const image = constraints.multiply(lifted[j]);
-      for (let i = 0; i < m; i++) gram[i * m + j] = image[i];
-    }
-    for (let i = 0; i < m; i++) {
-      for (let j = i + 1; j < m; j++) {
-        const avg = 0.5 * (gram[i * m + j] + gram[j * m + i]);
-        gram[i * m + j] = avg;
-        gram[j * m + i] = avg;
-      }
-    }
-    const lambda = solveSemidefinite(gram, m, r, 1e-13).x;
-    x = new Float64Array(n);
-    for (let j = 0; j < m; j++) {
-      if (lambda[j] === 0) continue;
-      for (let i = 0; i < n; i++) x[i] += lambda[j] * lifted[j][i];
-    }
-  } else {
-    // A = L^-1 (C^T C) L^-T, b = L^-1 C^T r; x = L^-T y with A y = b.
-    const columns = [];
-    for (let j = 0; j < n; j++) {
-      const column = constraints.multiplyTranspose(
-          constraints.multiply(unit(j, n)), new Float64Array(n));
-      forwardSubstitute(factor, n, column);
-      columns.push(column);
-    }
-    const a = new Float64Array(n * n);
-    // columns[j] = L^-1 B e_j, so X[i][j] = columns[j][i]; A = L^-1 X^T.
-    for (let i = 0; i < n; i++) {
-      const row = Float64Array.from(columns, (c) => c[i]);
-      forwardSubstitute(factor, n, row);
-      for (let j = 0; j < n; j++) a[j * n + i] = row[j];
-    }
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        const avg = 0.5 * (a[i * n + j] + a[j * n + i]);
-        a[i * n + j] = avg;
-        a[j * n + i] = avg;
-      }
-    }
-    const b = constraints.multiplyTranspose(r, new Float64Array(n));
-    forwardSubstitute(factor, n, b);
-    x = Float64Array.from(solveSemidefinite(a, n, b, 1e-13).x);
-    backwardSubstitute(factor, n, x);
+  }
+  const lambda = solveSemidefinite(gram, m, r, 1e-13).x;
+  const x = new Float64Array(n);
+  for (let j = 0; j < m; j++) {
+    if (lambda[j] === 0) continue;
+    for (let i = 0; i < n; i++) x[i] += lambda[j] * lifted[j][i];
   }
   const cx = constraints.multiply(x);
   let residual = 0;

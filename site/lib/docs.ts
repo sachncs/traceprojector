@@ -189,7 +189,14 @@ function isExternal(href: string): boolean {
 
 /** Where a link written in a Markdown file points on the site. */
 function rewrite(href: string, from: DocPage): string {
-  if (/^(https?:|mailto:|#|\/)/.test(href)) return href;
+  if (/^(https?:|mailto:|#)/.test(href)) return href;
+  // A path on the site itself, written by this file for the recipes.
+  if (href.startsWith("site:")) return basePath + href.slice(5);
+  // A program in examples/ is a recipe on the site.
+  const example = href.match(/^(?:\.\.\/)?examples\/([a-z0-9-]+)\.js$/);
+  if (example && RECIPES.some((r) => r.slug === example[1])) {
+    return `${basePath}/recipes/${example[1]}/`;
+  }
   const [target, hash = ""] = href.split("#");
   const page = bySource.get(path.posix.basename(target).toLowerCase());
   if (page && target.endsWith(".md")) {
@@ -221,7 +228,7 @@ function recipeMarkdown(slug: string): string {
   const printed = fs.readFileSync(
     path.join(root, `examples/${slug}.out.txt`), "utf8").trimEnd();
   const uses = usedBy(slug)
-    .map((name) => `[\`${name}\`](${basePath}/docs/api/#${name.toLowerCase()})`)
+    .map((name) => `[\`${name}\`](site:/docs/api/#${name.toLowerCase()})`)
     .join(", ");
   return [
     `# ${recipe.title}`,

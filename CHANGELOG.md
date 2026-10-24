@@ -14,7 +14,7 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- `examples/`: ten runnable programs (quick start, your own mesh, the four form degrees, a singular field, commuting, boundary values, refinement, time-dependent data, worker threads, higher order), each with its recorded output; `validation/examples.test.js` runs them. `validateMeshInput` is exported, to check a mesh without building anything.
+- `examples/`: ten runnable programs (quick start, your own mesh, the four form degrees, a singular field, commuting, boundary values, refinement, time-dependent data, worker threads, higher order), each with its recorded output; `validation/examples.test.js` runs them. `validateMeshInput` is exported, to check a mesh without building anything, and `parseGmsh` reads an ASCII Gmsh `.msh` file (formats 2.2 and 4.1, first-order tetrahedra) into the two arrays the operators take, refusing anything else with a `ValidateError`.
 - `validation/showcase.test.js`: every public export must have an API reference entry and a recipe or a stated reason it needs none.
 
 

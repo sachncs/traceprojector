@@ -38,9 +38,11 @@ const vertices = mesh.getVertices(); // [[x, y, z], ...]
 const tetrahedra = mesh.getTetrahedra(); // [[a, b, c, d], ...]
 ```
 
-To use your own mesh (from Gmsh, TetGen or anything else), build the same two
-arrays and pass them in. The library checks them when you construct a
-projector and raises a `ValidateError` naming the offending tetrahedron if:
+To use your own mesh, build the same two arrays and pass them in; for a Gmsh
+file (ASCII `.msh`, format 2.2 or 4.1, first-order tetrahedra) `parseGmsh`
+reads it into them (see the [Gmsh recipe](../examples/gmsh-mesh.js)). The
+library checks them when you construct a projector and raises a `ValidateError`
+naming the offending tetrahedron if:
 
 | Problem | What to do |
 |---|---|

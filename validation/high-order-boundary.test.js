@@ -13,6 +13,7 @@ import {generateUnitCubeMesh} from '../traceprojector/generator.js';
 import {HighOrderBoundary} from '../traceprojector/high-order-boundary.js';
 import {differential} from '../traceprojector/polynomial-forms.js';
 import {valueOf} from '../traceprojector/boundary-traces.js';
+import {ValidateError} from '../traceprojector/errors.js';
 
 const cube = generateUnitCubeMesh(2);
 const boundary = new HighOrderBoundary(
@@ -167,5 +168,53 @@ describe('the boundary operator (p = 1)', function() {
       console.log(`      ${name}: ${worst.toExponential(1)}`);
       expect(worst).to.be.below(1e-9);
     });
+  }
+});
+
+describe('the coefficients of the boundary operator (p = 1)', function() {
+  this.timeout(1800000);
+
+  it('rejects a degree below one or a fractional one', () => {
+    for (const degree of [0, -1, 1.5, '2']) {
+      expect(() => new HighOrderBoundary(
+          cube.getVertices(), cube.getTetrahedra(), {degree}),
+      `degree ${degree}`).to.throw(ValidateError);
+    }
+  });
+
+  for (const l of [0, 1, 2]) {
+    it(`l = ${l}: the field built from the coefficients is the lazy field`,
+        () => {
+          const c = Float64Array.from({length: space.size(l)},
+              (_, i) => Math.cos(0.9 * i + 0.2));
+          const u = (x, cell) => space.evaluate(c, x, cell, l);
+          const du = (x, cell) => space.derivative(c, x, cell, l);
+          const coefficients = boundary.coefficients(u, du, l);
+          const eager = boundary.field(coefficients, l);
+          const lazy = boundary.lazyField(u, du, l);
+          const diff = (a, b) => [].concat(a).reduce(
+              (s, q, i) => Math.max(s, Math.abs(q - [].concat(b)[i])), 0);
+          let worst = 0;
+          let compared = 0;
+          for (const face of [...traces.faces.values()].slice(0, 4)) {
+            const x = [0, 1, 2].map((d) => 0.5 * face.points[0][d] +
+              0.3 * face.points[1][d] + 0.2 * face.points[2][d]);
+            worst = Math.max(worst,
+                diff(eager.value(x, face.cell), lazy.value(x, face.cell)),
+                diff(eager.derivative(x, face.cell),
+                    lazy.derivative(x, face.cell)));
+            compared++;
+          }
+          console.log(`      l = ${l}: ${compared} points, worst difference ${
+            worst.toExponential(1)}`);
+          expect(compared).to.be.above(3);
+          expect(worst).to.be.below(1e-10);
+          // A function with no boundary part has no boundary coefficients.
+          const zero = boundary.coefficients(
+              () => (l === 0 ? 0 : [0, 0, 0]),
+              () => (l === 0 ? [0, 0, 0] : l === 1 ? [0, 0, 0] : 0), l);
+          const all = [...zero.whitney.values(), ...zero.bubbles.values()];
+          all.forEach((v) => expect(v).to.equal(0));
+        });
   }
 });

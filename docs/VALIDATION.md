@@ -418,7 +418,7 @@ bookkeeping of the lazy and sparse evaluators; in `boundary-traces.js` four were
 divergence, the face `area`, the quadrature-order default and the in-plane
 gradient of the bump); `tests/boundary_traces.test.js` now pins them down and
 each of the four mutants fails it (checked by hand, not by a new Stryker run)
-(the survivors of `high-order-boundary.js` are not triaged; most are in `field`, `lazyField` and `riesz`). The
+(the survivors of `high-order-boundary.js` were triaged by group: the caches and error strings are equivalent or cosmetic; the real gaps were the degree check of the constructor and the whole eager path `coefficients` / `field`, which no test used, and `validation/high-order-boundary.test.js` now checks them (the eager field equals the lazy one to 7·10⁻¹⁵ for `l = 0, 1, 2`); the remaining survivors in `riesz` and the evaluators have not been looked at one by one and the module was not re-mutated). The
 modules `local-weights.js`, `zero-trace-projector.js`, `stable-projector.js`,
 `bounded-commuting-projector.js`, `high-order-weights.js`,
 `higher-order-projector.js` and `high-order-trace-preserving.js` have still not

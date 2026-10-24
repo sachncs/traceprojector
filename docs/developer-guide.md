@@ -55,6 +55,9 @@ code, and nothing else:
 | `npm run lint` / `lint:fix` | ESLint with the Google JavaScript style, 80 columns |
 | `npm run validate` | the numerical validation, about ten minutes |
 | `npm run validate:slow` | the expensive higher-order validation, tens of minutes |
+| `npm run bench` | benchmarks of the solver and the weight pipeline, written to `reports/bench.json` |
+| `npm run bench:check` | the same, failing on a regression against `validation/benchmarks/baseline.json` |
+| `npm run bench:update` | rewrites the baseline (run it on a quiet machine, and say why in the commit) |
 | `npm run build` | the ESM, CJS and UMD bundles in `dist/` |
 | `npm run docs` | regenerates `docs/api.md` from the JSDoc comments |
 | `npm run test:types` | `tsd`: the `.d.ts` files must match the JavaScript |
@@ -69,6 +72,19 @@ Run a single test file with `npx mocha tests/mesh.test.js`. For a file under
 `validation/slow/`, use `npx mocha --no-config --timeout 7200000 <file>`: with
 the repository's config, Mocha adds the config's own file list and runs the
 whole suite.
+
+## Measure before you optimize
+
+Every change that is meant to make something faster or smaller starts from
+`npm run bench` and a profile (`node --cpu-prof`), and ends with the same
+benchmark. The benchmark reports time in units of a calibration loop (so that
+numbers from two machines compare), the size of the factors, iteration counts
+and the certificates of the solves. Three things have gone wrong before, and
+the measurements are there to catch them: a "faster" solver that agreed with a
+reference that was itself wrong (see the solver section of
+[Validation](VALIDATION.md)); a fast path whose accuracy had silently dropped
+(the benchmark fails on any certificate above 1e-9); and an optimization of a
+part that took 6% of the time. Profile first.
 
 ## The three kinds of test
 

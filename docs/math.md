@@ -101,10 +101,11 @@ split, which adds a vertex at the barycenter of each tetrahedron):
    the canonical degree of freedom of `σ` for `u` in the discrete space, which
    is what makes `Π` a projection.
 
-Both are small linear systems on the star. In the code they are sparse
-symmetric systems solved by a banded Cholesky factorization with a
-multiplier iteration (see [Performance](performance.md)); the weights are
-computed the first time a coefficient needs them and cached.
+Both are small sparse linear systems on the star. In the code they are solved
+by conjugate gradients on the dual problem, with a sparse Cholesky
+factorization (minimum-degree ordering) of the mass matrix, and each solve
+returns a certificate of optimality (see [Performance](performance.md)); the
+weights are computed the first time a coefficient needs them and cached.
 
 `BoundedCommutingProjector` and `ZeroTraceProjector` are this construction
 at the lowest order, with and without a boundary condition. `HigherOrderProjector`
@@ -140,9 +141,31 @@ each constructed on the boundary trace spaces (`P₁`, the surface Whitney
 (which is 1 at face barycenters and 0 on face boundaries) and a mass matrix on
 the star. The weights are then extended into the domain through the
 Worsey–Farin split, which adds a vertex at the barycenter of every face as
-well as every cell. `TracePreservingProjector` implements this at the lowest
-order. The canonical `Projector` computes the same weights only to cross-check
-its degrees of freedom (`verifyBoundaryWeights`).
+well as every cell. `TracePreservingProjector` implements this. The canonical
+`Projector` computes the same weights only to cross-check its degrees of
+freedom (`verifyBoundaryWeights`).
+
+**Above the lowest order** the trace space has, besides the Whitney forms of
+the boundary entities, one *bubble* per degree of freedom of each boundary edge
+and face. Each bubble gets a weight of its own. For the bubbles whose
+differential vanishes (the closed ones), the weight is the representer, with
+respect to the `μ`-weighted `L²` product on the star of the entity, of the
+functional that picks the bubble's coordinate; for the others it is the
+surface rotation (1-forms) or divergence (0-forms) of the weight of their
+differential, which is what makes the traces commute with `d`. Each weight is
+extended into the bulk on the Worsey–Farin split by a form with the weight as
+its trace and no bulk degrees of freedom, so that the operator can be applied
+to a field that is not in the finite element space.
+
+The Whitney coefficients keep the lowest-order weights of the paper, which do
+not annihilate the bubbles. The operator therefore subtracts the part of each
+bubble that the Whitney weight sees: with `M` the matrix of pairings of the
+lowest-order weights with the bubbles, the coefficient of a Whitney form is
+`α_a(u) − Σ_b M_ab α_b(u)`. For a finite element function the result is
+exactly its boundary degrees of freedom, so `Π_∂` reproduces the trace. This
+is not how the paper arranges it (it recomputes the lowest-order weights in the
+degree-`p` spaces), and whether it has the same constants is not known; what
+is checked is in [Validation](VALIDATION.md).
 
 ## What is proved, assumed and measured
 

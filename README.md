@@ -79,7 +79,7 @@ do when something fails.
 |---|---|
 | a smooth field, and speed matters | `Projector`, or `CanonicalProjector` for any degree |
 | a rough field; commuting for every input | `BoundedCommutingProjector` (no boundary values kept) |
-| a rough interior and exact boundary values | `StableProjector`, `TracePreservingProjector` |
+| a rough interior and exact boundary values | `StableProjector`, or `TracePreservingProjector` (any degree) |
 | a degree above the lowest, bounded and commuting | `HigherOrderProjector` |
 
 [Choosing an operator](https://sachncs.github.io/traceprojector/docs/operators/)
@@ -95,10 +95,11 @@ has the full table of what each class guarantees and what it needs.
   assumes, was measured on jittered and 100:1 stretched meshes.
 - **Known limits are documented with their evidence**: commuting for the
   trace-preserving operators is proved only for fields whose boundary trace is
-  a lowest-order trace (the papers' wider statement does not follow from their
-  proof, and it fails by about 5·10⁻³ otherwise); there is no
-  trace-preserving operator above the lowest order yet; and the bounded
-  operators cost a local solve per mesh entity. See
+  a discrete trace (the papers' wider statement does not follow from their
+  proof, and it fails by about 5·10⁻³ otherwise); the trace-preserving
+  operator above the lowest order is validated at `p = 1` and `p = 2` on cubes
+  but its stability is not measured; and the bounded operators cost a local
+  solve per mesh entity. See
   [Limits](https://sachncs.github.io/traceprojector/docs/limits/) and
   [Performance](https://sachncs.github.io/traceprojector/docs/performance/).
 - **Bad input is an error, not a wrong answer.** Malformed meshes and
@@ -112,7 +113,13 @@ has the full table of what each class guarantees and what it needs.
 - `refineTetrahedra` and `projector.refine(marked)` for adaptive refinement by
   longest-edge bisection.
 - `projectInParallel` from `traceprojector/parallel` projects one field at many
-  points on worker threads (Node.js).
+  points on worker threads (Node.js), and `CoefficientPool` computes the
+  coefficients of the bounded operators on any number of workers; each worker
+  owns its operator, so nothing is shared and the result is bitwise the same
+  for any number of workers.
+- `npm run bench` measures the solver and the weight pipeline (time in units of
+  a calibration loop, space, iterations, certificates) and `npm run bench:check`
+  compares with the committed baseline.
 - A [web playground](https://sachncs.github.io/traceprojector/playground/)
   with a 3D mesh viewer, code export and a convergence plot.
 

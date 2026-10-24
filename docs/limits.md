@@ -9,12 +9,12 @@ guarantees stop, each with the evidence. Costs are in
 
 | Limit | Detail |
 |---|---|
-| **No trace preservation above the lowest order.** | `TracePreservingProjector` exists for `p = 0` only. `HigherOrderProjector` is bounded and commuting for every degree, and can impose a zero trace, but does not preserve nonzero boundary traces. The paper's higher-order boundary operator is not implemented. |
+| **Trace preservation above the lowest order is validated at `p = 1` (all form degrees) and `p = 2` (0-forms) on cubes.** | `TracePreservingProjector` takes `degree: p`. It is not evaluated as coefficients but field by field (`local`), costs seconds to a minute per point near the boundary at `p = 1`, and its stability constant above the lowest order has not been measured. The boundary weights use the lowest-order weights of the paper with a corrected Whitney basis rather than weights re-derived for each `p`; the properties the proof needs are checked (see [Validation](VALIDATION.md)). `HigherOrderProjector` does not preserve nonzero boundary traces. |
 | **Commuting for the trace-preserving operators holds on a class of fields.** | For `TracePreservingProjector` and `StableProjector`, `d Π u = Π d u` is proved and tested for fields whose boundary trace is a lowest-order trace, and fails by about 5·10⁻³ (4 × 4 × 4 cube) for others. The papers state it for all fields, but their proof needs the narrower class. `BoundedCommutingProjector` and `HigherOrderProjector` commute for every input. |
 | **`Projector` is not bounded.** | It takes point values, edge integrals and face fluxes. A field that is unbounded at a vertex raises `ProjectError`; use a bounded operator for such data. |
 | **The stability constants are measured, not proved here.** | Narrow-bump ratios stayed between 0.86 and 1.01 across refinement for the bounded operators and did not grow, at the sizes tested (up to 10 cells per side at the lowest order, 6 at higher order). That a constant is bounded for all meshes is the papers' theorem, with an assumption (below). |
 | **Assumption 2.4 of Arnold and Guzmán is assumed by the paper.** | This repository measured its discrete form on jittered meshes, 100:1 stretched meshes and `p = 1` (0.002 to 0.36, no growth with refinement). It is evidence on those families, not a proof. |
-| **Not all claims of the papers are tested.** | K5, K6 and K7 (stability on the discrete space, the discrete lifting, best approximation) and W5 (the higher-order boundary weights) are listed as unchecked. |
+| **Not all claims of the papers are tested.** | K5, K6 and K7 (stability on the discrete space, the discrete lifting, best approximation) and the bounds of W6 for the higher-order boundary weights are listed as unchecked. |
 
 ## What it asks of your mesh
 

@@ -52,16 +52,18 @@ Status is the strongest evidence added here beyond the paper's own proof:
 | W2 | `(ζ_{0,r}, tr B_{0,r'})_Γ = δ` (P1 Lemma 5.x) | identity | existing `tests/bweight.test.js`, `tests/weight.test.js`, `verifyBoundaryWeights` (not independently re-derived here) |
 | W3 | `−sdiv ζ¹ = Σκζ⁰`, `srot ζ² = Σκζ¹` | identity (`p = 0`) | `tests/boundary_weights.test.js`: divergence of the edge weight matches the vertex weights; the face weight's rotation matches the edge weights to 1e-9 |
 | W4 | partition of unity `Σ_f ζ_f ≡ 1` on `Γ` | identity (`p = 0`) | `tests/boundary_weights.test.js` ("partition of unity of the face weights"): the sum of the face weights is one at every surface point sampled |
-| W5 | higher order: Kronecker, `ζ₀ ⊥ tr B₊`, mean-zero `div B₊²` | unchecked | the boundary weights of the trace-preserving operator at `p > 0` are not implemented |
+| W5 | higher order: Kronecker, `ζ₀ ⊥ tr B₊`, mean-zero `div B₊²` | identity (`p = 1`; its structure holds for any `p`) | `validation/high-order-boundary.test.js`: the boundary weight of every kind of bubble (closed and complementary, `l = 0, 1, 2`) is dual to the bubble basis as a surface pairing and through its extension, to 1e-9; the lowest-order weights are made orthogonal to the bubbles by correcting the Whitney basis (see below); `div B₊² = 0` because the bubbles of 2-forms are closed |
 | W6 | support and `h^β` norm bounds on `B`, `Y` | empirical (`p = 0`) | `tests/boundary_claims.test.js`: surface weight norms scale as `h⁻¹, h⁰, h¹` for vertices, edges, faces, and the extensions in the bulk as `h^(l−1/2)`, fitted slopes within 0.15 of the exponent |
 | W7 | discrete Poincaré on boundary extended stars | empirical (`p = 0`) | `tests/boundary_claims.test.js`: the constant is 0.456 on vertex stars and 0.336 on edge stars, flat under refinement and under in-plane jitter of 0.25 `h` |
 | M1 | `Π̊` is a projection onto the zero-trace space, commuting, L²-bounded (P2 Thm 6.1) | identity + empirical | `stable-operator.test.js` (identities at 2e-15), `stability.test.js` (bounded) |
 | M2 | the input meets the star assumption (P2 §2) | empirical | **fails on cube meshes at radius one near edges**; the implementation grows the star until it holds; `LocalWeights.radius` raises `ValidateError` if no radius up to 4 works |
-| G1 | `p > 0` for `l ∈ {1, 2}` | narrowed | canonical interpolation of any degree for all `l` (`CanonicalProjector`: projection, commuting, conforming, convergence orders); locally bounded commuting projection of any degree for all `l` (`HigherOrderProjector`, Arnold–Guzmán), also with a zero-trace condition. The paper's trace-preserving operator at `p > 0` (the `P_+` part) is not implemented |
+| G1 | `p > 0` for `l ∈ {1, 2}` | resolved at `p = 1, 2` | canonical interpolation of any degree for all `l` (`CanonicalProjector`); locally bounded commuting projection of any degree for all `l` (`HigherOrderProjector`), also with a zero trace; and the trace-preserving operator (`TracePreservingProjector` with `degree: p`), validated at `p = 1` for all `l` and `p = 2` for `l = 0` (TP2) |
 | AG1 | `π_r = P_r + Q_r(I − P_r)` is a projection, commutes with `d`, and is `L²`-stable (Arnold–Guzmán Thm 3.1) | identity + empirical (`p = 1`) | `validation/slow/`: reproduces its space for `l = 1, 2, 3` and a quadratic (5e-15); `d π^l u = π^{l+1} d u` to 1e-13 (0→1), 3e-13 (1→2), 1e-12 (2→3); stability ratio on narrow bumps 1.007 (`l = 0`), 0.995 (`l = 1`), 0.997 (`l = 2`), growth 1.000 per halving of `h` (limit 1.10) |
+| TP2 | `Π` above the lowest order: a projection, preserves the trace, commutes on `V_tr,p` (P1 Thm 3.1, `p ≥ 1`) | identity (`p = 1`, all `l`; `p = 2`, `l = 0`) | `validation/high-order-boundary.test.js` (trace of `Π_∂u` equals the trace of `u` to 7e-13 for `l = 0, 1, 2`; `tr dΠ_∂u = tr Π_∂du` to 6e-13 for grad and 6e-14 for curl on polynomial fields); `validation/slow/trace-preserving-higher-order.test.js` (`Πu = u` to 5e-13 near the boundary and in the interior for `l = 0..3`; grad, curl and div commute for fields with a discrete trace to 1e-11 at quadrature order 8; `p = 2`, `l = 0`: 7e-13) |
+| S1 | the local minimum-norm problems are solved exactly | certified | every solve returns its constraint residual, stationarity and duality gap; at most 3e-11, 2e-14 and 3e-15 over regular, jittered and 10:1, 100:1 stretched meshes (`validation/solver-robustness.test.js`); energy equal to the dense reference to 6e-10 |
 | AG2 | Assumption 2.4: the constant of the right inverse of `d` on each extended star is uniformly bounded | empirical | `validation/assumption-2-4.test.js` (see below) |
 
-**Counts (24 claims):** identity 14 (K1, K2, K3 narrowed, D1, D2, D3, D5, W1, W2, W3, W4, M1, AG1; W1, W3 and W4 at `p = 0`, AG1 at `p = 1`), empirical 6 (K4, D4, W6, W7, M2, AG2), unchecked 4 (K5, K6, K7, W5), narrowed 1 (G1). K4, D4 and M2 each have a documented negative or partial result.
+**Counts (26 claims):** identity 15 (K1, K2, K3 narrowed, D1, D2, D3, D5, W1, W2, W3, W4, W5, M1, AG1, TP2; W1, W3 and W4 at `p = 0`, W5 and AG1 at `p = 1`), empirical 7 (K4, D4, W6, W7, M2, AG2, plus S1, which is certified), unchecked 3 (K5, K6, K7), narrowed or resolved 1 (G1; the document keeps the row because the evidence is partial). K4, D4 and M2 each have a documented negative or partial result.
 
 ### Commuting (K3): the paper's statement is wider than its proof
 
@@ -123,6 +125,83 @@ or face flux and imposes no trace condition. It does not preserve traces.
   trace-preserving operator fails (see "Commuting" above).
 - A field in `H¹` that is unbounded at a *boundary* vertex gives finite
   output for all four degrees; the canonical operator returns `Infinity`.
+
+## Solver robustness (S1)
+
+Each weight needs the field of least energy `x'Mx` with `Cx = r`. The solver
+returns the solution together with a **certificate**: the constraint residual
+`|Cx − r|`, the stationarity `|Mx − C'λ|` for the multipliers `λ` it found,
+and the duality gap they give. A feasible point with zero stationarity is the
+minimizer, so small values certify the answer without a reference solver.
+
+| Mesh (5 × 5 × 5 cube, `p = 1`) | solves | residual | stationarity | gap |
+|---|---:|---:|---:|---:|
+| regular | 41 | 4e-12 | 3e-15 | 8e-16 |
+| jittered by 0.25 `h` | 47 | 4e-12 | 3e-15 | 4e-16 |
+| stretched 10 : 1 | 41 | 4e-12 | 1e-14 | 3e-15 |
+| stretched 100 : 1 | 41 | 3e-11 | 1e-14 | 3e-15 |
+
+The limits were fixed in advance (`validation/tolerances.json`, `solver`):
+1e-10 for each of the three, no fallback to the dense solver, and agreement
+with the dense reference in energy to 1e-8 (observed 6e-10 at 100 : 1).
+
+**What measuring found.** The first comparison, "banded agrees with dense",
+disagreed by 50 to 90% in energy on the degree-2 problems while both satisfied
+the constraints equally well. The certificates settled which was wrong: the
+*dense reference*. For more constraints than unknowns, when `C` has a null
+space, the `n × n` normal equations it solved are singular, and a basic
+solution of a singular system is not the minimum-norm one. It had up to 80%
+more energy than the minimizer. All the identities of this document depend only
+on feasibility, so none was affected, and the stability ratios measured with
+the corrected solver differ from the earlier ones by at most 0.001. The dense solver now
+solves the Gram system of the dual, which has a unique `x`, and a regression
+test covers the case. The iterative solver was also found, by the same
+certificates, to stop with a stationarity of up to 6e-5 on those problems because its
+penalty amplified rounding; it now applies the Schur complement with an
+accurate factorization of the mass matrix alone, and the stationarity is at
+roundoff by construction.
+
+The benchmark harness (`npm run bench`) records these certificates with
+every timing, and `npm run bench:check` fails on a regression in time (in
+units of a calibration loop), in factor size or in a certificate.
+
+## The boundary operator above the lowest order (W5, TP2)
+
+The paper builds, for `p ≥ 1`, a weight for every bubble degree of freedom of a
+boundary edge or face: for the closed bubbles the Riesz representer, weighted by
+the bump `μ`, of the coefficient functional on the trace space of the star;
+for the complementary bubbles the surface rotation or divergence of the weights
+of their differentials; each is extended into the bulk on the Worsey–Farin
+split with no bulk degrees of freedom. The paper also takes the lowest-order
+weights from a construction in the degree-`p` trace spaces, so that they are
+orthogonal to the bubbles.
+
+This implementation keeps the lowest-order weights of `p = 0` and makes the
+basis, rather than the weights, orthogonal: with `M_ab = (ζ_a, tr B_b)_Γ`
+the pairing of a lowest-order weight with a bubble basis function, the
+Whitney coefficient of the operator is `α_a(u) − Σ_b M_ab α_b(u)`. For a
+finite element function this returns exactly its boundary degrees of freedom
+(a short calculation, checked numerically below), the commuting of the traces
+follows from the same relations as in the paper, and the weights stay local.
+This is a departure from the paper's construction, not a restatement of it:
+whether its boundedness constants match the paper's has not been measured.
+
+What is checked (`p = 1`, 2 × 2 × 2 cube, `validation/high-order-boundary.test.js`):
+
+- every bubble weight, of every kind, is dual to all the basis functions of its
+  star, both as a surface pairing and through its extension (volume formula),
+  to 1e-9;
+- the surface pairing of a lowest-order weight with a bubble equals the volume
+  formula over 2,000 pairs to 1e-15;
+- the trace of `Π_∂u` equals the trace of `u` for a finite element function to
+  3e-14 (0-forms), 7e-13 (1-forms) and 3e-13 (2-forms);
+- `tr dΠ_∂u = tr Π_∂du` for polynomial fields to 6e-13 (grad) and 6e-14
+  (curl). For a smooth non-polynomial field the identity holds up to the
+  quadrature error (4e-8 at the default order), which the `quadratureOrder`
+  option reduces.
+
+The whole operator (`validation/slow/trace-preserving-higher-order.test.js`,
+6 × 6 × 6 cube): see TP2 above.
 
 ## Assumption 2.4 of Arnold and Guzmán (AG2)
 
@@ -367,24 +446,22 @@ case.
 
 ## Known gaps
 
-- **Trace preservation above the lowest order.** `TracePreservingProjector`
-  is the paper's operator at `p = 0` only. The higher-order boundary operator
-  `Π_∂ = P_0 + P_+(I − P_0)`, with its surface weights (W5), is not
-  implemented; `HigherOrderProjector` is bounded and commuting for any degree
-  and can impose a zero trace, but does not preserve nonzero traces.
-- **`TracePreservingProjector` at the boundary.** Local `L²` stability is
-  measured for 0- and 1-forms with a bump at a face centre (ratio 1.01 and
-  1.006, growth 0.995 per halving of `h`, `n = 4` to `8`). 2- and 3-forms and
-  corner and edge bumps are not measured.
-- **Zero-trace higher-order projection next to the boundary.** The weights
-  satisfy `⟨Z(σ), u⟩ = φ_σ(u)` for zero-trace `u` at `p = 1` near the boundary
-  for `l = 0, 1, 2, 3` (`validation/slow/zero-trace-weights.test.js`); the
-  assembled operator is tested for reproduction at `l = 0` only
-  (`validation/slow/zero-trace-projector.test.js`).
+- **Stability of the operator above the lowest order is not measured.**
+  `TracePreservingProjector` at `p ≥ 1` is checked for being a projection, for
+  preserving the trace and for commuting; the local `L²` bound of the boundary
+  part (W6 for the higher-order weights) and of the whole operator under
+  refinement are not.
+- **Commuting above the lowest order is tested on cubes** (`p = 1` for all
+  form degrees, `p = 2` for 0-forms) and on one mesh size; no convergence rate
+  is claimed.
+- **Cost.** A value of the operator near the boundary at `p = 1` costs 20 to 30
+  seconds on a 6 × 6 × 6 cube the first time (weights and extensions are cached
+  after), and the operator needs a mesh fine enough for the zero-trace part
+  (3 × 3 × 3 and 4 × 4 × 4 are too coarse). See [Performance](performance.md).
 - **Mesh requirements.** The bounded operators need meshes fine enough that the
-  extended stars are topological balls (3 × 3 × 3 cubes are too coarse; they
-  raise `ValidateError`). Near a cube's edges the stars grow beyond one ring.
+  extended stars are topological balls; near a cube's edges the stars grow
+  beyond one ring.
 - **Assumption 2.4** is measured on the families above, not proved.
-- **Cost.** The local solves are sparse and banded, not dense, and a
-  higher-order weight takes seconds, not minutes. The operators still do a local
-  solve per mesh entity; see [Performance](performance.md).
+- **`TracePreservingProjector` at `p = 0`** has its stability measured for 0-
+  and 1-forms with a bump at a face centre only (ratio 1.01 and 1.006, growth
+  0.995 per halving of `h`, `n = 4` to `8`).

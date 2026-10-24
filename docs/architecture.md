@@ -63,6 +63,8 @@ the commuting property holds by construction.
 | `bubble-forms.js`, `ag-element.js`, `ag-space.js` | the Arnold–Guzmán finite element spaces of any degree |
 | `physical-forms.js`, `polynomial-forms.js` | exact polynomial differential forms on physical cells |
 | `high-order-weights.js`, `higher-order-projector.js` | the Arnold–Guzmán weights and projection for any degree, with optional zero-trace condition |
+| `boundary-traces.js`, `high-order-boundary.js`, `high-order-trace-preserving.js` | traces of the finite element spaces on the boundary faces; the boundary weights, extensions and operator for `p ≥ 1`; and the whole trace-preserving projection above the lowest order |
+| `parallel-pool.js`, `parallel-pool-worker.js` | the worker pool for the coefficients of the bounded operators |
 
 ## Shared numerical code
 
@@ -72,7 +74,7 @@ the commuting property holds by construction.
 | `utils.js`, `small-linear-algebra.js` | `3×3` solves, vector operations, small symmetric eigenvalues |
 | `dense-linear-algebra.js` | Cholesky, semidefinite and minimum-norm solves (dense) |
 | `sparse-linear-algebra.js` | compressed sparse rows and conjugate gradients |
-| `banded-linear-algebra.js` | reverse Cuthill–McKee ordering, skyline Cholesky and the multiplier-method minimum-norm solve that the higher-order weights use |
+| `banded-linear-algebra.js` | the minimum-norm solver the weights use (conjugate gradients on the dual, with a certificate of optimality), sparse Cholesky with a minimum-degree ordering on a compressed graph, and the older skyline Cholesky with reverse Cuthill–McKee |
 | `errors.js` | `ValidateError`, `ProjectError`, `SingularError` |
 
 ## Design decisions

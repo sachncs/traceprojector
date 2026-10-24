@@ -30,7 +30,7 @@ constant that does not depend on the mesh size.
 | `ZeroTraceProjector` | 0 | yes | zero trace only | yes (interior) | `L²` | local solves per entity |
 | `StableProjector` | 0 | on its class | yes | interior yes, boundary no | finite boundary values | local solves per entity |
 | `BoundedCommutingProjector` | 0 | **yes, for every input** | **no** | yes | `L²` | local solves per entity |
-| `TracePreservingProjector` | 0 | on its class | yes | yes at the boundary (measured) | `L²` with `L²` derivative | local solves per entity |
+| `TracePreservingProjector` | any | on its class | yes | yes at the boundary (measured at `p = 0`) | `L²` with `L²` derivative | local solves per point |
 | `HigherOrderProjector` | any | **yes, for every input** | **no** | yes (measured) | `L²` with `L²` derivative | local solves per entity, larger |
 
 "On its class" means: commuting is proved and tested for fields whose boundary
@@ -84,13 +84,23 @@ values (for instance when the boundary condition is imposed afterwards).
 
 ## TracePreservingProjector
 
-The full operator of the trace-preserving paper at the lowest order,
+The full operator of the trace-preserving paper,
 `Π = mΠ (I − Π_∂) + Π_∂`, where `Π_∂` is built from the paper's boundary
-weights on Worsey–Farin splits of the boundary. It reproduces the lowest-order
-spaces, keeps the discrete trace on the boundary and, at the boundary, is
-stable (ratio about 1.01 for 0-forms and 1.006 for 1-forms, flat under
-refinement). You supply the derivative of your field as well as the field:
+weights on Worsey–Farin splits of the boundary and `mΠ` is the zero-trace
+bounded projection. It reproduces the spaces, keeps the discrete trace on the
+boundary and commutes with the exterior derivative for fields whose trace is a
+discrete trace. You supply the derivative of your field as well as the field:
 the gradient for a 0-form, the curl for a 1-form, the divergence for a 2-form.
+
+At `degree: 0` (the default) it has coefficients on the Whitney forms and, at
+the boundary, is stable (ratio about 1.01 for 0-forms and 1.006 for 1-forms,
+flat under refinement). With `degree: p` for `p ≥ 1` it works field by field:
+`projector.local(u, du, l)` gives the value and the derivative of the
+projection at a point of a cell, computed lazily from the weights near that
+cell. Validated at `p = 1` for all four form degrees (a projection to
+5·10⁻¹³; commuting for fields with a discrete trace to 10⁻¹¹ at quadrature
+order 8) and at `p = 2` for 0-forms. Its stability constant above the lowest
+order has not been measured.
 
 ## HigherOrderProjector
 
@@ -109,8 +119,7 @@ local problems become very large (see [Performance](performance.md)).
 If the boundary values of your field must be reproduced exactly and your field
 is smooth, use `Projector` or `CanonicalProjector`. If you need both exact
 boundary values and stability for rough interior data, use `StableProjector`
-(finite boundary values) or `TracePreservingProjector` (lowest order). If you
-need a degree above the lowest *and* stability, `HigherOrderProjector` gives
-the stability and commuting; a trace-preserving operator of higher degree is
-not implemented (the boundary part of the paper's higher-order construction is
-open; see [Limits](limits.md)).
+(finite boundary values, lowest order) or `TracePreservingProjector` (any
+degree). If you need a degree above the lowest, stability and commuting
+without preserving the boundary trace, `HigherOrderProjector` is the cheaper
+choice. See [Limits](limits.md) for what is validated at each degree.

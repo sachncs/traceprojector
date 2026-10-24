@@ -466,6 +466,15 @@ case.
 
 ## Known gaps
 
+- **No comparison with an independent implementation.** The results are not
+  checked against NGSolve, FEniCS or MFEM. The project does not depend on
+  external finite element codes, and the comparison was dropped on purpose,
+  not forgotten. What stands in for it: the classical identities of the
+  Whitney complex (de Rham map, `d∘d = 0`, partition of unity), a dense
+  reference solver for every local solve, independent quadrature of smooth
+  fields, and the solver certificates. None of these would catch a mistake
+  shared by this code and the papers' reading of it, which only a second
+  implementation could.
 - **Stability of the operator above the lowest order is not measured.**
   `TracePreservingProjector` at `p ≥ 1` is checked for being a projection, for
   preserving the trace and for commuting; the local `L²` bound of the boundary

@@ -21,6 +21,14 @@ const API = [
     desc: "The Arnold–Guzmán projection: any degree, locally bounded, commuting for every L² field.",
   },
   {
+    sig: "new TracePreservingProjector(vertices, tetrahedra, { degree })",
+    desc: "The papers' operator: bounded, commuting, keeps the discrete trace. Above the lowest order it is evaluated field by field with local(u, du, l).",
+  },
+  {
+    sig: "parseGmsh(text)",
+    desc: "Reads an ASCII Gmsh .msh file (2.2 or 4.1, first-order tetrahedra) into the two arrays every operator takes.",
+  },
+  {
     sig: "new Locator(mesh).findTetrahedron(point)",
     desc: "Point location in O(log N) after a one-time tree build. Returns the cell and the barycentric coordinates.",
   },

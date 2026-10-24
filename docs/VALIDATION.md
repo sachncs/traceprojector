@@ -408,6 +408,20 @@ files: `refinement.js` 50%, `errors.js` 50%, `traceprojector.js` 55%,
 `surface.js` 59%, `l2.js` 64%, `sparse-linear-algebra.js` 66%, `locator.js`
 68%, `bubble.js` 68%.
 
+**The boundary operator modules (measured later).** `boundary-traces.js` and
+`high-order-boundary.js` were mutated with the slow
+`validation/high-order-boundary.test.js` (about a minute, `--bail`) as the kill
+signal: **91.6%** (208 of 227 mutants killed) and **79.5%** (626 of 787,
+including one timeout). The survivors are mostly caches (a disabled cache gives
+the same answer), guards that never change a result, option defaults and the
+bookkeeping of the lazy and sparse evaluators; four to look at first are the
+sign in the surface divergence, the face `area`, the quadrature-order
+default and the in-plane gradient of the bump, which no test pins down. The
+modules `local-weights.js`, `zero-trace-projector.js`, `stable-projector.js`,
+`bounded-commuting-projector.js`, `high-order-weights.js`,
+`higher-order-projector.js` and `high-order-trace-preserving.js` have still not
+been mutated.
+
 **Killing tests, and a second measurement.** The survivors showed that the
 unit suite never exercised the full operator `Π = partial + ring`, the degree
 of freedom orientations, the bubble basis or the quadrature rules. Added

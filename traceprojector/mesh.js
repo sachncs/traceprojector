@@ -43,6 +43,19 @@ function sort3(a, b, c) {
  * {@link Refinement}.
  */
 
+/**
+ * Checks vertices and tetrahedra and raises a ValidateError naming the first
+ * problem: a malformed or non-finite coordinate, an index that is not an
+ * integer or does not name a vertex, a repeated vertex, or a tetrahedron with
+ * non-positive or degenerate volume. Every constructor that takes the two
+ * arrays calls it.
+ * @param {!Array<!Array<number>>} vertices
+ * @param {!Array<!Array<number>>} tetrahedra
+ */
+export function validateMeshInput(vertices, tetrahedra) {
+  Mesh.validateInput(vertices, tetrahedra);
+}
+
 export class Mesh {
   /** @type {!Map<number, number>} */
   edgeKeyToIndex;

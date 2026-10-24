@@ -29,7 +29,7 @@ try {
 
   const operators = ['projector', 'canonical', 'bounded-commuting', 'stable',
     'trace-preserving'];
-  const fields = ['smooth', 'singular', 'bump'];
+  const fields = ['smooth', 'singular', 'step', 'bump'];
   const refuses = new Set(['projector', 'canonical']);
   let failures = 0;
   for (const operator of operators) {

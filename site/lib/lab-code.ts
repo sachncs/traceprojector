@@ -93,6 +93,9 @@ function gradientSource(fieldId: string, centre: Vec3): string {
   const f = -0.5 / (r * r * Math.sqrt(r));
   return [f * (p[0] - ${cx}), f * (p[1] - ${cy}), f * (p[2] - ${cz})];
 }`;
+    case "step":
+      // The gradient of a jump is a measure on the plane; the operators see none of it.
+      return `(p) => [0, 0, 0]`;
     case "bump":
       return `(p) => {
   const f = -120 * Math.exp(-60 * ((p[0] - ${cx}) ** 2 + (p[1] - ${cy}) ** 2 + (p[2] - ${cz}) ** 2));

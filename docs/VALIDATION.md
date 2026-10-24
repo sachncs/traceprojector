@@ -414,9 +414,11 @@ files: `refinement.js` 50%, `errors.js` 50%, `traceprojector.js` 55%,
 signal: **91.6%** (208 of 227 mutants killed) and **79.5%** (626 of 787,
 including one timeout). The survivors are mostly caches (a disabled cache gives
 the same answer), guards that never change a result, option defaults and the
-bookkeeping of the lazy and sparse evaluators; in `boundary-traces.js` four to look at first are the
-sign in the surface divergence, the face `area`, the quadrature-order
-default and the in-plane gradient of the bump, which no test pins down (the survivors of `high-order-boundary.js` are not triaged; most are in `field`, `lazyField` and `riesz`). The
+bookkeeping of the lazy and sparse evaluators; in `boundary-traces.js` four were real gaps (the sign in the surface
+divergence, the face `area`, the quadrature-order default and the in-plane
+gradient of the bump); `tests/boundary_traces.test.js` now pins them down and
+each of the four mutants fails it (checked by hand, not by a new Stryker run)
+(the survivors of `high-order-boundary.js` are not triaged; most are in `field`, `lazyField` and `riesz`). The
 modules `local-weights.js`, `zero-trace-projector.js`, `stable-projector.js`,
 `bounded-commuting-projector.js`, `high-order-weights.js`,
 `higher-order-projector.js` and `high-order-trace-preserving.js` have still not

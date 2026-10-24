@@ -42,4 +42,18 @@ export class StableProjector {
     cell: number,
     l: number,
   ): number | number[];
+
+  /**
+   * Number of entities of form degree l in the projector's numbering: the
+   * vertices (0), edges (1), faces (2) or cells (3). The entity numbers that
+   * `coefficient` takes run from 0 to this count minus one.
+   * @param l - Form degree, 0 to 3.
+   */
+  count(l: number): number;
+
+  /**
+   * The two vertices of an edge, in the numbering of the input mesh.
+   * @param index - Edge number, from 0 to `count(1) - 1`.
+   */
+  edge(index: number): [number, number];
 }

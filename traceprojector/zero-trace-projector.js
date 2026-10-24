@@ -11,8 +11,16 @@
  */
 
 import {LocalWeights} from './local-weights.js';
-import {ProjectError} from './errors.js';
+import {ProjectError, ValidateError} from './errors.js';
 import {validateMeshInput} from './mesh.js';
+
+/** The entities of form degree l of a complex. */
+function entitiesOf(complex, l) {
+  if (![0, 1, 2, 3].includes(l)) {
+    throw new ValidateError(`the form degree must be 0, 1, 2 or 3, not ${l}`);
+  }
+  return [complex.vertices, complex.edges, complex.faces, complex.cells][l];
+}
 
 export class ZeroTraceProjector {
   /**
@@ -84,5 +92,30 @@ export class ZeroTraceProjector {
           ];
     });
     return total;
+  }
+
+  /**
+   * Number of entities of form degree l in the projector's numbering: the
+   * vertices (0), edges (1), faces (2) or cells (3). The entity numbers that
+   * `coefficient` takes run from 0 to this count minus one.
+   * @param {number} l - Form degree, 0 to 3.
+   * @return {number}
+   */
+  count(l) {
+    return entitiesOf(this.weights.base, l).length;
+  }
+
+  /**
+   * The two vertices of an edge, in the numbering of the input mesh.
+   * @param {number} index - Edge number, from 0 to `count(1) - 1`.
+   * @return {!Array<number>}
+   */
+  edge(index) {
+    const edges = this.weights.base.edges;
+    if (!Number.isInteger(index) || index < 0 || index >= edges.length) {
+      throw new ValidateError(`edge ${index} does not exist: there are ${
+        edges.length}`);
+    }
+    return [...edges[index]];
   }
 }

@@ -7,6 +7,7 @@ import { MetricsStrip } from "@/components/metrics-strip";
 import { PlaygroundShowcase } from "@/components/playground-showcase";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { Tasks } from "@/components/tasks";
 import { ApiGlance } from "@/components/api-glance";
 
 export default function HomePage() {
@@ -15,6 +16,7 @@ export default function HomePage() {
       <SiteHeader />
       <main className="flex-1">
         <Hero />
+        <Tasks />
         <Features />
         <CodePreview />
         <MathSection />

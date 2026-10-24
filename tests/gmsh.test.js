@@ -108,6 +108,13 @@ describe('parseGmsh', () => {
     expect(read.tetrahedra).to.deep.equal(t);
   });
 
+  it('takes linear time on text that repeats section openings', () => {
+    const text = '$A\n' + '$a\na'.repeat(50000);
+    const start = Date.now();
+    expect(() => parseGmsh(text)).to.throw(ValidateError);
+    expect(Date.now() - start).to.be.below(2000);
+  });
+
   it('reads Windows line endings', () => {
     expect(parseGmsh(legacy.replace(/\n/g, '\r\n')).tetrahedra).to.have
         .length(2);

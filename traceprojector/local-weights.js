@@ -35,6 +35,10 @@ import {
 } from './simplicial-complex.js';
 import {solveSemidefinite, minimumNormSolve} from './dense-linear-algebra.js';
 import {
+  minimumNormSolveBanded,
+  solveSemidefiniteBanded,
+} from './banded-linear-algebra.js';
+import {
   SparseMatrix,
   solveConsistent,
   minimumNormSolveSparse,
@@ -469,11 +473,16 @@ export class LocalWeights {
       });
       solved = minimumNormSolve(rows, mass, n, rhs);
     } else {
-      solved = minimumNormSolveSparse(
-          new SparseMatrix(rowEntries.length, n, rowEntries),
-          new SparseMatrix(n, n, massEntries),
-          rhs,
-      );
+      const constraints = new SparseMatrix(rowEntries.length, n, rowEntries);
+      const mass = new SparseMatrix(n, n, massEntries);
+      try {
+        solved = minimumNormSolveBanded(constraints, mass, rhs);
+      } catch (error) {
+        solved = null;
+      }
+      if (!solved || !(solved.residual <= 1e-9 * Math.max(solved.scale, 1))) {
+        solved = minimumNormSolveSparse(constraints, mass, rhs);
+      }
     }
     const {x, residual, scale: size, condition} = solved;
     this.requireSmall(
@@ -559,14 +568,24 @@ export class LocalWeights {
       size = norm(rhs) + norm(stiffness) * norm(x);
     } else {
       const stiffness = new SparseMatrix(n, n, stiffnessEntries);
-      const diagonal = stiffness.diagonal();
-      const inverseDiagonal = diagonal.every((d) => d > 0) ?
-        diagonal.map((d) => 1 / d) :
-        undefined;
-      x = solveConsistent((v, out) => stiffness.multiply(v, out), rhs, {
-        maxIterations: 20 * n + 100,
-        inverseDiagonal,
-      }).x;
+      let banded = null;
+      try {
+        banded = solveSemidefiniteBanded(stiffness, rhs);
+      } catch (error) {
+        banded = null;
+      }
+      if (banded && banded.residual <= 1e-10 * Math.max(banded.scale, 1)) {
+        x = banded.x;
+      } else {
+        const diagonal = stiffness.diagonal();
+        const inverseDiagonal = diagonal.every((d) => d > 0) ?
+          diagonal.map((d) => 1 / d) :
+          undefined;
+        x = solveConsistent((v, out) => stiffness.multiply(v, out), rhs, {
+          maxIterations: 20 * n + 100,
+          inverseDiagonal,
+        }).x;
+      }
       const check = stiffness.multiply(x);
       residual = Math.hypot(...check.map((value, i) => value - rhs[i]));
       size = norm(rhs);

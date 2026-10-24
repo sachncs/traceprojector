@@ -25,6 +25,12 @@
       "rule": "stable-projection ratio at stretch s is at most s times the ratio at s=1 (constant grows at most linearly in the aspect ratio); every ratio finite and below 100"
     }
   },
+  "extensionConstant": {
+    "rule": "Assumption 2.4 of Arnold and Guzman, discrete: the constant of the right inverse of d on an extended star with vanishing trace, over the entities sampled, is at most maxConstant on every mesh of the family and grows by at most maxGrowthPerHalvingOfH per halving of h",
+    "maxConstant": 0.6,
+    "maxGrowthPerHalvingOfH": 1.1,
+    "note": "maxConstant is about twice the largest value seen when the rule was fixed (0.28 for stretch 100, 0.22 for jitter 0.3 h)"
+  },
   "metamorphic": {
     "runsPerProperty": 1000
   },

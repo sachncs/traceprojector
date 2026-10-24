@@ -14,6 +14,26 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Documentation on the website, standalone: a getting-started guide, a guide
+  to choosing an operator, performance, a developer guide, and every other
+  page of `docs/`, rendered from the repository's Markdown at
+  https://sachncs.github.io/traceprojector/docs/ (no links out to GitHub).
+  The code examples in the user guides are executed by
+  `validation/docs-examples.test.js`.
+- `HighOrderWeights.extensionConstant` and
+  `validation/assumption-2-4.test.js`: Assumption 2.4 of Arnold and Guzmán
+  (the uniform bound on the right inverse of `d` on extended stars) is now
+  measured, not only assumed: 0.002 to 0.36 across jitter, 100:1 stretch and
+  `p = 1`, growing by 3% from `n = 4` to `n = 8`.
+- `HigherOrderProjector` accepts `boundaryConditions: true` for the
+  zero-trace version (weights vanish on the boundary entities); validated at
+  `p = 1` near the boundary for all four form degrees.
+- Paper claims W4 (partition of unity), W6 (norms of the boundary weights and
+  their extensions) and W7 (discrete Poincaré constants) tested at lowest
+  order; end-to-end commuting of the higher-order projection for degrees 0
+  to 3, and its stability for all four degrees (ratios 0.995 to 1.007).
+- `banded-linear-algebra.js`: reverse Cuthill–McKee ordering, skyline
+  Cholesky and a minimum-norm solver by the method of multipliers.
 - `ZeroTraceProjector` and `StableProjector` (lowest order): locally
   L²-bounded projections built from the local weight functions of
   arXiv:2502.03601. Interior coefficients are integrals against the weights,
@@ -49,6 +69,12 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- The deployed website loaded its assets from the host root and showed an
+  unstyled page on GitHub Pages; it is now built with the `/traceprojector`
+  base path.
+- The README's quick-start example printed a wrong value (it claimed about
+  1.365; the interpolant is 0.6937) and imported `generateUnitCubeMesh` from
+  a path that does not export it.
 - Projections returned `Infinity` or `NaN` silently when the input field was
   not finite at a degree of freedom; they now throw `ProjectError`.
 - Geometry depended on the unit system. Meshes with edges below about 0.1 mm
@@ -60,6 +86,16 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- The local problems of the higher-order weights are solved with a banded
+  Cholesky factorization instead of a dense one. One minimum-norm solve of
+  about 1,500 unknowns went from 1.9 s to 0.02 s; a whole weight of an
+  interior entity at `p = 1` on a 6 × 6 × 6 cube went from 3.1 s to 0.45 s
+  (`l = 1`), 14.2 s to 2.0 s (`l = 2`) and 42.8 s to 5.7 s (`l = 3`). A
+  zero-trace weight next to the boundary that exceeded an hour now takes
+  seconds. `Polynomial.evaluate` uses precomputed powers.
+- README rewritten; `docs/setup.md`, `development.md`, `testing.md` and
+  `publishing.md` merged into the developer guide; `architecture.md`,
+  `math.md`, `exceptions.md` and `CONTRIBUTING.md` brought up to date.
 - Code style follows the Google JavaScript Style Guide (ESLint with
   `eslint-config-google`) instead of StandardJS. The reformat is mechanical:
   the unit tests and the bit-exact determinism output are unchanged.

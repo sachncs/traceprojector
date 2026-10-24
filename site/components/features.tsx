@@ -62,8 +62,8 @@ const FEATURES: Feature[] = [
   },
   {
     icon: Code2,
-    title: "Higher-order enrichment",
-    body: "Scalar bubble basis for H¹ (p ≥ 4) and an L² monomial basis for L² (p ≥ 1). Hand-written .d.ts for every module.",
+    title: "Any polynomial degree",
+    body: "Canonical interpolation and the locally bounded Arnold–Guzmán projection onto Lagrange, Nédélec, Raviart–Thomas and discontinuous spaces of any degree. Hand-written .d.ts for every module.",
     tag: "Extensibility",
     accent: "violet",
   },
@@ -180,7 +180,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
           ) : (
             <div className="flex items-center gap-2 text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
               <GitBranch className="h-3 w-3" />
-              <span>Verified by 192 unit tests</span>
+              <span>Checked by hundreds of unit tests and a validation suite</span>
             </div>
           )}
         </div>

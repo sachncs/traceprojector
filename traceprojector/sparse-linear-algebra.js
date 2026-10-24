@@ -296,7 +296,7 @@ export function minimumNormSolveSparse(constraints, mass, r) {
 }
 
 /** Solves L y = b in place for a lower-triangular row-major L. */
-function forwardSubstitute(l, n, b) {
+export function forwardSubstitute(l, n, b) {
   for (let i = 0; i < n; i++) {
     let sum = b[i];
     const row = i * n;

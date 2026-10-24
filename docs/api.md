@@ -1,6 +1,10 @@
 ## Classes
 
 <dl>
+<dt><a href="#BandedCholesky">BandedCholesky</a></dt>
+<dd><p>Cholesky factorization K = L L^T of a symmetric positive definite sparse
+matrix in profile (skyline) storage, after reordering.</p>
+</dd>
 <dt><a href="#Bubble">Bubble</a></dt>
 <dd><p>Higher-order projection framework implementing Section 7 of the paper.</p>
 <p>For polynomial degree p &gt;= 4 on H^1 (l=0), the projection Pi^l_p is built
@@ -134,6 +138,21 @@ unreliable on coarse meshes.</p>
 <dt><a href="#ITERATIVE_RELATIVE_BOUND">ITERATIVE_RELATIVE_BOUND</a></dt>
 <dd><p>Relative residual bound for the iterative solvers (see requireSmall).</p>
 </dd>
+<dt><a href="#evaluateForm">evaluateForm</a></dt>
+<dd><p>The value of a scalar or triple polynomial form at x.</p>
+</dd>
+<dt><a href="#addForms">addForms</a></dt>
+<dd><p>The sum of two forms of the same kind.</p>
+</dd>
+<dt><a href="#scaleForm">scaleForm</a></dt>
+<dd><p>A form scaled by a number.</p>
+</dd>
+<dt><a href="#timesPolynomial">timesPolynomial</a></dt>
+<dd><p>A form multiplied by a scalar polynomial.</p>
+</dd>
+<dt><a href="#parsed">parsed</a></dt>
+<dd><p>Exponent triples of keys already seen.</p>
+</dd>
 <dt><a href="#components">components</a></dt>
 <dd><p>Number of components of a k-form on R^m.</p>
 </dd>
@@ -147,6 +166,11 @@ so it can describe both the mesh and its Alfeld split.</p>
 </dd>
 <dt><a href="#FACE_EDGE_SIGNS">FACE_EDGE_SIGNS</a></dt>
 <dd><p>Incidence of the edges [ab, bc, ac] in the boundary of the face [a, b, c].</p>
+</dd>
+<dt><a href="#TOLERANCE">TOLERANCE</a></dt>
+<dd><p>Dense helpers for the small, well-scaled matrices of the reference-element
+constructions: null spaces, independent subsets and Gram-Schmidt in a given
+inner product.</p>
 </dd>
 <dt><a href="#BREAKDOWN_RATIO">BREAKDOWN_RATIO</a></dt>
 <dd><p>Curvature below this fraction of the initial curvature per unit norm is
@@ -178,6 +202,40 @@ ratio does not depend on the unit system, unlike an absolute volume.</p>
 ## Functions
 
 <dl>
+<dt><a href="#bubbleFamily">bubbleFamily(r, m)</a> ⇒ <code>Array.&lt;!Array.&lt;{kind: string, value: function(), derivative: function()}&gt;&gt;</code></dt>
+<dd><p>The orthonormal bubbles p_r^k(tau) for every form degree on the reference
+simplex of dimension m: for each k, the list of
+<code>{kind, value(s), derivative(s)}</code> with the pulled-back components of the
+bubble and of its derivative.</p>
+</dd>
+<dt><a href="#agCarriers">agCarriers()</a></dt>
+<dd><p>Sub-simplices of the reference tetrahedron that carry dofs of degree k.</p>
+</dd>
+<dt><a href="#agBasis">agBasis(r, k)</a> ⇒ <code>Object</code></dt>
+<dd><p>The dual basis of the degrees of freedom on the reference tetrahedron.</p>
+</dd>
+<dt><a href="#reverseCuthillMcKee">reverseCuthillMcKee(neighbours)</a> ⇒ <code>Int32Array</code></dt>
+<dd><p>Reverse Cuthill-McKee ordering of a graph.</p>
+</dd>
+<dt><a href="#penalized">penalized()</a></dt>
+<dd><p>K = M + gamma C^T C as column-to-value maps.</p>
+</dd>
+<dt><a href="#minimumNormSolveBanded">minimumNormSolveBanded(constraints, mass, r)</a> ⇒ <code>Object</code></dt>
+<dd><p>Minimum-norm solution of C x = r in the metric M (minimizes x^T M x) by the
+method of multipliers: each pass solves the banded system
+(M + gamma C^T C) x = C^T (gamma r - lambda) and updates the multipliers
+with the true constraint residual. The penalty gamma grows until the
+residual falls steadily; the answer is the exact minimizer, not a penalty
+approximation, because the multipliers absorb the penalty error.</p>
+</dd>
+<dt><a href="#solveSemidefiniteBanded">solveSemidefiniteBanded(matrix, b)</a> ⇒ <code>Object</code></dt>
+<dd><p>Solves K x = b for a symmetric positive semidefinite sparse K and a
+right-hand side in its range, to near machine precision: K + shift I is
+factored by
+banded Cholesky and the solution is refined on the true residual. The
+iterates stay in the range of K, so the null space is never entered, and the
+answer is the minimum-norm solution.</p>
+</dd>
 <dt><a href="#refineTetrahedra">refineTetrahedra(vertices, tetrahedra, marked)</a> ⇒ <code>Object</code></dt>
 <dd></dd>
 <dt><a href="#boundarySurface">boundarySurface(vertices, cells)</a> ⇒ <code>Object</code></dt>
@@ -223,6 +281,15 @@ RT_e(x) = (|e| / (2 A)) (x - p_o) projected into the face tangent plane.</p>
 </dd>
 <dt><a href="#triangulateNormal">triangulateNormal(mesh, fIdx, tv)</a> ⇒ <code>Array.&lt;number&gt;</code></dt>
 <dd><p>Outward unit normal of a boundary face, from its stored geometry.</p>
+</dd>
+<dt><a href="#facets">facets()</a></dt>
+<dd><p>All subsets of {0..m} of size m: the facets of the reference simplex.</p>
+</dd>
+<dt><a href="#dimensionOf">dimensionOf()</a></dt>
+<dd><p>dim P_r^- Lambda^k on a simplex of dimension m.</p>
+</dd>
+<dt><a href="#bubbleDimensionOf">bubbleDimensionOf()</a></dt>
+<dd><p>dim of the bubble space (Arnold, Falk, Winther, eq. 4.13).</p>
 </dd>
 <dt><a href="#solveConstrained">solveConstrained(K, b, k)</a> ⇒ <code>Array.&lt;number&gt;</code></dt>
 <dd><p>Solves the bordered system for a kernel Lagrange-multiplier constraint:
@@ -369,6 +436,13 @@ measurements.</p>
 <dt><a href="#runConvergenceStudy">runConvergenceStudy(meshes, config)</a> ⇒ <code>Array.&lt;{h: number, l2Err: number, h1Err: (number|undefined), rateL2: (number|undefined), rateH1: (number|undefined)}&gt;</code></dt>
 <dd><p>Runs a convergence study on a sequence of meshes.</p>
 </dd>
+<dt><a href="#sampled">sampled(forms, points)</a> ⇒ <code>Object</code></dt>
+<dd><p>Values of forms at quadrature points as one flat array per form, so that
+inner products are plain loops.</p>
+</dd>
+<dt><a href="#inner">inner()</a></dt>
+<dd><p>sum over points of weight * &lt;a, b&gt;, for flat sampled values.</p>
+</dd>
 <dt><a href="#accumulate">accumulate()</a></dt>
 <dd><p>Adds a value to a sparse row held as a column-to-value map.</p>
 </dd>
@@ -377,6 +451,19 @@ measurements.</p>
 </dd>
 <dt><a href="#projectInParallel">projectInParallel(job)</a> ⇒ <code>Promise.&lt;!Array.&lt;(number|!Array.&lt;number&gt;)&gt;&gt;</code></dt>
 <dd></dd>
+<dt><a href="#affine">affine()</a></dt>
+<dd><p>An affine polynomial c + g . x.</p>
+</dd>
+<dt><a href="#substitute">substitute()</a></dt>
+<dd><p>The reference polynomial with its variables replaced by affine maps.</p>
+</dd>
+<dt><a href="#physicalForm">physicalForm(form, l, frame)</a> ⇒ <code>Polynomial</code> | <code>Array.&lt;Polynomial&gt;</code></dt>
+<dd><p>The Piola image of a reference form of degree l on a cell.</p>
+</dd>
+<dt><a href="#translateForm">translateForm()</a></dt>
+<dd><p>The form shifted by T: the form whose value at x is the value of the given
+form at x - T.</p>
+</dd>
 <dt><a href="#homogeneous">homogeneous()</a></dt>
 <dd><p>All exponent triples of total degree exactly d, in a fixed order.</p>
 </dd>
@@ -454,6 +541,10 @@ local vertex numbers (increasing) and the test degree.</p>
 <dt><a href="#moments">moments(k, carrier, points, u, order)</a> ⇒ <code>Array.&lt;number&gt;</code></dt>
 <dd><p>Evaluates the degrees of freedom of one carrier on a field.</p>
 </dd>
+<dt><a href="#pullback">pullback(k, corners)</a> ⇒ <code>function</code></dt>
+<dd><p>The pull-back of a k-form to the simplex with the given corners, in the
+parameters s of x = c0 + sum s_i (c_i - c0).</p>
+</dd>
 <dt><a href="#evaluate">evaluate()</a></dt>
 <dd><p>Evaluates a polynomial form (scalar or triple) at x.</p>
 </dd>
@@ -478,6 +569,23 @@ the volume, so the integral of f is the sum of weight * f(x).</p>
 <dt><a href="#integrateTetrahedron">integrateTetrahedron(points, f, order)</a> ⇒ <code>number</code></dt>
 <dd><p>Integral of a scalar function over a tetrahedron.</p>
 </dd>
+<dt><a href="#nullspace">nullspace(rows, n, [tolerance])</a> ⇒ <code>Array.&lt;!Array.&lt;number&gt;&gt;</code></dt>
+<dd><p>A basis of {x : rows x = 0}, by Gauss-Jordan elimination with full
+pivoting.</p>
+</dd>
+<dt><a href="#independentSubset">independentSubset()</a></dt>
+<dd><p>Indices of a maximal linearly independent subset of the vectors, taken in
+order.</p>
+</dd>
+<dt><a href="#orthonormalize">orthonormalize()</a></dt>
+<dd><p>Orthonormalizes vectors in the inner product given by the symmetric
+matrix <code>gram</code> (modified Gram-Schmidt); vectors that are dependent in this
+inner product are dropped.</p>
+</dd>
+<dt><a href="#symmetricEigenvalues">symmetricEigenvalues(matrix)</a> ⇒ <code>Array.&lt;number&gt;</code></dt>
+<dd><p>Eigenvalues of a symmetric matrix by cyclic Jacobi rotations, in
+increasing order.</p>
+</dd>
 <dt><a href="#conjugateGradient">conjugateGradient(apply, b, options)</a> ⇒ <code>Object</code></dt>
 <dd><p>Preconditioned conjugate gradients for a symmetric positive semidefinite
 operator with a consistent right-hand side. Started from zero, the
@@ -493,6 +601,19 @@ on ill-conditioned systems.</p>
 <dd><p>Minimum-norm solution of C x = r in the metric M (minimizes x^T M x), for a
 sparse C and sparse symmetric positive definite M: x = M^-1 C^T lambda with
 (C M^-1 C^T) lambda = r, solved by nested conjugate gradients.</p>
+</dd>
+<dt><a href="#forwardSubstitute">forwardSubstitute()</a></dt>
+<dd><p>Solves L y = b in place for a lower-triangular row-major L.</p>
+</dd>
+<dt><a href="#backwardSubstitute">backwardSubstitute()</a></dt>
+<dd><p>Solves L^T x = y in place for a lower-triangular row-major L.</p>
+</dd>
+<dt><a href="#minimumNormSolveDense">minimumNormSolveDense(constraints, mass, r)</a> ⇒ <code>Object</code></dt>
+<dd><p>Minimum-norm solution of C x = r in the metric M by dense linear algebra:
+M is factored by Cholesky, and the smaller of the two equivalent systems
+(the m x m Gram system C M^-1 C^T, or the n x n normal equations of
+C L^-T, with M = L L^T) is solved by a pivoted semidefinite Cholesky.
+Exact up to rounding, at O(n^3) cost; use for a few thousand unknowns.</p>
 </dd>
 <dt><a href="#sub">sub()</a></dt>
 <dd><p>Oriented triangle surface in three dimensions with Whitney forms of degree
@@ -692,6 +813,36 @@ Pre-registered in validation/tolerances.json
 Relative residual bound for the iterative solvers (see requireSmall).
 
 **Kind**: global constant  
+<a name="evaluateForm"></a>
+
+## evaluateForm
+The value of a scalar or triple polynomial form at x.
+
+**Kind**: global constant  
+<a name="addForms"></a>
+
+## addForms
+The sum of two forms of the same kind.
+
+**Kind**: global constant  
+<a name="scaleForm"></a>
+
+## scaleForm
+A form scaled by a number.
+
+**Kind**: global constant  
+<a name="timesPolynomial"></a>
+
+## timesPolynomial
+A form multiplied by a scalar polynomial.
+
+**Kind**: global constant  
+<a name="parsed"></a>
+
+## parsed
+Exponent triples of keys already seen.
+
+**Kind**: global constant  
 <a name="components"></a>
 
 ## components
@@ -714,6 +865,14 @@ so it can describe both the mesh and its Alfeld split.
 
 ## FACE\_EDGE\_SIGNS
 Incidence of the edges [ab, bc, ac] in the boundary of the face [a, b, c].
+
+**Kind**: global constant  
+<a name="TOLERANCE"></a>
+
+## TOLERANCE
+Dense helpers for the small, well-scaled matrices of the reference-element
+constructions: null spaces, independent subsets and Gram-Schmidt in a given
+inner product.
 
 **Kind**: global constant  
 <a name="BREAKDOWN_RATIO"></a>
@@ -758,6 +917,95 @@ its sign (the orientation) is reliable, and the barycentric gradients
 ratio does not depend on the unit system, unlike an absolute volume.
 
 **Kind**: global constant  
+<a name="bubbleFamily"></a>
+
+## bubbleFamily(r, m) ⇒ <code>Array.&lt;!Array.&lt;{kind: string, value: function(), derivative: function()}&gt;&gt;</code>
+The orthonormal bubbles p_r^k(tau) for every form degree on the reference
+simplex of dimension m: for each k, the list of
+`{kind, value(s), derivative(s)}` with the pulled-back components of the
+bubble and of its derivative.
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| r | <code>number</code> | 
+| m | <code>number</code> | 
+
+<a name="agCarriers"></a>
+
+## agCarriers()
+Sub-simplices of the reference tetrahedron that carry dofs of degree k.
+
+**Kind**: global function  
+<a name="agBasis"></a>
+
+## agBasis(r, k) ⇒ <code>Object</code>
+The dual basis of the degrees of freedom on the reference tetrahedron.
+
+**Kind**: global function  
+**Returns**: <code>Object</code> - The dual basis
+    (3D polynomial forms), each dof's carrier, kind and index in the
+    bubble family, and the first dof number of each carrier.  
+
+| Param | Type |
+| --- | --- |
+| r | <code>number</code> | 
+| k | <code>number</code> | 
+
+<a name="reverseCuthillMcKee"></a>
+
+## reverseCuthillMcKee(neighbours) ⇒ <code>Int32Array</code>
+Reverse Cuthill-McKee ordering of a graph.
+
+**Kind**: global function  
+**Returns**: <code>Int32Array</code> - order[newIndex] = oldIndex.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| neighbours | <code>Array.&lt;!Set.&lt;number&gt;&gt;</code> | Adjacency, without self loops. |
+
+<a name="penalized"></a>
+
+## penalized()
+K = M + gamma C^T C as column-to-value maps.
+
+**Kind**: global function  
+<a name="minimumNormSolveBanded"></a>
+
+## minimumNormSolveBanded(constraints, mass, r) ⇒ <code>Object</code>
+Minimum-norm solution of C x = r in the metric M (minimizes x^T M x) by the
+method of multipliers: each pass solves the banded system
+(M + gamma C^T C) x = C^T (gamma r - lambda) and updates the multipliers
+with the true constraint residual. The penalty gamma grows until the
+residual falls steadily; the answer is the exact minimizer, not a penalty
+approximation, because the multipliers absorb the penalty error.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| constraints | [<code>SparseMatrix</code>](#SparseMatrix) | C, m x n. |
+| mass | [<code>SparseMatrix</code>](#SparseMatrix) | M, n x n, symmetric positive definite. |
+| r | <code>Float64Array</code> | Length m, in the range of C. |
+
+<a name="solveSemidefiniteBanded"></a>
+
+## solveSemidefiniteBanded(matrix, b) ⇒ <code>Object</code>
+Solves K x = b for a symmetric positive semidefinite sparse K and a
+right-hand side in its range, to near machine precision: K + shift I is
+factored by
+banded Cholesky and the solution is refined on the true residual. The
+iterates stay in the range of K, so the null space is never entered, and the
+answer is the minimum-norm solution.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| matrix | [<code>SparseMatrix</code>](#SparseMatrix) | K, n x n. |
+| b | <code>Float64Array</code> | Length n, in the range of K. |
+
 <a name="refineTetrahedra"></a>
 
 ## refineTetrahedra(vertices, tetrahedra, marked) ⇒ <code>Object</code>
@@ -924,6 +1172,24 @@ Outward unit normal of a boundary face, from its stored geometry.
 | fIdx | <code>number</code> | 
 | tv | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> | 
 
+<a name="facets"></a>
+
+## facets()
+All subsets of {0..m} of size m: the facets of the reference simplex.
+
+**Kind**: global function  
+<a name="dimensionOf"></a>
+
+## dimensionOf()
+dim P_r^- Lambda^k on a simplex of dimension m.
+
+**Kind**: global function  
+<a name="bubbleDimensionOf"></a>
+
+## bubbleDimensionOf()
+dim of the bubble space (Arnold, Falk, Winther, eq. 4.13).
+
+**Kind**: global function  
 <a name="solveConstrained"></a>
 
 ## solveConstrained(K, b, k) ⇒ <code>Array.&lt;number&gt;</code>
@@ -1364,6 +1630,25 @@ Runs a convergence study on a sequence of meshes.
 | [config.p] | <code>number</code> | Polynomial degree (default 0). |
 | [config.quadratureOrder] | <code>number</code> | Quadrature order (default 3). |
 
+<a name="sampled"></a>
+
+## sampled(forms, points) ⇒ <code>Object</code>
+Values of forms at quadrature points as one flat array per form, so that
+inner products are plain loops.
+
+**Kind**: global function  
+
+| Param | Type |
+| --- | --- |
+| forms | <code>Array.&lt;function(Array.&lt;number&gt;): (number\|Array.&lt;number&gt;)&gt;</code> | 
+| points | <code>Array.&lt;{x: !Array.&lt;number&gt;}&gt;</code> | 
+
+<a name="inner"></a>
+
+## inner()
+sum over points of weight * <a, b>, for flat sampled values.
+
+**Kind**: global function  
 <a name="accumulate"></a>
 
 ## accumulate()
@@ -1394,6 +1679,38 @@ Sorts three numbers in ascending order.
 | --- | --- | --- |
 | job | <code>Object</code> | `field` is the `file:` URL (or an absolute path) of the module that     default-exports the field; `workers` defaults to the number of cores. |
 
+<a name="affine"></a>
+
+## affine()
+An affine polynomial c + g . x.
+
+**Kind**: global function  
+<a name="substitute"></a>
+
+## substitute()
+The reference polynomial with its variables replaced by affine maps.
+
+**Kind**: global function  
+<a name="physicalForm"></a>
+
+## physicalForm(form, l, frame) ⇒ <code>Polynomial</code> \| <code>Array.&lt;Polynomial&gt;</code>
+The Piola image of a reference form of degree l on a cell.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| form | <code>Polynomial</code> \| <code>Array.&lt;Polynomial&gt;</code> | Reference form (scalar for l = 0,     3, triple for l = 1, 2). |
+| l | <code>number</code> | Form degree. |
+| frame | <code>Object</code> | The cell's map x = p0 + J s. |
+
+<a name="translateForm"></a>
+
+## translateForm()
+The form shifted by T: the form whose value at x is the value of the given
+form at x - T.
+
+**Kind**: global function  
 <a name="homogeneous"></a>
 
 ## homogeneous()
@@ -1614,6 +1931,20 @@ Evaluates the degrees of freedom of one carrier on a field.
 | u | <code>function</code> | The field, with a scalar     value for k = 0, 3 and a triple for k = 1, 2. |
 | order | <code>number</code> | Gauss points per direction. |
 
+<a name="pullback"></a>
+
+## pullback(k, corners) ⇒ <code>function</code>
+The pull-back of a k-form to the simplex with the given corners, in the
+parameters s of x = c0 + sum s_i (c_i - c0).
+
+**Kind**: global function  
+**Returns**: <code>function</code> - Maps (s, field) to the components of the pulled-back form.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| k | <code>number</code> | Form degree. |
+| corners | <code>Array.&lt;Array.&lt;number&gt;&gt;</code> | The m + 1 corners (m <= 3). |
+
 <a name="evaluate"></a>
 
 ## evaluate()
@@ -1682,6 +2013,48 @@ Integral of a scalar function over a tetrahedron.
 | f | <code>function</code> | 
 | order | <code>number</code> | 
 
+<a name="nullspace"></a>
+
+## nullspace(rows, n, [tolerance]) ⇒ <code>Array.&lt;!Array.&lt;number&gt;&gt;</code>
+A basis of {x : rows x = 0}, by Gauss-Jordan elimination with full
+pivoting.
+
+**Kind**: global function  
+**Returns**: <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> - Basis vectors of length n.  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| rows | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> | Constraints, each of length n. |
+| n | <code>number</code> | Number of unknowns. |
+| [tolerance] | <code>number</code> | Entries below this are treated as zero. |
+
+<a name="independentSubset"></a>
+
+## independentSubset()
+Indices of a maximal linearly independent subset of the vectors, taken in
+order.
+
+**Kind**: global function  
+<a name="orthonormalize"></a>
+
+## orthonormalize()
+Orthonormalizes vectors in the inner product given by the symmetric
+matrix `gram` (modified Gram-Schmidt); vectors that are dependent in this
+inner product are dropped.
+
+**Kind**: global function  
+<a name="symmetricEigenvalues"></a>
+
+## symmetricEigenvalues(matrix) ⇒ <code>Array.&lt;number&gt;</code>
+Eigenvalues of a symmetric matrix by cyclic Jacobi rotations, in
+increasing order.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| matrix | <code>Array.&lt;!Array.&lt;number&gt;&gt;</code> | Symmetric n x n matrix. |
+
 <a name="conjugateGradient"></a>
 
 ## conjugateGradient(apply, b, options) ⇒ <code>Object</code>
@@ -1726,6 +2099,35 @@ sparse C and sparse symmetric positive definite M: x = M^-1 C^T lambda with
 | --- | --- | --- |
 | constraints | [<code>SparseMatrix</code>](#SparseMatrix) | C, m x n. |
 | mass | [<code>SparseMatrix</code>](#SparseMatrix) | M, n x n. |
+| r | <code>Float64Array</code> | Length m, in the range of C. |
+
+<a name="forwardSubstitute"></a>
+
+## forwardSubstitute()
+Solves L y = b in place for a lower-triangular row-major L.
+
+**Kind**: global function  
+<a name="backwardSubstitute"></a>
+
+## backwardSubstitute()
+Solves L^T x = y in place for a lower-triangular row-major L.
+
+**Kind**: global function  
+<a name="minimumNormSolveDense"></a>
+
+## minimumNormSolveDense(constraints, mass, r) ⇒ <code>Object</code>
+Minimum-norm solution of C x = r in the metric M by dense linear algebra:
+M is factored by Cholesky, and the smaller of the two equivalent systems
+(the m x m Gram system C M^-1 C^T, or the n x n normal equations of
+C L^-T, with M = L L^T) is solved by a pivoted semidefinite Cholesky.
+Exact up to rounding, at O(n^3) cost; use for a few thousand unknowns.
+
+**Kind**: global function  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| constraints | [<code>SparseMatrix</code>](#SparseMatrix) | C, m x n. |
+| mass | [<code>SparseMatrix</code>](#SparseMatrix) | M, n x n, symmetric positive definite. |
 | r | <code>Float64Array</code> | Length m, in the range of C. |
 
 <a name="sub"></a>

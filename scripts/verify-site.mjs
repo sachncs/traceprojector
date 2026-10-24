@@ -9,6 +9,7 @@
 import {execFileSync} from 'node:child_process';
 import {
   cpSync,
+  existsSync,
   mkdtempSync,
   readFileSync,
   writeFileSync,
@@ -18,6 +19,36 @@ import {tmpdir} from 'node:os';
 import {join, resolve} from 'node:path';
 
 const root = resolve(import.meta.dirname, '..');
+
+/**
+ * The deployed site lives under /traceprojector/, so a page that references
+ * /_next/... or /favicon.svg at the host root is broken there (this happened
+ * once). Every page must be present, standalone, and carry the base path.
+ */
+function checkOutput(out) {
+  const pages = [
+    'index.html',
+    'playground/index.html',
+    'docs/index.html',
+    ...['getting-started', 'operators', 'errors', 'api', 'performance',
+      'limits', 'math', 'architecture', 'validation', 'developer-guide',
+      'changelog'].map((slug) => `docs/${slug}/index.html`),
+  ];
+  for (const page of pages) {
+    const path = join(out, page);
+    if (!existsSync(path)) throw new Error(`missing page ${page}`);
+    const html = readFileSync(path, 'utf8');
+    const unprefixed = html.match(/(?:href|src)="\/(?!traceprojector\/)[^"]*"/g);
+    if (unprefixed) {
+      throw new Error(`${page} has links outside the base path: ${
+        unprefixed.slice(0, 3).join(' ')}`);
+    }
+    if (page.startsWith('docs/') && /github\.com\/[^"]*\/blob\/master\/docs\//.test(html)) {
+      throw new Error(`${page} links to a Markdown file on GitHub`);
+    }
+  }
+  console.log(`site output: ${pages.length} pages, all under the base path`);
+}
 const work = mkdtempSync(join(tmpdir(), 'traceprojector-site-'));
 const run = (command, args, cwd) =>
   execFileSync(command, args, {
@@ -36,6 +67,10 @@ try {
     recursive: true,
     filter: (source) => !/[\\/](node_modules|\.next|out)([\\/]|$)/.test(source),
   });
+  // The documentation pages are rendered from the repository's Markdown, which
+  // the site reads from the directory above it.
+  cpSync(join(root, 'docs'), join(work, 'docs'), {recursive: true});
+  cpSync(join(root, 'CHANGELOG.md'), join(work, 'CHANGELOG.md'));
   const manifestPath = join(copy, 'package.json');
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
   manifest.dependencies.traceprojector = `file:${tarball}`;
@@ -43,6 +78,7 @@ try {
 
   run('npm', ['install', '--no-audit', '--no-fund'], copy);
   run('npx', ['next', 'build'], copy);
+  checkOutput(join(copy, 'out'));
 
   const check = `
 import {buildProjector, projectAtPoint} from './lib/trace-bridge.ts';

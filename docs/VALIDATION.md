@@ -51,17 +51,17 @@ Status is the strongest evidence added here beyond the paper's own proof:
 | W1 | `α_r(w) = (tr w, ζ_r)_Γ`, zero on zero-trace (P1 Lemma 4.2) | identity (`p = 0`) | `tests/boundary_projector.test.js`: `α_r(W_s) = δ_rs` for every boundary vertex, edge and face `r` and every Whitney form `W_s` of the mesh, with the extensions `Y` on the Worsey–Farin split |
 | W2 | `(ζ_{0,r}, tr B_{0,r'})_Γ = δ` (P1 Lemma 5.x) | identity | existing `tests/bweight.test.js`, `tests/weight.test.js`, `verifyBoundaryWeights` (not independently re-derived here) |
 | W3 | `−sdiv ζ¹ = Σκζ⁰`, `srot ζ² = Σκζ¹` | identity (`p = 0`) | `tests/boundary_weights.test.js`: divergence of the edge weight matches the vertex weights; the face weight's rotation matches the edge weights to 1e-9 |
-| W4 | partition of unity `Σ tr³(div B²)ζ² ≡ 1` | unchecked | not tested separately |
-| W5 | higher order: Kronecker, `ζ₀ ⊥ tr B₊`, mean-zero `div B₊²` | unchecked | `p ≥ 1` for `l = 1, 2` is not implemented |
-| W6 | support and `h^β` norm bounds on `B`, `Y` | unchecked | — |
-| W7 | discrete Poincaré on boundary extended stars | unchecked | — |
+| W4 | partition of unity `Σ_f ζ_f ≡ 1` on `Γ` | identity (`p = 0`) | `tests/boundary_weights.test.js` ("partition of unity of the face weights"): the sum of the face weights is one at every surface point sampled |
+| W5 | higher order: Kronecker, `ζ₀ ⊥ tr B₊`, mean-zero `div B₊²` | unchecked | the boundary weights of the trace-preserving operator at `p > 0` are not implemented |
+| W6 | support and `h^β` norm bounds on `B`, `Y` | empirical (`p = 0`) | `tests/boundary_claims.test.js`: surface weight norms scale as `h⁻¹, h⁰, h¹` for vertices, edges, faces, and the extensions in the bulk as `h^(l−1/2)`, fitted slopes within 0.15 of the exponent |
+| W7 | discrete Poincaré on boundary extended stars | empirical (`p = 0`) | `tests/boundary_claims.test.js`: the constant is 0.456 on vertex stars and 0.336 on edge stars, flat under refinement and under in-plane jitter of 0.25 `h` |
 | M1 | `Π̊` is a projection onto the zero-trace space, commuting, L²-bounded (P2 Thm 6.1) | identity + empirical | `stable-operator.test.js` (identities at 2e-15), `stability.test.js` (bounded) |
 | M2 | the input meets the star assumption (P2 §2) | empirical | **fails on cube meshes at radius one near edges**; the implementation grows the star until it holds; `LocalWeights.radius` raises `ValidateError` if no radius up to 4 works |
-| G1 | `p > 0` for `l ∈ {1, 2}` | narrowed | canonical interpolation of any degree for all `l` (`CanonicalProjector`: projection, commuting, conforming, convergence orders); locally bounded commuting projection of any degree for all `l` without trace preservation (`HigherOrderProjector`, Arnold–Guzmán). The paper's trace-preserving operator at `p > 0` (the `P_+` part) is not implemented |
+| G1 | `p > 0` for `l ∈ {1, 2}` | narrowed | canonical interpolation of any degree for all `l` (`CanonicalProjector`: projection, commuting, conforming, convergence orders); locally bounded commuting projection of any degree for all `l` (`HigherOrderProjector`, Arnold–Guzmán), also with a zero-trace condition. The paper's trace-preserving operator at `p > 0` (the `P_+` part) is not implemented |
+| AG1 | `π_r = P_r + Q_r(I − P_r)` is a projection, commutes with `d`, and is `L²`-stable (Arnold–Guzmán Thm 3.1) | identity + empirical (`p = 1`) | `validation/slow/`: reproduces its space for `l = 1, 2, 3` and a quadratic (5e-15); `d π^l u = π^{l+1} d u` to 1e-13 (0→1), 3e-13 (1→2), 1e-12 (2→3); stability ratio on narrow bumps 1.007 (`l = 0`), 0.995 (`l = 1`), 0.997 (`l = 2`), growth 1.000 per halving of `h` (limit 1.10) |
+| AG2 | Assumption 2.4: the constant of the right inverse of `d` on each extended star is uniformly bounded | empirical | `validation/assumption-2-4.test.js` (see below) |
 
-**Counts (22 claims, for the trace-preserving construction of Paper 1):** identity 11 (K1, K2, K3 narrowed, D1, D2, D3, D5, W1, W2, W3,
-M1; W1 and W3 at `p = 0`), empirical 3 (K4, D4, M2), unchecked 7 (K5, K6, K7, W4, W5, W6,
-W7), narrowed 1 (G1). K4, D4 and M2 each have a documented negative or partial result.
+**Counts (24 claims):** identity 14 (K1, K2, K3 narrowed, D1, D2, D3, D5, W1, W2, W3, W4, M1, AG1; W1, W3 and W4 at `p = 0`, AG1 at `p = 1`), empirical 6 (K4, D4, W6, W7, M2, AG2), unchecked 4 (K5, K6, K7, W5), narrowed 1 (G1). K4, D4 and M2 each have a documented negative or partial result.
 
 ### Commuting (K3): the paper's statement is wider than its proof
 
@@ -123,6 +123,57 @@ or face flux and imposes no trace condition. It does not preserve traces.
   trace-preserving operator fails (see "Commuting" above).
 - A field in `H¹` that is unbounded at a *boundary* vertex gives finite
   output for all four degrees; the canonical operator returns `Infinity`.
+
+## Assumption 2.4 of Arnold and Guzmán (AG2)
+
+The bound of the higher-order operator rests on a constant: the norm of a right
+inverse of `d` on the extended star of an entity, for fields with vanishing
+trace on the whole boundary of the star (a Bogovskii-type operator). The paper
+proves it only for stars that are star-shaped with respect to a ball and, for
+the stars that occur, **assumes** it is uniformly bounded. This repository
+measures its discrete form, in the finite element spaces the projector uses.
+
+For each sampled entity `σ` and form degree `k = 0, 1, 2`, the constant is
+`C = sup |ρ| / (diam(es σ) |dρ|)` over discrete `ρ` with zero trace. It equals
+`1 / (diam · √μ)` for the smallest nonzero eigenvalue `μ` of
+`BᵀM_to B x = μ M_from x` (`HighOrderWeights.extensionConstant`), computed
+exactly. The rule (`validation/tolerances.json`, `extensionConstant`) was
+fixed before the final run: `C ≤ 0.6` everywhere, and growth at most 1.10 per
+halving of `h`.
+
+| Mesh (6 × 6 × 6 cube unless noted) | `C₀` | `C₁` | `C₂` |
+|---|---:|---:|---:|
+| regular | 0.075 | 0.129 | 0.299 |
+| interior vertices jittered by 0.2 `h` | 0.076 | 0.133 | 0.275 |
+| jittered by 0.3 `h` | 0.075 | 0.140 | 0.274 |
+| stretched 10 : 1 | 0.021 | 0.199 | 0.355 |
+| stretched 100 : 1 | 0.002 | 0.204 | 0.362 |
+| `p = 1`, jitter 0.2 `h`, 4 × 4 × 4 | 0.090 | 0.136 | 0.265 |
+| jitter 0.25 `h`, `n = 4` → `n = 8` | 0.076 → 0.080 | 0.132 → 0.136 | 0.274 → 0.277 |
+
+What this shows: over twelve entities of each degree on each of these meshes
+the constant is far below the limit, does not depend on `h` (growth 1.03 per
+halving at worst), and is insensitive to jitter and to anisotropy up to 100:1.
+What it does not show: that no family of meshes has stars with a large constant.
+The check is finite; a degenerating family would be seen only if it is among
+the samples. The assumption remains an assumption of the paper, now with
+numerical support on these families.
+
+## Commuting for general fields: diagnosis
+
+The README of an earlier version of this repository reported that
+`TracePreservingProjector` commutes only for fields whose boundary trace is a
+lowest-order trace, and fails by about 5·10⁻³ for others. The cause is not in
+the implementation. Splitting the residual on the 4 × 4 × 4 cube by distance from
+the boundary shows the failure on edges that touch the boundary (4.7·10⁻³) and
+on edges one layer in (1.7·10⁻³), while the boundary part `Π_∂` commutes to
+6·10⁻¹⁵ everywhere, as its definition requires. The failure is in the zero-trace
+part, applied to `u − Π_∂u`: `Π̊` commutes with `d` only for functions with
+zero trace, and `u − Π_∂u` has zero boundary *degrees of freedom* but not zero
+trace unless `tr u` is a lowest-order trace. This is exactly the step of the
+paper's proof that needs the narrower class. `BoundedCommutingProjector`, with
+no boundary part, commutes for every input to roundoff, which separates the
+two. The claim is therefore narrowed to `V_tr,p` (K3 above), as it was.
 
 ## Results so far (cube mesh `n = 4`, 384 cells)
 
@@ -316,41 +367,24 @@ case.
 
 ## Known gaps
 
-- The paper's weight-based boundary operator `Π_∂` is implemented at lowest
-  order as `BoundaryProjector` (vertex, edge and face weights on the boundary
-  surface; extensions `Y` on the Worsey–Farin split), and `TracePreservingProjector`
-  assembles `Π = mΠ (I - Π_∂) + Π_∂`. Measured on the 4 × 4 × 4 cube: it
-  reproduces the lowest-order spaces in all four degrees, and commutes with
-  `d` to 4e-14 (0-forms) and 2e-14 (1-forms) for fields with a lowest-order
-  trace. For fields outside that class (a smooth non-polynomial field, or a
-  polynomial field with a non-Whitney trace) the commuting residual is about
-  5e-3 (0-forms) and 2e-3 (1-forms) at this size, because `mΠ` is only defined
-  on zero-trace fields; its dependence on `h` has not been measured. Its local `L²` stability at the boundary is measured
-  (K4 above: ratio 1.01 and 1.006, growth 0.995 per halving of `h` for bumps at
-  a face centre, 0- and 1-forms, `n = 4` to `8`); 2- and 3-forms and corner and
-  edge bumps are not measured, and neither is behaviour at higher order. The operator needs a mesh fine enough that the
-  extended stars are balls (it raises `ValidateError` on a 3 × 3 × 3 cube) and takes minutes on
-  4 × 4 × 4 cells.
-- Higher order (`p > 0`) for the stable operators is implemented as
-  `HigherOrderProjector` (Arnold–Guzmán 2021: `π_r = P_r + Q_r (I - P_r)`),
-  without trace preservation and without boundary conditions. Built from
-  `AgSpace` (their degrees of freedom, eq. 5.8; unisolvence and
-  `d E g = E d g` checked for r ≤ 3), `HighOrderWeights` (weights of any
-  degree on Alfeld-split stars) and the correction `Q_r`. Measured at `p = 1`
-  (degree-2 spaces): the weights satisfy `<Z(σ), u> = φ_σ(u)` on the whole
-  space to 1e-13 for all four form degrees and equal `LocalWeights` at
-  `p = 0`; `Q` is the identity on `M_r` and commutes with `d` on smooth
-  non-polynomial fields in degrees 0 to 2; the assembled operator reproduces a
-  quadratic to 5e-15, satisfies `grad π⁰ u = π¹ grad u` to 2.5e-13 on the
-  4 × 4 × 4 cube, and its `L²` ratio on narrow bumps is 1.007 at `n = 4, 5, 6`
-  (growth 1.000 per halving, limit 1.10). Not covered: the end-to-end
-  pipeline was run for `π⁰` and `π¹` only (degrees 2 and 3 follow from the
-  tested components but were not run as one pipeline), no bump stability for
-  `l ≥ 1`, and Assumption 2.4 of the paper (uniformly bounded Bogovskii
-  constants) is an assumption of their theorem, not something checked here.
-  Cost: the weights are dense local solves (about 10 s per edge, 30 s per
-  face and 60 s per cell at `p = 1`), so the operator is for
-  validation-scale meshes.
-- Performance: local problems use iterative solvers on stars of up to several
-  rings; the whole `n = 4` mesh takes minutes. Limits are not yet measured.
-- Stability constants (growth under refinement) are not yet measured.
+- **Trace preservation above the lowest order.** `TracePreservingProjector`
+  is the paper's operator at `p = 0` only. The higher-order boundary operator
+  `Π_∂ = P_0 + P_+(I − P_0)`, with its surface weights (W5), is not
+  implemented; `HigherOrderProjector` is bounded and commuting for any degree
+  and can impose a zero trace, but does not preserve nonzero traces.
+- **`TracePreservingProjector` at the boundary.** Local `L²` stability is
+  measured for 0- and 1-forms with a bump at a face centre (ratio 1.01 and
+  1.006, growth 0.995 per halving of `h`, `n = 4` to `8`). 2- and 3-forms and
+  corner and edge bumps are not measured.
+- **Zero-trace higher-order projection next to the boundary.** The weights
+  satisfy `⟨Z(σ), u⟩ = φ_σ(u)` for zero-trace `u` at `p = 1` near the boundary
+  for `l = 0, 1, 2, 3` (`validation/slow/zero-trace-weights.test.js`); the
+  assembled operator is tested for reproduction at `l = 0` only
+  (`validation/slow/zero-trace-projector.test.js`).
+- **Mesh requirements.** The bounded operators need meshes fine enough that the
+  extended stars are topological balls (3 × 3 × 3 cubes are too coarse; they
+  raise `ValidateError`). Near a cube's edges the stars grow beyond one ring.
+- **Assumption 2.4** is measured on the families above, not proved.
+- **Cost.** The local solves are sparse and banded, not dense, and a
+  higher-order weight takes seconds, not minutes. The operators still do a local
+  solve per mesh entity; see [Performance](performance.md).

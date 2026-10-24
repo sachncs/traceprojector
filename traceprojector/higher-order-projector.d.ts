@@ -6,9 +6,10 @@
  * correction onto the forms without lowest-order degrees of freedom. It is a
  * projection, commutes with the exterior derivative for every L2 input with
  * an L2 derivative, and each coefficient depends only on the input near its
- * entity. Validation-scale: the weights are dense local solves (minutes on a
- * 4 x 4 x 4 cube at p = 1), and the mesh must be fine enough that its
- * extended stars are balls.
+ * entity. The weights are sparse local solves (a few seconds each at p = 1),
+ * and the mesh must be fine enough that its extended stars are balls. It does
+ * not preserve nonzero boundary traces; with `boundaryConditions` it maps into
+ * the forms with zero trace.
  */
 export class HigherOrderProjector {
   /**
@@ -17,11 +18,17 @@ export class HigherOrderProjector {
    * @param options.degree - Polynomial degree p (default 0; the spaces have
    *   degree p + 1).
    * @param options.quadratureOrder - Gauss points per direction.
+   * @param options.boundaryConditions - Zero trace on the boundary of the
+   *   domain: the weights of boundary entities vanish (default false).
    */
   constructor(
     vertices: number[][],
     tetrahedra: number[][],
-    options?: { degree?: number; quadratureOrder?: number },
+    options?: {
+      degree?: number;
+      quadratureOrder?: number;
+      boundaryConditions?: boolean;
+    },
   );
 
   /**

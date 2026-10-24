@@ -87,7 +87,7 @@ export function Hero() {
             </span>
             <Sparkles className="h-3 w-3 text-primary" />
             <span>
-              v0.1.0 — Section 6.3 boundary-weight cascade is live
+              Bounded, commuting, trace-preserving — and validated
             </span>
             <ArrowRight className="h-3 w-3 opacity-50 transition-transform group-hover:translate-x-0.5" />
           </motion.div>
@@ -123,8 +123,9 @@ export function Hero() {
           >
             A small, dependency-free JavaScript reference implementation of{" "}
             <span className="font-mono text-foreground">Π⁰, Π¹, Π², Π³</span>{" "}
-            for the 3D de Rham complex. Commuting, exact on the
-            boundary. Built for engineers who care about the math.
+            for the 3D de Rham complex. Commuting projections that keep the boundary
+            values, or stay stable for rough data. Built for engineers who care
+            about the math, with the evidence next to the claims.
           </motion.p>
 
           <motion.div
@@ -164,10 +165,10 @@ export function Hero() {
               className="h-11 rounded-full px-5 text-muted-foreground"
               asChild
             >
-              <a href="#install">
+              <Link href="/docs/getting-started/">
                 <Terminal className="mr-1.5 h-4 w-4" />
-                npm install traceprojector
-              </a>
+                Get started
+              </Link>
             </Button>
           </motion.div>
 

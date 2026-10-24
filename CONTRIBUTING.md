@@ -1,113 +1,52 @@
 # Contributing to traceprojector
 
-Thank you for your interest in contributing! This document outlines the workflow for proposing changes, reporting issues, and submitting pull requests.
+Thank you for helping. The full walkthrough, from a fresh clone to a merged
+change, is the [developer guide](docs/developer-guide.md); this page is the
+summary.
 
-## Getting Started
-
-1. Fork the repository on GitHub.
-2. Clone your fork locally.
-3. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-## Development Workflow
-
-We use a zero-config toolchain:
+## The loop
 
 ```bash
-npm run lint        # Check code style with StandardJS
-npm run lint:fix    # Auto-fix style issues
-npm test            # Run the full Mocha test suite
-npm run test:coverage  # Run tests with c8 coverage report
-npm run build       # Build Rollup bundles (ESM, CJS, UMD)
-npm run docs        # Regenerate API documentation
+git checkout -b fix/my-change     # branch from master
+npm install
+npm test                          # the fast suite, about 15 seconds
+# ... change code, add a test that fails without the change ...
+npm run lint:fix
+npm run verify                    # what the CI test jobs run
 ```
 
-All contributions must pass lint and tests before being merged.
+Then open a pull request against `master`. It needs the four required checks
+(`test (24)`, `test (26)`, `validate`, `web`) to pass.
 
-## Commit Conventions
+## What a good change looks like
 
-We follow [Conventional Commits](https://www.conventionalcommits.org/) for commit messages. This enables automatic changelog generation and semantic versioning.
+- **A test that fails without it.** For a bug fix, name the test after the bug.
+- **Evidence, not assertion.** If you change what an operator guarantees, show
+  the number: the validation tests (`npm run validate`) have tolerances that
+  were fixed before the first run and are not loosened to turn a test green. If
+  one must change, say why in [docs/VALIDATION.md](docs/VALIDATION.md).
+- **Documentation that matches.** The site renders `docs/`, so a user-visible
+  change updates the page that describes it. The examples in the getting-started
+  guide and the README are executed by the validation suite.
+- **Google JavaScript style**, enforced by ESLint (`npm run lint`): two-space
+  indentation, 80 columns, semicolons, single quotes.
 
-### Format
+## Commit messages
 
-```
-<type>(<scope>): <description>
+[Conventional Commits](https://www.conventionalcommits.org/):
+`<type>(<scope>): <description>`, with type one of `feat`, `fix`, `docs`,
+`style`, `refactor`, `perf`, `test`, `chore`, `ci`, `revert`, and the module
+name as the scope (`fix(local-weights): ...`).
 
-[optional body]
+## Reporting bugs and asking for features
 
-[optional footer(s)]
-```
-
-### Types
-
-- **feat**: A new feature
-- **fix**: A bug fix
-- **docs**: Documentation only changes
-- **style**: Code style changes (formatting, missing semi-colons, etc.)
-- **refactor**: Code change that neither fixes a bug nor adds a feature
-- **perf**: Performance improvement
-- **test**: Adding missing tests or correcting existing tests
-- **chore**: Build process or auxiliary tool changes
-- **ci**: CI configuration changes
-- **revert**: Revert a previous commit
-
-### Examples
-
-```bash
-git commit -m "feat(mesh): add anisotropic mesh support"
-git commit -m "fix(point-locator): correct barycentric coordinate calculation"
-git commit -m "docs: update API reference for Projector class"
-git commit -m "test(traceprojector): add edge cases for degenerate tetrahedra"
-git commit -m "chore: update rollup to v4"
-```
-
-### Scope
-
-Optional scope should reference the module affected:
-
-- `mesh` - Mesh topology and geometry
-- `whitney` - Whitney forms and barycentric utilities
-- `traceprojector` - Main projection class
-- `point-locator` - AABB tree point location
-- `quadrature` - Gaussian quadrature
-- `math-utils` - Linear algebra primitives
-- `local-solver` - Boundary-patch assembly
-- `higher-order` - Higher-order projection
-- `boundary-weight` - Boundary weight computation
-- `mesh-refinement` - Alfeld and Worsey-Farin splits
-- `errors` - Custom error classes
-- `projectors` - H1, Hcurl, Hdiv, L2 projectors
-- `docs` - Documentation
-
-## Pull Request Process
-
-1. Create a feature branch from `master`:
-   ```bash
-   git checkout -b feat/my-change
-   ```
-2. Make your changes, add tests, and ensure `npm test` passes.
-3. Run `npm run lint:fix` to auto-format.
-4. Commit with a conventional commit message describing the change.
-5. Push to your fork and open a Pull Request against `master`.
-6. Fill out the PR template with a summary and test plan.
-7. Ensure CI passes and request a review from a maintainer.
-
-## Reporting Bugs
-
-Please use the [Bug Report issue template](.github/ISSUE_TEMPLATE/bug_report.md) and include:
-- A minimal reproduction case or code snippet
-- Expected vs actual behavior
-- Node.js version and OS
-
-## Requesting Features
-
-Please use the [Feature Request issue template](.github/ISSUE_TEMPLATE/feature_request.md) and describe:
-- The problem or limitation you are facing
-- The proposed solution or API change
-- Any alternatives you have considered
+Use the issue templates in `.github/ISSUE_TEMPLATE/`. For a bug, include a
+minimal reproduction, the expected and the actual behaviour, and your Node.js
+version and operating system. For a question about the mathematics or the
+papers, use [Discussions](https://github.com/sachncs/traceprojector/discussions).
+Security problems go through [SECURITY.md](SECURITY.md), not a public issue.
 
 ## Code of Conduct
 
-This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+This project follows the [Contributor Covenant](CODE_OF_CONDUCT.md). By taking
+part you agree to uphold it.

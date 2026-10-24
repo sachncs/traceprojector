@@ -1,98 +1,111 @@
 # Architecture
 
-## Module Map
+The library has one job, projecting a field onto finite element forms, done in
+two different ways. Understanding which way a class uses explains what it
+guarantees and what it costs.
 
 ```
-traceprojector/
-  traceprojector.js     — Main API: Projector class
-  mesh.js               — Tetrahedral mesh topology, geometry, adjacency
-  whitney.js            — Barycentric coords, Whitney edge/face basis
-  quadrature.js         — Gaussian quadrature on triangles, tetrahedra, lines
-  utils.js              — Linear algebra: LU, inverse, vector ops
-  solver.js             — Boundary-patch stiffness + constrained solve
-  locator.js            — AABB tree for O(log N) point location
-  bubble.js             — Bubble basis assembly, L2 monomial projection
-  bweight.js            — Alfeld/Worsey-Farin split + weight solves
-  weight.js             — Boundary weight computer (vertex/edge/face cascade)
-  refinement.js         — Alfeld and Worsey-Farin mesh splits
-  surface.js            — Surface differential operators + barycenter tent
-  boundaryVerify.js     — Section 6.3 weight cross-check
-  harness.js            — Convergence experiment utilities (dev/test)
-  generator.js          — Structured cube mesh generator (dev/test)
-  errors.js             — Custom error classes
-  projectors/
-    h1.js               — Pi^0 (vertex-based)
-    hcurl.js            — Pi^1 (edge-based)
-    hdiv.js             — Pi^2 (face-based)
-    l2.js               — Pi^3 (cell-based)
+                    the input field u(x)
+                           |
+          +----------------+----------------+
+          |                                 |
+   canonical path                      bounded path
+   (point values, edge                 (a weight function per mesh entity,
+   integrals, face fluxes)              found by a local solve on its star)
+          |                                 |
+   Projector                          ZeroTraceProjector
+   CanonicalProjector                 BoundedCommutingProjector
+                                      StableProjector
+                                      TracePreservingProjector
+                                      HigherOrderProjector
 ```
 
-## Data Flow
+## The canonical path
 
-```
-User Input
-    |
-    v
-Mesh (vertices, tets)
-    |
-    +---> Whitney (barycentric coords, basis)
-    |         |
-    |         v
-    |     Projector (API facade)
-    |         |
-    |         +---> Weight
-    |         |         +---> Refinement (Alfeld / Worsey-Farin)
-    |         |         +---> Solver
-    |         |         +---> Bweight (per-star weight solve)
-    |         |         +---> BoundaryVerify (cross-check)
-    |         |
-    |         +---> Locator (AABB tree)
-    |         |
-    |         +---> Bubble (bubble / L2 enrichment)
-    |         |
-    |         +---> Projectors (H1, Hcurl, Hdiv, L2)
-    |                   +---> utils (LU, vector ops)
-    |                   +---> Surface (grad_Gamma, curl_Gamma, div_Gamma)
-    |
-    +---> Quadrature (integrals)
-```
+A coefficient of the projection is a functional of the input at one entity: the
+value at a vertex, the integral along an edge, the flux through a face, the
+integral over a cell. This is cheap and exact for smooth input, but a
+functional like a point value is not bounded in `L²`, so the operator is not
+stable.
 
-## Projector Hierarchy
+| Module | Role |
+|---|---|
+| `traceprojector.js` | the `Projector` facade (`project`, `projectAtPoint`, `sampler`, `refine`) and all public exports |
+| `mesh.js` | topology and geometry of the tetrahedral mesh, with validation |
+| `whitney.js` | barycentric coordinates and the lowest-order Whitney basis |
+| `projectors/` | `h1.js`, `hcurl.js`, `hdiv.js`, `l2.js`: the projection for each form degree |
+| `weight.js`, `bweight.js`, `solver.js`, `surface.js`, `refinement.js` | the paper's boundary weights on Alfeld and Worsey–Farin splits, used to cross-check the degrees of freedom |
+| `boundaryVerify.js` | the cross-check itself |
+| `bubble.js` | scalar higher-order enrichment |
+| `canonical-projector.js` | canonical interpolation of any degree, built on `reference-element.js`, `polynomial-forms.js` and `simplicial-complex.js` |
+| `locator.js` | point location by a bounding-box tree |
+| `bisection.js` | longest-edge refinement that keeps the mesh conforming |
+| `parallel.js`, `parallel-worker.js` | projection of one field at many points on worker threads |
 
-Each projector implements the same interface:
+## The bounded path
 
-```
-project(u, point, tIdx, boundaryFaceSet) -> value
-```
+A coefficient is an integral of the input against a *weight function* that is
+supported on the star of mesh entities around the entity. The weight is found
+by solving a small local problem: the minimum-norm field whose exterior
+derivative equals the weights of the entities on the boundary of the entity,
+plus a local potential problem. Integrals against such weights are bounded in
+`L²`, which is where the stability comes from; the weights are built so that
+the commuting property holds by construction.
 
-- `H1`: Vertex DoFs + boundary-weighted vertex values.
-- `Hcurl`: Edge DoFs + line-integral constraints on boundary edges.
-- `Hdiv`: Face DoFs + normal-flux constraints on boundary faces.
-- `L2`: Cell average via quadrature.
+| Module | Role |
+|---|---|
+| `local-weights.js` | the weights of Ern, Guzmán, Potu and Vohralík at the lowest order, on Alfeld splits |
+| `zero-trace-projector.js`, `bounded-commuting-projector.js` | the zero-trace operator and the one with no boundary condition |
+| `stable-projector.js` | canonical boundary part plus the zero-trace interior part |
+| `worsey-farin.js`, `boundary-surface.js`, `surface-complex.js` | the surface splits and the surface complex of the boundary |
+| `boundary-weights.js`, `boundary-projector.js` | the paper's boundary weights and the boundary operator `Π_∂` (lowest order) |
+| `trace-preserving-projector.js` | `Π = mΠ(I − Π_∂) + Π_∂` |
+| `bubble-forms.js`, `ag-element.js`, `ag-space.js` | the Arnold–Guzmán finite element spaces of any degree |
+| `physical-forms.js`, `polynomial-forms.js` | exact polynomial differential forms on physical cells |
+| `high-order-weights.js`, `higher-order-projector.js` | the Arnold–Guzmán weights and projection for any degree, with optional zero-trace condition |
 
-## Key Design Decisions
+## Shared numerical code
 
-1. **Pure ES modules**: No CommonJS in source; bundlers handle multi-format output.
-2. **Zero external runtime dependencies**: All linear algebra is native JavaScript.
-3. **Immutable mesh inputs (with one caveat)**: `Mesh` validates and freezes topology at construction.  The caveat is `Refinement`: `computeAlfeldSplit()` and `computeWorseyFarinSplit()` append barycenter vertices to `mesh.vertices` and bump `mesh.vertexCount`.  Treat the mesh as immutable up to the point `Refinement` runs; treat the post-refinement mesh as the "live" mesh from that point onward.  The Refinement class stores its own copy of the split data so a second `Mesh` instance is not required.
-4. **Lazy caching**: `Whitney` caches per-tet barycentric gradients; `Projector` caches boundary weights on demand.
-5. **Warning instead of throwing for local failures**: `Weight` and `Bubble` warn on singular matrices so that a single bad element does not crash the entire mesh projection.  `Weight` accepts an optional `{ strict: true }` flag for callers who prefer fail-fast behaviour; in that mode the same per-simplex failure path re-throws a `ProjectError` instead of emitting a warning.
-6. **Section 6.3 boundary-weight cascade**: `Weight` wires three duality functionals (vertex, edge, face) on the surface trace spaces via `bweight`; `boundaryVerify` cross-checks each functional against the canonical DoF.
-7. **Surface differential operators**: `Surface` exposes `grad_Γ`, `curl_Γ`, `div_Γ`, `rot_Γ` plus the barycenter tent `μ` required by the Section 6.3 cascade.
+| Module | Role |
+|---|---|
+| `quadrature.js` | Gauss quadrature on intervals, triangles and tetrahedra, with exactness tests |
+| `utils.js`, `small-linear-algebra.js` | `3×3` solves, vector operations, small symmetric eigenvalues |
+| `dense-linear-algebra.js` | Cholesky, semidefinite and minimum-norm solves (dense) |
+| `sparse-linear-algebra.js` | compressed sparse rows and conjugate gradients |
+| `banded-linear-algebra.js` | reverse Cuthill–McKee ordering, skyline Cholesky and the multiplier-method minimum-norm solve that the higher-order weights use |
+| `errors.js` | `ValidateError`, `ProjectError`, `SingularError` |
 
-## Key Encoding Limits
+## Design decisions
 
-The integer keys used for canonical edge and face lookup are computed
-as plain arithmetic on `Number` integers and are bounded by
-`Number.MAX_SAFE_INTEGER` (`2^53 − 1`):
+1. **Pure ES modules, no runtime dependencies.** All the linear algebra is in
+   the repository; bundlers produce the ESM, CJS and UMD files in `dist/`.
+2. **Typed errors for bad input.** Anything a caller can get wrong (a flipped
+   tetrahedron, a `NaN` coordinate, a point outside the mesh, a field that
+   returns `Infinity`) raises one of three error classes. The fuzz tests assert
+   that no malformed mesh produces a wrong answer, a hang or a crash.
+3. **Lazy, cached weights.** The bounded operators compute the weight of an
+   entity the first time a coefficient needs it and cache it. Projecting at a
+   few points therefore solves only the problems near them. The higher-order
+   weights are also cached by a signature of the star's geometry, so stars that
+   are translates of each other share one solve.
+4. **Local solves are minimum-norm.** The weight of an entity is the field of
+   least `L²` norm with the required exterior derivative. Minimality makes it
+   unique, which is what lets cached weights be reused.
+5. **Warnings for local failures, errors for global ones.** The canonical
+   boundary weights warn (and can be made strict) so that one bad element does
+   not hide the rest.
+6. **Determinism.** The same input gives the same bits, which the determinism
+   test checks.
 
-| Method | Limit on the pre-refinement vertex count | Notes |
-|--------|------------------------------------------|-------|
-| `Mesh.computeEdgeKey(a, b, vertexCount)` | `vertexCount < 2^26` (~67 M) | The product `a * vertexCount` must stay within `Number.MAX_SAFE_INTEGER`. |
-| `Mesh#faceKey(f)` | `originalVertexCount < 2^17` (~131 k) | The quadratic term `s0 * vc^2` must stay within `Number.MAX_SAFE_INTEGER`. |
+## Encoding limits
 
-Both limits apply to the **pre-refinement** vertex count — refinement
-appends barycenter vertices that are not part of the canonical key
-space.  At the time of v0.1.0 the library has not been benchmarked on
-meshes larger than 100 k vertices; users planning to go larger should
-expect to encounter the face-key ceiling first.
+Edge and face lookups use integer keys computed in `Number` arithmetic, so
+they are exact up to `2^53 − 1`:
+
+| Key | Limit on the vertex count of the input mesh |
+|---|---|
+| edge key | `vertexCount < 2^26` (about 67 million) |
+| face key | `originalVertexCount < 2^17` (about 131 thousand) |
+
+The face key is reached first; meshes beyond about 131,000 vertices are
+outside what the canonical path has been run on.

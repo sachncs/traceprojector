@@ -21,6 +21,9 @@ const parse = (k) => {
   return out;
 };
 
+const POWER_STRIDE = 64;
+const powers = new Float64Array(3 * POWER_STRIDE);
+
 export class Polynomial {
   /** @param {Map<string, number>=} terms Exponent triple to coefficient. */
   constructor(terms = new Map()) {
@@ -80,11 +83,25 @@ export class Polynomial {
       const flat = [];
       for (const [e, c] of this.terms) flat.push(...parse(e), c);
       this.compiled = Float64Array.from(flat);
+      this.top = 0;
+      for (let i = 0; i < flat.length; i += 4) {
+        this.top = Math.max(this.top, flat[i], flat[i + 1], flat[i + 2]);
+      }
     }
     const t = this.compiled;
+    // Powers of each coordinate once, instead of three exponentiations per
+    // term.
+    const top = this.top;
+    powers[0] = powers[POWER_STRIDE] = powers[2 * POWER_STRIDE] = 1;
+    for (let k = 1; k <= top; k++) {
+      powers[k] = powers[k - 1] * x[0];
+      powers[POWER_STRIDE + k] = powers[POWER_STRIDE + k - 1] * x[1];
+      powers[2 * POWER_STRIDE + k] = powers[2 * POWER_STRIDE + k - 1] * x[2];
+    }
     let sum = 0;
     for (let i = 0; i < t.length; i += 4) {
-      sum += t[i + 3] * x[0] ** t[i] * x[1] ** t[i + 1] * x[2] ** t[i + 2];
+      sum += t[i + 3] * powers[t[i]] * powers[POWER_STRIDE + t[i + 1]] *
+        powers[2 * POWER_STRIDE + t[i + 2]];
     }
     return sum;
   }

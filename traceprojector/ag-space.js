@@ -9,7 +9,7 @@
 
 import {ValidateError} from './errors.js';
 import {CanonicalProjector} from './canonical-projector.js';
-import {agBasis, bubbleFamily} from './ag-element.js';
+import {agBasis, bubbleSamples} from './ag-element.js';
 import {differential} from './polynomial-forms.js';
 import {pullback, referenceRule} from './reference-element.js';
 
@@ -84,24 +84,28 @@ export class AgSpace extends CanonicalProjector {
           out[base] = u(corners[0], c);
           return;
         }
-        const family = bubbleFamily(this.r, m)[l];
         const rule = referenceRule(m, this.r + 3);
         const pull = pullback(l, corners);
         const pullD = l + 1 <= m ? pullback(l + 1, corners) : null;
+        // The field is sampled once per point of the rule, not once per
+        // bubble.
+        let pulled = null;
+        let pulledD = null;
         for (let t = 0; t < perEntity[m]; t++) {
-          const item = family[entries[first[ci] + t].index];
+          const entry = entries[first[ci] + t];
+          const samples = bubbleSamples(this.r, l, m, entry.index, rule);
           let sum = 0;
-          for (const {s, weight} of rule) {
-            if (item.kind === 'coclosed') {
-              if (!du) {
-                throw new ValidateError('the derivative of u is needed');
-              }
-              sum += weight * dot(
-                  pullD(s, (x) => du(x, c)), item.derivative(s));
-            } else {
-              sum += weight * dot(
-                  pull(s, (x) => u(x, c)), item.value(s));
-            }
+          if (samples.derivatives) {
+            if (!du) throw new ValidateError('the derivative of u is needed');
+            pulledD ??= rule.map(({s}) => pullD(s, (x) => du(x, c)));
+            rule.forEach(({weight}, q) => {
+              sum += weight * dot(pulledD[q], samples.derivatives[q]);
+            });
+          } else {
+            pulled ??= rule.map(({s}) => pull(s, (x) => u(x, c)));
+            rule.forEach(({weight}, q) => {
+              sum += weight * dot(pulled[q], samples.values[q]);
+            });
           }
           out[base + t] = sum;
         }

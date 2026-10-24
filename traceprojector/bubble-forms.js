@@ -154,19 +154,37 @@ export class SimplexForms {
     return combine(this.space, full, this.k);
   }
 
+  /**
+   * The form and the derivative of a coefficient vector, built once per
+   * vector: they are evaluated at every quadrature point of every cell.
+   * @private
+   */
+  forms(coefficients) {
+    if (!this.formCache) this.formCache = new WeakMap();
+    let entry = this.formCache.get(coefficients);
+    if (!entry) {
+      const full = new Array(this.space.length).fill(0);
+      this.independent.forEach((a, i) => (full[a] = coefficients[i]));
+      entry = {
+        form: combine(this.space, full, this.k),
+        derivative: this.pullD ?
+          combine(this.derivatives.map((d) => d), full, this.k + 1) : null,
+      };
+      this.formCache.set(coefficients, entry);
+    }
+    return entry;
+  }
+
   /** Pulled-back components of a coefficient vector at the parameters s. */
   valueAt(coefficients, s) {
-    const form = this.form(coefficients);
+    const {form} = this.forms(coefficients);
     return this.pull(s, (x) => evaluate(form, x));
   }
 
   /** Pulled-back components of the derivative of a coefficient vector. */
   derivativeAt(coefficients, s) {
     if (!this.pullD) return [];
-    const full = new Array(this.space.length).fill(0);
-    this.independent.forEach((a, i) => (full[a] = coefficients[i]));
-    const derivative = combine(
-        this.derivatives.map((d) => d), full, this.k + 1);
+    const {derivative} = this.forms(coefficients);
     return this.pullD(s, (x) => evaluate(derivative, x));
   }
 }

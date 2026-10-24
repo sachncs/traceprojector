@@ -69,8 +69,9 @@ export class HighOrderWeights {
     // Gauss points per direction that integrate the products of two basis
     // functions of degree r with a bubble exactly.
     this.exactOrder = this.r + 3;
+    this.boundaryConditions = options.boundaryConditions === true;
     this.topology = new LocalWeights(vertices, tetrahedra, {
-      boundaryConditions: false,
+      boundaryConditions: this.boundaryConditions,
     });
     this.base = this.topology.base;
     this.weights = [new Map(), new Map(), new Map(), new Map()];
@@ -84,6 +85,11 @@ export class HighOrderWeights {
   weight(l, index) {
     const cache = this.weights[l];
     if (cache.has(index)) return cache.get(index);
+    if (this.topology.isBoundary(l, index)) {
+      const zero = {l, index, cells: [], pieces: []};
+      cache.set(index, zero);
+      return zero;
+    }
     const signature = this.signature(l, index);
     const known = this.classes.get(signature.key);
     let z;
@@ -120,7 +126,12 @@ export class HighOrderWeights {
     }
     const relative = (v) => point(v).map((q, i) => (q - origin[i]).toFixed(9))
         .join(',');
-    const cellKey = (c) => this.base.cells[c].map(relative).sort().join('|');
+    const boundaryOf = (c) => (this.boundaryConditions ?
+      this.base.cellFaces[c].filter((f) => this.base.isBoundaryFace(f))
+          .map((f) => this.base.faces[f].map(relative).sort().join('|'))
+          .sort().join('/') : '');
+    const cellKey = (c) => this.base.cells[c].map(relative).sort().join('|') +
+      '!' + boundaryOf(c);
     const own = l === 0 ? [index] : l === 1 ? this.base.edges[index] :
       l === 2 ? this.base.faces[index] : this.base.cells[index];
     const key = `${l}#${own.map(relative).join('|')}#${
@@ -176,10 +187,12 @@ export class HighOrderWeights {
   patch(cells, split) {
     const ids = new Map();
     const coordinates = [];
+    const baseVertex = [];
     const vertex = (key, point) => {
       if (!ids.has(key)) {
         ids.set(key, coordinates.length);
         coordinates.push(point);
+        baseVertex.push(key[0] === 'v' ? Number(key.slice(1)) : -1);
       }
       return ids.get(key);
     };
@@ -200,7 +213,7 @@ export class HighOrderWeights {
         tets.push([...ring.filter((_, i) => i !== k), centre]);
       }
     }
-    return {vertices: coordinates, tetrahedra: tets, centroids};
+    return {vertices: coordinates, tetrahedra: tets, centroids, baseVertex};
   }
 
   /** Physical forms of every local basis function of a cell, cached. */
@@ -237,13 +250,13 @@ export class HighOrderWeights {
       eta = split.tetrahedra.map(
           () => Polynomial.monomial([0, 0, 0], 1 / volume));
     } else {
-      eta = this.solveEta(l, sigma, cells, splitSpace);
+      eta = this.solveEta(l, sigma, cells, splitSpace, split, star);
     }
     // 2. The potential part.
     let extra = null;
     if (l <= 2) {
       extra = this.solvePotential(
-          l, sigma, cells, splitSpace, subCell, eta, split.centroids);
+          l, sigma, cells, splitSpace, subCell, eta, split.centroids, star);
     }
     const pieces = split.tetrahedra.map((_, s) => {
       const {cell} = subCell(s);
@@ -277,7 +290,7 @@ export class HighOrderWeights {
   }
 
   /** @private Minimum-norm eta for l = 1, 2, 3. */
-  solveEta(l, sigma, cells, space) {
+  solveEta(l, sigma, cells, space, patch, star) {
     const from = 3 - l;
     const to = 4 - l;
     const target = this.targetForms(l, sigma, cells, space);
@@ -303,7 +316,7 @@ export class HighOrderWeights {
         });
       });
     });
-    const onBoundary = this.boundaryDofs(space, from);
+    const onBoundary = this.closureDofs(space, from, patch, star.gammaCFaces);
     const free = [];
     const position = new Int32Array(fromSize).fill(-1);
     for (let a = 0; a < fromSize; a++) {
@@ -344,22 +357,31 @@ export class HighOrderWeights {
     });
   }
 
-  /** Whether each dof of degree l lies on the boundary of the patch. */
-  boundaryDofs(space, l) {
+  /**
+   * Whether each dof of degree l of a patch space lies on the closure of
+   * some base faces.
+   * @param {!AgSpace} space The patch space.
+   * @param {number} l
+   * @param {{baseVertex: number[]}} patch The patch, for the base numbers.
+   * @param {number[]} faces Base faces.
+   * @return {boolean[]}
+   */
+  closureDofs(space, l, patch, faces) {
+    const sets = this.topology.closure(faces);
+    const bv = patch.baseVertex;
     const complex = space.complex;
-    const faces = new Set();
-    const edges = new Set();
-    const vertices = new Set();
-    complex.faces.forEach((face, f) => {
-      if (complex.faceCells[f].length !== 1) return;
-      faces.add(f);
-      complex.faceEdges[f].forEach((e) => edges.add(e));
-      face.forEach((v) => vertices.add(v));
-    });
-    const sets = [vertices, edges, faces];
-    const info = space.dofInfo(l);
-    return info.map(({dimension, entity}) => dimension < 3 &&
-      sets[dimension].has(entity));
+    const baseEdge = (e) => {
+      const [a, b] = complex.edges[e].map((v) => bv[v]);
+      return a < 0 || b < 0 ? -1 : this.base.edgeIndex(a, b);
+    };
+    const baseFace = (f) => {
+      const ids = complex.faces[f].map((v) => bv[v]);
+      return ids.some((q) => q < 0) ? -1 : this.base.faceIndex(...ids);
+    };
+    return space.dofInfo(l).map(({dimension, entity}) => (
+      dimension === 0 ? sets.vertices.has(bv[entity]) :
+      dimension === 1 ? sets.edges.has(baseEdge(entity)) :
+      dimension === 2 ? sets.faces.has(baseFace(entity)) : false));
   }
 
   /** Sparse L2 mass matrix of the free dofs of degree l. */
@@ -388,11 +410,13 @@ export class HighOrderWeights {
   }
 
   /** @private The potential and the resulting P on every sub-cell. */
-  solvePotential(l, sigma, cells, splitSpace, subCell, eta, centroids) {
+  solvePotential(
+      l, sigma, cells, splitSpace, subCell, eta, centroids, star) {
     const base = this.patch(cells, false);
     const space = new AgSpace(base.vertices, base.tetrahedra,
         {degree: this.degree});
     const size = space.size(l);
+    const excluded = this.closureDofs(space, l, base, star.gammaFaces);
     const mu = this.bubbleWeights(splitSpace, centroids);
     const rule = (s) => tetrahedronRule(
         splitSpace.complex.geometry(s).points, this.exactOrder);
@@ -440,12 +464,26 @@ export class HighOrderWeights {
       rhs[a] += this.lowestDegreeOfFreedom(l, sigma, ownerCell,
           (x) => evaluateForm(forms[i], x));
     });
-    const dense = new Float64Array(size * size);
-    entries.forEach(
-        (row, a) => row.forEach((v, b) => (dense[a * size + b] = v)));
-    const direct = solveSemidefinite(dense, size, rhs, 1e-13);
-    const solved = {x: direct.x, relativeResidual: direct.residual /
-      Math.max(Math.hypot(...rhs), 1e-300)};
+    // Unknowns: the dofs not excluded by the boundary condition.
+    const free = [];
+    const at = new Int32Array(size).fill(-1);
+    for (let a = 0; a < size; a++) {
+      if (!excluded[a]) {
+        at[a] = free.length;
+        free.push(a);
+      }
+    }
+    const n = free.length;
+    const dense = new Float64Array(n * n);
+    entries.forEach((row, a) => row.forEach((v, b) => {
+      if (at[a] >= 0 && at[b] >= 0) dense[at[a] * n + at[b]] = v;
+    }));
+    const reduced = Float64Array.from(free, (a) => rhs[a]);
+    const direct = solveSemidefinite(dense, n, reduced, 1e-13);
+    const x = new Float64Array(size);
+    free.forEach((a, i) => (x[a] = direct.x[i]));
+    const solved = {x, relativeResidual: direct.residual /
+      Math.max(Math.hypot(...reduced), 1e-300)};
     if (!(solved.relativeResidual < 1e-8)) {
       throw new SingularError(
           `the potential problem of entity ${sigma} of degree ${l} is ` +

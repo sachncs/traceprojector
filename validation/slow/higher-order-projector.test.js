@@ -49,28 +49,75 @@ describe('Arnold-Guzman projection of degree p + 1', function() {
       }
     });
 
-    it('commutes with the gradient for a smooth non-polynomial field', () => {
-      const u = (x) => Math.sin(x[0] + 0.5 * x[1]) * Math.cos(x[2]) +
-        x[0] * x[1];
-      const gradient = (x) => [
-        Math.cos(x[0] + 0.5 * x[1]) * Math.cos(x[2]) + x[1],
-        0.5 * Math.cos(x[0] + 0.5 * x[1]) * Math.cos(x[2]) + x[0],
-        -Math.sin(x[0] + 0.5 * x[1]) * Math.sin(x[2]),
-      ];
-      const scalar = projector.local(u, 0);
-      const vector = projector.local(gradient, 1);
-      for (const w of [[0.4, 0.2, 0.2, 0.2], [0.1, 0.3, 0.4, 0.2]]) {
-        const x = at(w);
-        const left = scalar.derivative(x, c0);
-        const right = vector.value(x, c0);
-        const diff = Math.hypot(...left.map((q, i) => q - right[i]));
-        console.log(`      d pi0 u = pi1 du: difference ${diff.toExponential(2)}`);
-        expect(diff).to.be.below(1e-9);
-      }
-    });
+    const smooth = {
+      0: {
+        u: (x) => Math.sin(x[0] + 0.5 * x[1]) * Math.cos(x[2]) + x[0] * x[1],
+        du: (x) => [
+          Math.cos(x[0] + 0.5 * x[1]) * Math.cos(x[2]) + x[1],
+          0.5 * Math.cos(x[0] + 0.5 * x[1]) * Math.cos(x[2]) + x[0],
+          -Math.sin(x[0] + 0.5 * x[1]) * Math.sin(x[2]),
+        ],
+      },
+      1: {
+        u: (x) => [Math.sin(x[1]) + x[2] * x[2], Math.cos(x[2]) * x[0],
+          Math.exp(0.3 * x[0]) + x[1]],
+        du: (x) => [
+          1 + Math.sin(x[2]) * x[0],
+          2 * x[2] - 0.3 * Math.exp(0.3 * x[0]),
+          Math.cos(x[2]) - Math.cos(x[1]),
+        ],
+      },
+      2: {
+        u: (x) => [Math.sin(x[1]) * x[2] + x[0], x[0] * x[0] + x[2] * x[1],
+          Math.cos(x[0]) + x[1] * x[2]],
+        du: (x) => 1 + x[2] + x[1] - Math.sin(x[0]) * 0 + x[1] * 0 +
+          x[2] * 0 + 0 * x[0],
+      },
+    };
+    // d/dx of the first, second and third components of the l = 2 field.
+    smooth[2].du = (x) => 1 + x[2] + x[1];
+
+    for (const l of [0, 1, 2]) {
+      it(`commutes with d between degrees ${l} and ${l + 1}`, () => {
+        const {u, du} = smooth[l];
+        const lower = projector.local(u, l);
+        const upper = projector.local(du, l + 1);
+        for (const w of [[0.4, 0.2, 0.2, 0.2], [0.1, 0.3, 0.4, 0.2]]) {
+          const x = at(w);
+          const left = [].concat(lower.derivative(x, c0));
+          const right = [].concat(upper.value(x, c0));
+          const diff = Math.hypot(...left.map((q, i) => q - right[i]));
+          console.log(`      l = ${l}: difference ${diff.toExponential(2)}`);
+          expect(diff).to.be.below(1e-9);
+        }
+      });
+    }
+
+    for (const l of [1, 2, 3]) {
+      it(`reproduces a field of its space for l = ${l}`, () => {
+        const space = projector.space;
+        const c = Float64Array.from({length: space.size(l)},
+            (_, i) => Math.sin(1.3 * i + 0.2));
+        // The function is the global field with these coefficients.
+        const u = (x) => {
+          for (let cell = 0; cell < projector.base.cells.length; cell++) {
+            const b = projector.base.barycentric(cell, x);
+            if (b.every((q) => q > -1e-12)) {
+              return space.evaluate(c, x, cell, l);
+            }
+          }
+          throw new Error('outside');
+        };
+        const pi = projector.local(u, l);
+        const x = at([0.25, 0.25, 0.25, 0.25]);
+        const want = [].concat(u(x));
+        const got = [].concat(pi.value(x, c0));
+        got.forEach((q, i) => expect(q).to.be.closeTo(want[i], 1e-8));
+      });
+    }
   });
 
-  describe('stability of pi_0 at p = 1 on narrow bumps', () => {
+  describe('stability of pi at p = 1 on narrow bumps', () => {
     const bumpNormSquared = (delta) => {
       let sum = 0;
       const N = 20000;
@@ -81,7 +128,9 @@ describe('Arnold-Guzman projection of degree p + 1', function() {
       return 4 * Math.PI * sum * delta ** 3;
     };
 
-    function worstRatio(n) {
+    const direction = [1, -2, 0.5];
+
+    function worstRatio(n, l) {
       const cube = generateUnitCubeMesh(n);
       const projector = new HigherOrderProjector(
           cube.getVertices(), cube.getTetrahedra(), {degree: 1});
@@ -107,34 +156,43 @@ describe('Arnold-Guzman projection of degree p + 1', function() {
             delta;
           return s < 1 ? (1 - s * s) ** 2 : 0;
         };
-        const pi = projector.local(bump, 0);
+        const field = l === 0 || l === 3 ? bump :
+          (x) => direction.map((q) => q * bump(x));
+        const pi = projector.local(field, l);
         let sum = 0;
         for (const c of cells) {
           for (const {x, weight} of tetrahedronRule(
               complex.geometry(c).points, 6)) {
-            sum += weight * pi.value(x, c) ** 2;
+            const value = pi.value(x, c);
+            sum += weight * (typeof value === 'number' ? value ** 2 :
+              value.reduce((acc, q) => acc + q * q, 0));
           }
         }
-        worst = Math.max(worst, Math.sqrt(sum / bumpNormSquared(delta)));
+        const scale = l === 0 || l === 3 ? 1 :
+          direction.reduce((acc, q) => acc + q * q, 0);
+        worst = Math.max(
+            worst, Math.sqrt(sum / (scale * bumpNormSquared(delta))));
       }
       return worst;
     }
 
-    it('the constant does not grow as h shrinks', () => {
-      const sizes = [4, 5, 6];
-      const logH = [];
-      const logC = [];
-      for (const n of sizes) {
-        const ratio = worstRatio(n);
-        console.log(`      n = ${n}: largest ratio ${ratio.toFixed(3)}`);
-        logH.push(Math.log(1 / n));
-        logC.push(Math.log(ratio));
-        expect(ratio).to.be.below(50);
-      }
-      const growth = 2 ** -fitSlope(logH, logC).slope;
-      console.log(`      growth per halving of h = ${growth.toFixed(3)}`);
-      expect(growth).to.be.at.most(
-          tolerances.stableOperator.stability.maxGrowthPerHalvingOfH);
-    });
+    for (const l of [0, 1, 2, 3]) {
+      it(`degree ${l}: the constant does not grow as h shrinks`, () => {
+        const sizes = [4, 5, 6];
+        const logH = [];
+        const logC = [];
+        for (const n of sizes) {
+          const ratio = worstRatio(n, l);
+          console.log(`      n = ${n}: largest ratio ${ratio.toFixed(3)}`);
+          logH.push(Math.log(1 / n));
+          logC.push(Math.log(ratio));
+          expect(ratio).to.be.below(50);
+        }
+        const growth = 2 ** -fitSlope(logH, logC).slope;
+        console.log(`      growth per halving of h = ${growth.toFixed(3)}`);
+        expect(growth).to.be.at.most(
+            tolerances.stableOperator.stability.maxGrowthPerHalvingOfH);
+      });
+    }
   });
 });

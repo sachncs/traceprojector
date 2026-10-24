@@ -38,10 +38,10 @@ console.log('canonical: |grad Pi0 u - Pi1 grad u| below 1e-9:', worst < 1e-9);
 //    the coefficients of u at the edge's two ends.
 const bounded = new BoundedCommutingProjector(vertices, tetrahedra,
     {quadratureOrder: 6});
-const edges = bounded.weights.base.edges;
+
 worst = 0;
 for (const edge of [0, 5, 17, 40]) {
-  const [from, to] = edges[edge];
+  const [from, to] = bounded.edge(edge);
   const direct = bounded.coefficient(gradU, 1, edge);
   const difference = bounded.coefficient(u, 0, to) -
     bounded.coefficient(u, 0, from);

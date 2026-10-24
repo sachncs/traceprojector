@@ -2,7 +2,7 @@ import {expectType, expectError, expectAssignable} from 'tsd';
 import {
   Mesh, Whitney, Projector, StableProjector, ZeroTraceProjector,
   TracePreservingProjector,
-  ValidateError, ProjectError, SingularError,
+  ValidateError, ProjectError, SingularError, validateMeshInput, parseGmsh,
 } from '../../traceprojector/traceprojector.js';
 import {generateUnitCubeMesh} from '../../traceprojector/generator.js';
 import {CoefficientPool} from '../../traceprojector/parallel.js';
@@ -48,3 +48,22 @@ expectType<number>(pool.size);
 expectType<Promise<Float64Array>>(pool.coefficients({field: 'file:///field.js', l: 0, entities: [0, 1]}));
 expectType<Promise<void>>(pool.close());
 expectError(new CoefficientPool({vertices, tetrahedra, operator: 'nonsense'}));
+
+// Checking a mesh without building anything.
+expectType<void>(validateMeshInput(vertices, tetrahedra));
+expectType<void>(validateMeshInput(vertices, tetrahedra, {allowFlipped: true}));
+expectError(validateMeshInput(vertices));
+
+// Reading a Gmsh file.
+const parsed = parseGmsh('$MeshFormat\n');
+expectType<number[][]>(parsed.vertices);
+expectType<number[][]>(parsed.tetrahedra);
+expectType<Record<string, number>>(parsed.skipped);
+expectType<number[][]>(parseGmsh('', {orient: false}).tetrahedra);
+expectError(parseGmsh(5));
+
+// Entity numbering of the bounded and stable operators.
+expectType<number>(zeroTrace.count(1));
+expectType<[number, number]>(zeroTrace.edge(0));
+expectType<number>(stable.count(0));
+expectType<[number, number]>(stable.edge(0));

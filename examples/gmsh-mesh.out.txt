@@ -1,0 +1,6 @@
+vertices 64  tetrahedra 162
+skipped {"triangles":108}
+u at the point          0.8326
+projection at the point 0.8491
+a binary file  ValidateError: binary .msh files are not supported
+hexahedra      ValidateError: the file has hexahedra (element type 5)

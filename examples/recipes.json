@@ -14,6 +14,13 @@
     "cost": "Linear in the number of cells."
   },
   {
+    "slug": "gmsh-mesh",
+    "title": "Read a mesh from Gmsh",
+    "summary": "Load a .msh file (ASCII, format 2.2 or 4.1, first-order tetrahedra) with parseGmsh and use it like any other mesh. What cannot be used is an error that says why.",
+    "assumes": "An ASCII .msh file with first-order tetrahedra; no binary, no hexahedra, prisms, pyramids or second-order elements.",
+    "cost": "Linear in the size of the file."
+  },
+  {
     "slug": "form-degrees",
     "title": "The four form degrees",
     "summary": "A potential, an edge field, a flux and a density: what each one projects to and where it lives.",

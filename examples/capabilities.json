@@ -1,0 +1,208 @@
+{
+  "Projector": {
+    "recipes": [
+      "quick-start",
+      "form-degrees",
+      "time-dependent",
+      "boundary-trace",
+      "refinement"
+    ]
+  },
+  "Mesh": {
+    "recipes": [
+      "own-mesh"
+    ]
+  },
+  "Whitney": {
+    "recipes": [
+      "quick-start"
+    ]
+  },
+  "Locator": {
+    "recipes": [
+      "quick-start",
+      "own-mesh"
+    ]
+  },
+  "generateUnitCubeMesh": {
+    "recipes": [
+      "quick-start"
+    ]
+  },
+  "generateSingleTetMesh": {
+    "recipes": [
+      "own-mesh"
+    ]
+  },
+  "ValidateError": {
+    "recipes": [
+      "own-mesh"
+    ]
+  },
+  "ProjectError": {
+    "recipes": [
+      "singular-field"
+    ]
+  },
+  "SingularError": {
+    "recipes": [
+      "own-mesh"
+    ]
+  },
+  "ZeroTraceProjector": {
+    "recipes": [
+      "singular-field"
+    ]
+  },
+  "BoundedCommutingProjector": {
+    "recipes": [
+      "commuting",
+      "singular-field"
+    ]
+  },
+  "StableProjector": {
+    "recipes": [
+      "singular-field",
+      "boundary-trace"
+    ]
+  },
+  "TracePreservingProjector": {
+    "recipes": [
+      "boundary-trace",
+      "higher-order"
+    ]
+  },
+  "CanonicalProjector": {
+    "recipes": [
+      "form-degrees",
+      "higher-order"
+    ]
+  },
+  "HigherOrderProjector": {
+    "recipes": [
+      "higher-order"
+    ]
+  },
+  "refineTetrahedra": {
+    "recipes": [
+      "refinement"
+    ]
+  },
+  "Refinement": {
+    "recipes": [
+      "refinement"
+    ]
+  },
+  "projectInParallel": {
+    "recipes": [
+      "parallel"
+    ]
+  },
+  "CoefficientPool": {
+    "recipes": [
+      "parallel"
+    ]
+  },
+  "Weight": {
+    "reference": "A building block of Projector, exported for inspection; use Projector instead"
+  },
+  "Bubble": {
+    "reference": "A building block of Projector, exported for inspection; use Projector instead"
+  },
+  "Solver": {
+    "reference": "A building block of Projector, exported for inspection; use Projector instead"
+  },
+  "H1": {
+    "reference": "A building block of Projector, exported for inspection; use Projector instead"
+  },
+  "Hcurl": {
+    "reference": "A building block of Projector, exported for inspection; use Projector instead"
+  },
+  "Hdiv": {
+    "reference": "A building block of Projector, exported for inspection; use Projector instead"
+  },
+  "L2": {
+    "reference": "A building block of Projector, exported for inspection; use Projector instead"
+  },
+  "triangleQuadrature": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "tetrahedronQuadrature": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "integrateTriangle": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "barycentricToCartesian": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "lineQuadrature": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "compositeTetrahedronQuadrature": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "integrateTetrahedron": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "dot": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "cross": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "subtract": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "norm": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "subtractInto": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "crossInto": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "triangleArea": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "zeros": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "infinityNorm": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "luSolve": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "inverse3x3": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "solve3x3": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "MAX_SAFE_FACTORIAL": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "tetDeterminant": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "tetVolume": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "MIN_RELATIVE_VOLUME": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "longestEdge": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "relativeVolume": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "factorial": {
+    "reference": "A numerical utility the library itself uses"
+  },
+  "numericalGradient": {
+    "reference": "A numerical utility the library itself uses"
+  }
+}

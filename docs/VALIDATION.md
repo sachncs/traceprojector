@@ -462,8 +462,13 @@ case.
   the same to four digits for every `n` of a parity, as it must be on
   self-similar meshes with a bump that scales with `h`, so it shows the
   ratio does not grow under this refinement, nothing about degrading meshes,
-  other degrees or other fields. It is a lower bound for the constant, not an
-  estimate.
+  other fields. The same script for `l = 1, 2, 3` (the bump times a constant
+  vector for `l = 1, 2`) gave, near the boundary for `n = 5` to `8` (odd, even)
+  and in the interior (`n = 6`): `l = 1` 2.32, 2.94 and 2.56; `l = 2` 3.17, 3.39
+  and 2.08; `l = 3` 0.72, 0.75 and 0.47. The values do not grow with `n` (they
+  repeat to three digits for each parity), which is again what self-similar
+  meshes give. They are lower bounds for the constants, not estimates, and
+  degraded meshes and `p = 2` are not covered.
 - **Commuting above the lowest order is tested on cubes** (`p = 1` for all
   form degrees, `p = 2` for 0-forms) and on one mesh size; no convergence rate
   is claimed.

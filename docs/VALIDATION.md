@@ -489,8 +489,11 @@ case.
   pseudo-random sequence, `n = 6` and `8`) is 0.66 and 0.67 (0.2) and 0.55 and
   0.61 (0.35) in the interior, and 0.63 and 0.54 (0.2) and 0.64 and 0.48 (0.35)
   near the boundary: the same size as on the regular mesh and no growth, from
-  two mesh sizes and one random draw per case. Strongly stretched or sliver
-  meshes were not tried at `p = 1`.
+  two mesh sizes and one random draw per case. On cubes stretched 5:1 and 20:1 along
+  `x` (cells `5h` and `20h` long, the bump a sphere of width `h/2`) the ratio
+  for `l = 0` is 0.307 and 0.185 in the interior and 0.296 and 0.391 near the
+  boundary, the same at `n = 6` and `8`: bounded and no larger than on the
+  regular mesh. Sliver cells, other degrees and `p = 2` were not tried.
 - **Commuting above the lowest order is tested on cubes** (`p = 1` for all
   form degrees, `p = 2` for 0-forms) and on one mesh size; no convergence rate
   is claimed.

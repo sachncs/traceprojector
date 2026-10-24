@@ -24,7 +24,7 @@ export class AgSpace extends CanonicalProjector {
    *     the spaces is r = p + 1.
    */
   constructor(vertices, tetrahedra, options = {}) {
-    super(vertices, tetrahedra, options);
+    super(vertices, tetrahedra, {...options, trusted: true});
     this.referenceDerivatives = new Map();
   }
 

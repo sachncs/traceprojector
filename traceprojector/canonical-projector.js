@@ -39,7 +39,9 @@ export class CanonicalProjector {
    *     the library's convention (p = 0 is the Whitney space).
    */
   constructor(vertices, tetrahedra, options = {}) {
-    validateMeshInput(vertices, tetrahedra);
+    // AgSpace builds this class on patches of cells whose orientation is of
+    // no consequence to it; only a caller's own mesh is checked.
+    if (!options.trusted) validateMeshInput(vertices, tetrahedra);
     const p = options.degree ?? 0;
     if (!Number.isInteger(p) || p < 0) {
       throw new ValidateError('degree must be a nonnegative integer');

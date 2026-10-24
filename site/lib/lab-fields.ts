@@ -70,6 +70,17 @@ export const LAB_FIELDS: Field[] = [
     }),
   },
   {
+    id: "step",
+    label: "discontinuous: a jump across x = c",
+    note: "One on one side of a plane, zero on the other. In L² but not continuous: point values on the plane are arbitrary, so read the residuals as a measure of smearing, not of convergence.",
+    smoothGradient: false,
+    make: ({ centre }) => ({
+      u: (p) => (p[0]! > centre[0] ? 1 : 0),
+      grad: () => [0, 0, 0],
+      source: `(p) => (p[0] > ${centre[0]} ? 1 : 0)`,
+    }),
+  },
+  {
     id: "bump",
     label: "localized bump",
     note: "A narrow Gaussian: refine the mesh near it to watch the error fall.",

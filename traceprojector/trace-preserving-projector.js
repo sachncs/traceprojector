@@ -14,7 +14,8 @@
  * 3-form). Both must be defined throughout the domain.
  */
 
-import {ProjectError} from './errors.js';
+import {ProjectError, ValidateError} from './errors.js';
+import {HighOrderTracePreserving} from './high-order-trace-preserving.js';
 import {BoundaryProjector} from './boundary-projector.js';
 import {ZeroTraceProjector} from './zero-trace-projector.js';
 import {integrateTetrahedron} from './simplicial-complex.js';
@@ -29,12 +30,51 @@ export class TracePreservingProjector {
    * @param {{quadratureOrder: (number|undefined)}=} options
    */
   constructor(vertices, tetrahedra, options = {}) {
+    this.degree = options.degree ?? 0;
+    if (!Number.isInteger(this.degree) || this.degree < 0) {
+      throw new ValidateError('degree must be a nonnegative integer');
+    }
+    if (this.degree > 0) {
+      // Above the lowest order the operator works field by field (see
+      // HighOrderTracePreserving); there are no Whitney coefficients.
+      this.high = new HighOrderTracePreserving(vertices, tetrahedra, {
+        degree: this.degree,
+        quadratureOrder: options.quadratureOrder,
+      });
+      this.complex = this.high.complex;
+      return;
+    }
     this.zero = new ZeroTraceProjector(vertices, tetrahedra, options);
     this.boundary = new BoundaryProjector(vertices, tetrahedra, options);
     this.complex = this.boundary.orig;
     this.order = options.quadratureOrder ?? 4;
     this.cache = new WeakMap();
     this.single = new WeakMap();
+  }
+
+  /**
+   * Pi u in degree l as a lazy field: its value and its exterior derivative
+   * at a point of a cell. Works at every degree; above the lowest order it is
+   * the only way to evaluate the operator.
+   * @return {{value: function(number[], number): (number|number[]),
+   *     derivative: function(number[], number): (number|number[])}}
+   */
+  local(u, du, l) {
+    if (this.high) return this.high.local(u, du, l);
+    return {
+      value: (x, c) => this.project(u, du, x, c, l),
+      derivative: () => {
+        throw new ValidateError('derivative needs degree > 0');
+      },
+    };
+  }
+
+  /** @private */
+  requireWhitney() {
+    if (this.high) {
+      throw new ValidateError(
+          'coefficients are defined at degree 0 only; use local() or project()');
+    }
   }
 
   /** Boundary entities of degree l as `{entity, alpha(u, du)}` records. */
@@ -122,6 +162,7 @@ export class TracePreservingProjector {
    * @return {Float64Array} Coefficient of each entity of degree l.
    */
   coefficients(u, du, l) {
+    this.requireWhitney();
     let perDegree = this.cache.get(u);
     if (!perDegree) {
       perDegree = new Map();
@@ -156,6 +197,7 @@ export class TracePreservingProjector {
    * @return {number}
    */
   coefficient(u, du, l, entity) {
+    this.requireWhitney();
     let perDegree = this.single.get(u);
     if (!perDegree) {
       perDegree = new Map();
@@ -178,6 +220,7 @@ export class TracePreservingProjector {
    * @return {number|number[]}
    */
   project(u, du, point, cell, l) {
+    if (this.high) return this.high.local(u, du, l).value(point, cell);
     const coefficients = this.coefficients(u, du, l);
     const basis = this.complex.whitney(cell, l, point);
     let total = l === 0 || l === 3 ? 0 : [0, 0, 0];

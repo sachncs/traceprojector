@@ -16,8 +16,21 @@ export class TracePreservingProjector {
   constructor(
     vertices: number[][],
     tetrahedra: number[][],
-    options?: { quadratureOrder?: number },
+    options?: { quadratureOrder?: number; degree?: number },
   );
+
+  /**
+   * Pi u as a lazy field: its value and its exterior derivative at a point of
+   * a cell. At degree > 0 this is how the operator is evaluated.
+   */
+  local(
+    u: (point: number[]) => number | number[],
+    du: ((point: number[]) => number | number[]) | null,
+    l: number,
+  ): {
+    value: (point: number[], cell: number) => number | number[];
+    derivative: (point: number[], cell: number) => number | number[];
+  };
 
   /**
    * All Whitney coefficients of the projection in degree l.

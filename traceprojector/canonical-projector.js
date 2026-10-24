@@ -13,6 +13,7 @@ import {ValidateError, ProjectError} from './errors.js';
 import {SimplicialComplex} from './simplicial-complex.js';
 import {moments, referenceBasis} from './reference-element.js';
 import {differential} from './polynomial-forms.js';
+import {validateMeshInput} from './mesh.js';
 
 const EDGE_PAIRS = [[0, 1], [0, 2], [0, 3], [1, 2], [1, 3], [2, 3]];
 const FACE_TRIPLES = [[1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 1, 2]];
@@ -38,6 +39,7 @@ export class CanonicalProjector {
    *     the library's convention (p = 0 is the Whitney space).
    */
   constructor(vertices, tetrahedra, options = {}) {
+    validateMeshInput(vertices, tetrahedra);
     const p = options.degree ?? 0;
     if (!Number.isInteger(p) || p < 0) {
       throw new ValidateError('degree must be a nonnegative integer');

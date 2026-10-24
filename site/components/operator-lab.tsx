@@ -318,12 +318,13 @@ export function OperatorLab() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
-              <Label>Cube, cells per side</Label>
+              <Label htmlFor="lab-cells">Cube, cells per side</Label>
               <Select
+                name="lab-cells"
                 value={source === "cube" ? String(n) : "custom"}
                 onValueChange={(v) => v !== "custom" && chooseCube(parseInt(v))}
               >
-                <SelectTrigger aria-label="Cells per side">
+                <SelectTrigger id="lab-cells" name="lab-cells">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -343,6 +344,8 @@ export function OperatorLab() {
                 <FileUp className="h-3.5 w-3.5" /> Load .msh or .json
                 <input
                   type="file"
+                  id="lab-file"
+                  name="lab-file"
                   accept=".msh,.json,.txt"
                   className="sr-only"
                   onChange={(e) => onFile(e.target.files?.[0])}
@@ -361,6 +364,7 @@ export function OperatorLab() {
               <Label htmlFor="paste">Or paste JSON</Label>
               <textarea
                 id="paste"
+                name="paste"
                 value={pasted}
                 onChange={(e) => setPasted(e.target.value)}
                 placeholder='{"vertices": [[0,0,0],[1,0,0],[0,1,0],[0,0,1]], "tetrahedra": [[0,1,2,3]]}'
@@ -390,15 +394,16 @@ export function OperatorLab() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="space-y-2">
-              <Label>Operator</Label>
+              <Label htmlFor="lab-operator">Operator</Label>
               <Select
+                name="lab-operator"
                 value={operator}
                 onValueChange={(v) => {
                   setOperator(v as OperatorId);
                   clear();
                 }}
               >
-                <SelectTrigger aria-label="Operator">
+                <SelectTrigger id="lab-operator" name="lab-operator">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -415,15 +420,16 @@ export function OperatorLab() {
               </p>
             </div>
             <div className="space-y-2">
-              <Label>Field</Label>
+              <Label htmlFor="lab-field">Field</Label>
               <Select
+                name="lab-field"
                 value={fieldId}
                 onValueChange={(v) => {
                   setFieldId(v);
                   clear();
                 }}
               >
-                <SelectTrigger aria-label="Field">
+                <SelectTrigger id="lab-field" name="lab-field">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

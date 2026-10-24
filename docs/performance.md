@@ -31,73 +31,138 @@ constant than the canonical operators.
 Memory is about 5 KB per cell. Reproduce with
 `node --expose-gc validation/limits.mjs`.
 
+## How we measure
+
+A number without a method cannot be compared, so the measurements here come
+from the benchmark harness, not from one-off timings:
+
+- `npm run bench` times the solver and the weight pipeline in *units of a
+  calibration loop* (a dense matrix product run on the same machine just before), so
+  a result means the same on a faster or slower machine; it also records the
+  stored factor entries (space), the iteration counts and the solver
+  certificates. `npm run bench:check` compares with the committed baseline
+  and fails on a scenario that is slower, or whose space or iteration count changed.
+- Every local solve returns a **certificate**: the constraint residual, the
+  stationarity of the minimizer, the duality gap and the factor size. The
+  limits are fixed in `validation/tolerances.json` before running (10⁻¹⁰ each;
+  observed at most 3·10⁻¹¹, 2·10⁻¹⁴ and 3·10⁻¹⁵), so a fast solve that is wrong
+  fails a test instead of passing a benchmark. `crossCheck` mode compares a
+  solve with the dense reference.
+- `stats` on the higher-order weights holds one record per solve: the form
+  degree, the method, unknowns, constraints, milliseconds, iterations, stored
+  entries and the certificate.
+
 ## Bounded operators at the lowest order
 
-Computing *every* coefficient of all four form degrees, on a unit cube:
+Computing *every* coefficient of all four form degrees on a unit cube, one
+thread:
 
 | Cells | `BoundedCommutingProjector` | `ZeroTraceProjector` (interior entities only) |
 |---:|---:|---:|
-| 384 (4 per side) | 12 s | 36 s |
-| 750 (5) | 25 s | 89 s |
-| 1,296 (6) | 45 s | 159 s |
+| 162 (3 per side) | 4.6 s | |
+| 384 (4) | 13 s | 92 s |
+| 750 (5) | 28 s | 158 s |
+| 1,296 (6) | 51 s | |
 
-That is 7 ms per entity for the operator with no boundary condition and 26 ms
-per interior entity for the zero-trace operator; the latter is dearer because
-near the boundary the neighbourhood is enlarged until it meets the paper's
-assumption that it is a ball (see [Validation](VALIDATION.md)). The time grows
-about linearly with the number of cells.
+The time grows about linearly with the number of cells. Compared with the
+previous solver, the operator with no boundary condition is about 14% slower on
+small meshes: the certified solver factors two matrices and orders them with a
+minimum-degree ordering whose cost shows on small problems (9% and 11% of the
+time at 162 cells) and pays back on large ones. A size-based choice of
+factorization was considered and not made; the saving is at most that 14%.
 
 **You rarely need every coefficient.** Coefficients are computed the first time
 they are used and cached, so projecting a field at a handful of points solves
-only the local problems around those points: a few entities, not thousands.
-To evaluate the projection of one field everywhere, you do need all of them.
+only the local problems around those points.
 
 ## Higher-order operators
 
-The cost of one weight of `HigherOrderProjector` at `p = 1` for an entity in the
-interior of a 6 × 6 × 6 cube (a few thousand unknowns per local problem):
+One weight of `HigherOrderProjector` at `p = 1` for an entity in the interior of
+a 6 × 6 × 6 cube (a few thousand unknowns per local problem), cold:
 
-| Form degree of the entity | Before | Now |
-|---|---:|---:|
-| edge (`l = 1`) | 3.0 s | 0.45 s |
-| face (`l = 2`) | 14.2 s | 2.0 s |
-| cell (`l = 3`) | 42.8 s | 5.7 s |
+| Form degree of the entity | First version | Banded solver | Now |
+|---|---:|---:|---:|
+| edge (`l = 1`) | 3.0 s | 0.45 s | 0.15 s |
+| face (`l = 2`) | 14.2 s | 2.0 s | 0.32 s |
+| cell (`l = 3`) | 42.8 s | 5.7 s | 0.78 s |
 
-Weights of cells that are translates of each other share one solve, so on a
-structured mesh the number of distinct solves is small. The numbers grow quickly
-with the polynomial degree (more unknowns per cell) and with the size of the
-star.
+Weights of cells that are translates of each other share one solve.
 
-A zero-trace weight of a cell next to the boundary at `p = 1`, which took more
-than an hour before, now takes about a minute (four seconds at `p = 0`).
+**Scaling of one solve.** Measured over the sizes of real local problems, the
+time grew as n^2.5 and the space as n^1.9 with the skyline factorization; with
+the minimum-degree sparse Cholesky they grow as n^1.86 and n^1.76. On a real
+`l = 2` problem the factor has 35.9 thousand entries, against 245 thousand for
+the skyline.
 
-## Where the time went, and what was done
+### The boundary operator above the lowest order
 
-Profiling the higher-order weights showed that the time was in the dense
-linear algebra: a minimum-norm solve of about 1,500 unknowns by dense Cholesky
-took 1.9 s and nearly all of the weight's time. The local systems are sparse,
-because each unknown is coupled only to the unknowns on neighbouring cells, so:
+`TracePreservingProjector({degree: p})` evaluates the projection at a point:
+the boundary part `Π_∂ u` and the zero-trace part of `u − Π_∂ u`. A point near
+the boundary at `p = 1`, `l = 2` took 116 s at first and takes about 17 s now;
+the cost is dominated by the boundary weights and the zero-trace weights of
+the cells in range of the point, and every later point near the same faces is
+cheaper because the weights are cached. These are minutes for a handful of
+points, not an operator to evaluate everywhere.
 
-1. **Banded Cholesky.** After a reverse Cuthill–McKee reordering the matrix has
-   a small profile, and a skyline factorization costs a small fraction of the
-   dense `n³/3`. The solve above takes 0.02 s.
-2. **A multiplier iteration for the constraint.** The weight is the field of
-   least norm with a prescribed derivative, a constrained problem. It is solved
-   by factoring `M + γ CᵀC` once and updating the multipliers with the true
-   constraint residual; the answer is the exact minimizer (checked against the
-   dense solver to 10⁻⁹) and the penalty `γ` is increased automatically if the
-   iteration is slow. A dense solve remains as the fallback if the banded one
-   cannot converge.
-3. **Cheaper quadrature.** Exact quadrature orders instead of a fixed high
-   order, flat arrays for the inner products, and powers of the coordinates
-   computed once per polynomial evaluation.
-4. **Caching by geometry.** Weights are cached by a signature of the star
-   (cell shapes up to translation), so repeated shapes are solved once.
+## What was done, and what each step bought
 
-With these, the lowest-order bounded operators dropped from several minutes to
-tens of seconds for a mesh of a few hundred cells, and the whole validation
-suite runs in about ten minutes. What is left in a profile is a flat spread
-over quadrature points and small-array arithmetic, not a single hot spot.
+Profiling showed that the time was in linear algebra and in polynomial
+arithmetic, so:
+
+1. **A solver that returns a proof.** The weight is the field of least norm with
+   a prescribed derivative. It is now found by preconditioned conjugate
+   gradients on the dual problem, with an accurate factor of the mass matrix and
+   the certificate above. The earlier multiplier iteration stopped with a
+   stationarity error up to 6·10⁻⁵.
+2. **Sparse Cholesky with a minimum-degree ordering on a compressed graph.**
+   35.9 thousand against 245 thousand stored entries on the same problem.
+3. **Dense typed-array polynomials** and a cached reference rule, so a
+   polynomial is a flat array and a product is a loop.
+4. **Tabulation of the bubble basis at quadrature points** instead of
+   evaluating polynomials point by point, and a cache of the forms of each
+   simplex.
+5. **Caches keyed by geometry:** element matrices, form banks and the
+   derivatives of the canonical basis, so repeated shapes cost one solve.
+6. **A sparse evaluator for the extensions** of the boundary weights, which
+   touch only their nonzero degrees of freedom.
+
+A bug was found along the way: the dense reference minimum-norm solver used the
+normal equations on the wrong side when the matrix had a null space, and
+returned a solution with up to 80% more energy than the minimum (the identities
+it was checked against did not detect it). It always solves the dual system
+now, with a regression test.
+
+## Concurrency
+
+The weights of a mesh depend only on the mesh, so the coefficients of a bounded
+operator can be computed on any number of solvers at once.
+`CoefficientPool` (`traceprojector/parallel`) gives each worker thread its own
+operator, so there is **no shared mutable state**: the only module-level
+state, scratch buffers, is per-isolate. The coefficients come back in a fixed
+order and are **bitwise identical to the serial result for any number of
+workers**, which a test checks. The pool takes `resourceLimits` to bound each
+worker's memory.
+
+Strong scaling on a 4 × 4 × 4 cube, every face coefficient, against one worker:
+
+| Workers | Speedup |
+|---:|---:|
+| 2 | 1.69 |
+| 4 | 2.75 |
+| 8 | 3.4 |
+
+This is one machine with 12 heterogeneous cores (performance and efficiency
+cores), and a one-worker pool was about 33% slower than computing in-process,
+probably from the cores the workers landed on; expect different efficiency on
+yours, and measure with the harness. Each worker builds its own weights, so the
+cache is not shared between workers: the speedup is smaller than the count
+because stars are solved more than once.
+
+## Known costs
+
+- Stability constants of the operator above the lowest order are not measured.
+- The cost per near-boundary point at `p = 1` is 17 to 30 s.
+- The parallel efficiency is modest and machine dependent.
 
 ## Making it faster for your problem
 

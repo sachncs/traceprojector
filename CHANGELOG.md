@@ -14,6 +14,37 @@ and this project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `TracePreservingProjector({degree: p})` for `p >= 1`: the boundary
+  operator above the lowest order (`boundary-traces.js`,
+  `high-order-boundary.js`, `high-order-trace-preserving.js`), evaluated
+  with `local(u, du, l)`. Validated at `p = 1` (all four degrees) and
+  `p = 2` (`l = 0`) on cubes: trace preserved to 10⁻¹³, projection to
+  5·10⁻¹³, commuting to 10⁻¹¹ for fields with a discrete trace. Its stability
+  is not measured.
+- `CoefficientPool` (`traceprojector/parallel`): coefficients of the bounded
+  operators on any number of worker threads, bitwise identical to serial.
+- `npm run bench`, `bench:check`, `bench:update`: solver and weight-pipeline
+  benchmarks in calibration units, with a committed baseline.
+- Solver certificates (residual, stationarity, duality gap, factor size) with
+  limits fixed in `validation/tolerances.json`.
+
+### Changed
+
+- The local minimum-norm solves use preconditioned conjugate gradients on the
+  dual problem with sparse Cholesky and a minimum-degree ordering; one
+  higher-order weight at `p = 1` is 3 to 7 times faster than before
+  (cell: 5.7 s to 0.78 s).
+- Dense typed-array polynomials, tabulated bubble bases and geometry-keyed
+  caches in the higher-order weights.
+
+### Fixed
+
+- `minimumNormSolveDense` returned a non-minimal solution (up to 80% more
+  energy) when the constraint matrix had a null space; it now always solves
+  the dual system. Regression test added.
+
+### Added (earlier in this release)
+
 - Documentation on the website, standalone: a getting-started guide, a guide
   to choosing an operator, performance, a developer guide, and every other
   page of `docs/`, rendered from the repository's Markdown at

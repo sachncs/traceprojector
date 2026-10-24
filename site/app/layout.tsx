@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Inter_Tight, JetBrains_Mono, Inter } from "next/font/google";
 import "./globals.css";
 
+const basePath =
+  process.env.NODE_ENV === "production" ? "/traceprojector" : "";
+
 const interTight = Inter_Tight({
   subsets: ["latin"],
   variable: "--font-inter",
@@ -70,7 +73,7 @@ export const metadata: Metadata = {
     follow: true,
   },
   icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    icon: [{ url: `${basePath}/favicon.svg`, type: "image/svg+xml" }],
   },
 };
 

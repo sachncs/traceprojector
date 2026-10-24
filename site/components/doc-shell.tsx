@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site-header";
 import { cn } from "@/lib/utils";
 import {
   SECTIONS,
+  pageHref,
   type DocPage,
   type Heading,
 } from "@/lib/docs";
@@ -24,7 +25,7 @@ function Sidebar({ current }: { current?: string }) {
             {section.pages.map((page) => (
               <li key={page.slug}>
                 <Link
-                  href={`/docs/${page.slug}/`}
+                  href={pageHref(page)}
                   aria-current={page.slug === current ? "page" : undefined}
                   className={cn(
                     "block rounded-md px-3 py-1.5 transition-colors",
@@ -122,7 +123,7 @@ export function DocShell({
             <div className="flex gap-3">
               {previous && (
                 <Link
-                  href={`/docs/${previous.slug}/`}
+                  href={pageHref(previous)}
                   className="inline-flex items-center gap-1.5 rounded-md border border-border/60 px-3 py-1.5 hover:bg-muted"
                 >
                   <ArrowLeft className="h-3.5 w-3.5" />
@@ -131,7 +132,7 @@ export function DocShell({
               )}
               {next && (
                 <Link
-                  href={`/docs/${next.slug}/`}
+                  href={pageHref(next)}
                   className="inline-flex items-center gap-1.5 rounded-md border border-border/60 px-3 py-1.5 hover:bg-muted"
                 >
                   {next.title}

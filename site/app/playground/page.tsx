@@ -209,12 +209,13 @@ export default function PlaygroundPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Subdivision (n³ cubes)</Label>
+                  <Label asChild><span>Subdivision (n³ cubes)</span></Label>
                   <span className="text-sm tabular-nums text-muted-foreground">
                     {subdivision}
                   </span>
                 </div>
                 <Slider
+                  aria-label="Subdivision (n³ cubes)"
                   min={2}
                   max={10}
                   step={1}
@@ -223,12 +224,13 @@ export default function PlaygroundPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Quadrature order</Label>
+                <Label htmlFor="quadrature">Quadrature order</Label>
                 <Select
+                  name="quadrature"
                   value={String(quadratureOrder)}
                   onValueChange={(v) => setQuadratureOrder(parseInt(v))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="quadrature" name="quadrature">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -244,6 +246,7 @@ export default function PlaygroundPage() {
                 <Label htmlFor="edges">Show edges</Label>
                 <input
                   id="edges"
+                  name="edges"
                   type="checkbox"
                   className="h-4 w-4"
                   checked={showEdges}
@@ -261,8 +264,8 @@ export default function PlaygroundPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Select value={functionId} onValueChange={setFunctionId}>
-                <SelectTrigger>
+              <Select name="function" value={functionId} onValueChange={setFunctionId}>
+                <SelectTrigger id="function" name="function" aria-label="Function">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -288,12 +291,13 @@ export default function PlaygroundPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Form degree (l)</Label>
+                <Label htmlFor="form-degree">Form degree (l)</Label>
                 <Select
+                  name="form-degree"
                   value={String(form)}
                   onValueChange={(v) => setForm(parseInt(v) as 0 | 1 | 2 | 3)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="form-degree" name="form-degree">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -306,12 +310,13 @@ export default function PlaygroundPage() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>Polynomial degree (p)</Label>
+                  <Label asChild><span>Polynomial degree (p)</span></Label>
                   <span className="text-sm tabular-nums text-muted-foreground">
                     {p}
                   </span>
                 </div>
                 <Slider
+                  aria-label="Polynomial degree (p)"
                   min={0}
                   max={4}
                   step={1}
@@ -368,8 +373,10 @@ export default function PlaygroundPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Point (x, y, z)</Label>
+                    <Label htmlFor="point">Point (x, y, z)</Label>
                     <Input
+                      id="point"
+                      name="point"
                       value={pointStr}
                       onChange={(e) => setPointStr(e.target.value)}
                       placeholder="0.5, 0.5, 0.5"

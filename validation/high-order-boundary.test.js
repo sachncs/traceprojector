@@ -77,6 +77,32 @@ describe('weights of the bubble degrees of freedom (p = 1)', function() {
   }
 });
 
+describe('pairing of the lowest-order weights with the bubbles (p = 1)', function() {
+  this.timeout(600000);
+  for (const l of [0, 1, 2]) {
+    it(`l = ${l}: the surface integral equals the volume formula`, () => {
+      const list = boundary.lowestEntities0(l);
+      let checked = 0;
+      let worst = 0;
+      for (const b of boundary.catalog(l).list.slice(0, 60)) {
+        const star = new Set(b.faces.map((f) => f.f));
+        const {u, du} = boundary.basisField(l, b.dof);
+        for (const a of list) {
+          if (![...star].some((f) => a.faces.has(f))) continue;
+          const volume = a.alpha(u, du);
+          const surface = boundary.lowestPairing(l, a, b.dof);
+          worst = Math.max(worst, Math.abs(volume - surface));
+          checked++;
+        }
+      }
+      console.log(`      l = ${l}: ${checked} pairs, worst difference ${
+        worst.toExponential(1)}`);
+      expect(checked).to.be.above(20);
+      expect(worst).to.be.below(1e-9);
+    });
+  }
+});
+
 describe('the boundary operator (p = 1)', function() {
   this.timeout(1800000);
   const trace = (l, v, n) => {

@@ -12,7 +12,7 @@
  * restricted to the plane of a face are the field on that face.
  */
 
-import {Polynomial} from './polynomial-forms.js';
+import {Polynomial, differential} from './polynomial-forms.js';
 import {affine, physicalForm} from './physical-forms.js';
 import {referenceRule} from './reference-element.js';
 
@@ -99,6 +99,7 @@ export class BoundaryTraces {
     this.formCache = new Map();
     this.whitneyCache = new Map();
     this.localIndex = new Map();
+    this.derivativeCache = new Map();
     this.faces = new Map();
     this.complex.faces.forEach((vertices, f) => {
       if (this.complex.faceCells[f].length !== 1) return;
@@ -184,19 +185,44 @@ export class BoundaryTraces {
     return out;
   }
 
+  /** The local number of a global dof in a cell, or -1. */
+  basisIndex(c, l, dof) {
+    const key = `${c}:${l}`;
+    if (!this.localIndex.has(key)) {
+      this.localIndex.set(key, new Map(
+          this.space.cellDofs(c, l).map((d, i) => [d, i])));
+    }
+    return this.localIndex.get(key).get(dof) ?? -1;
+  }
+
+  /** The exterior derivatives of the AG basis forms of a cell, cached. */
+  basisDerivatives(c, l) {
+    const key = `b${c}:${l}`;
+    if (!this.derivativeCache.has(key)) {
+      this.derivativeCache.set(key, this.basisForms(c, l).map(
+          (form) => differential(form, l)));
+    }
+    return this.derivativeCache.get(key);
+  }
+
+  /** The exterior derivatives of the Whitney forms of a cell, cached. */
+  whitneyDerivatives(c, l) {
+    const key = `w${c}:${l}`;
+    if (!this.derivativeCache.has(key)) {
+      this.derivativeCache.set(key, this.whitneyForms(c, l).map(
+          (form) => differential(form, l)));
+    }
+    return this.derivativeCache.get(key);
+  }
+
   /**
    * The trace on a boundary face of the AG basis function of global dof `dof`
    * of degree l, or null if it vanishes there.
    */
   basisTrace(l, dof, face) {
     const c = face.cell;
-    const key = `${c}:${l}`;
-    if (!this.localIndex.has(key)) {
-      this.localIndex.set(key, new Map(
-          this.space.cellDofs(c, l).map((d, i) => [d, i])));
-    }
-    const i = this.localIndex.get(key).get(dof);
-    if (i === undefined) return null;
+    const i = this.basisIndex(c, l, dof);
+    if (i < 0) return null;
     return faceTrace(l, this.basisForms(c, l)[i], face.normal);
   }
 

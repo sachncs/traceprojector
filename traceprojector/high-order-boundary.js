@@ -22,8 +22,9 @@
 
 import {AgSpace} from './ag-space.js';
 import {BoundaryProjector} from './boundary-projector.js';
+import {referenceRule} from './reference-element.js';
 import {ValidateError} from './errors.js';
-import {Polynomial, differential} from './polynomial-forms.js';
+import {Polynomial} from './polynomial-forms.js';
 import {
   BoundaryTraces,
   faceTrace,
@@ -426,18 +427,21 @@ export class HighOrderBoundary {
     let out;
     if (l === 0) {
       out = [...new Set(complex.triangles.flat())].map((r) => ({
+        r,
         entity: r,
         faces: facesOf(r),
         alpha: (u, du) => this.lowest.alpha0(r, u, du),
       }));
     } else if (l === 1) {
       out = complex.edges.map((pair, r) => ({
+        r,
         entity: orig.edgeIndex(...pair),
         faces: facesOf(r),
         alpha: (u, du) => this.lowest.alpha1(r, u, du),
       }));
     } else {
       out = complex.triangles.map((triangle, r) => ({
+        r,
         entity: orig.faceIndex(...triangle),
         faces: facesOf(r),
         alpha: (u, du) => this.lowest.alpha2(r, u, du),
@@ -451,7 +455,7 @@ export class HighOrderBoundary {
   basisField(l, dof) {
     const empty = l === 0 ? 0 : [0, 0, 0];
     const emptyD = l === 0 ? [0, 0, 0] : l === 1 ? [0, 0, 0] : 0;
-    const local = (c) => this.space.cellDofs(c, l).indexOf(dof);
+    const local = (c) => this.traces.basisIndex(c, l, dof);
     return {
       u: (x, c) => {
         const i = local(c);
@@ -460,9 +464,46 @@ export class HighOrderBoundary {
       du: (x, c) => {
         const i = local(c);
         return i < 0 ? emptyD : valueOf(
-            differential(this.traces.basisForms(c, l)[i], l), x);
+            this.traces.basisDerivatives(c, l)[i], x);
       },
     };
+  }
+
+  /**
+   * The pairing (zeta_a, tr B_b) of a lowest-order weight with the trace of a
+   * bubble basis function: an integral over the sub-triangles of the faces
+   * the weight is supported on. It equals alpha_a(B_b) (the volume formula);
+   * for 2-forms the sign follows the orientation of the face a.
+   * @param {number} l
+   * @param {{r: number}} a A lowest-order entity.
+   * @param {number} dof
+   * @return {number}
+   */
+  lowestPairing(l, a, dof) {
+    const {complex} = this.lowest;
+    const weight = this.lowest.weight(l, a.r);
+    const rule = referenceRule(2, this.traces.order);
+    let sum = 0;
+    for (const t of weight.triangles) {
+      const face = this.traces.faces.get(
+          this.complex.faceIndex(...complex.triangles[t]));
+      const trace = face && this.traces.basisTrace(l, dof, face);
+      if (!trace) continue;
+      for (let k = 0; k < 3; k++) {
+        const [p0, p1, p2] = this.lowest.subFaces.get(`${t}_${k}`).points
+            .map((v) => this.lowest.fine.vertices[v]);
+        const e1 = p1.map((q, i) => q - p0[i]);
+        const e2 = p2.map((q, i) => q - p0[i]);
+        const area = Math.hypot(...cross(e1, e2)) / 2;
+        for (const {s, weight: w} of rule) {
+          const x = p0.map((q, i) => q + s[0] * e1[i] + s[1] * e2[i]);
+          const z = l === 0 ? weight.valueOf(t, k) : weight.valueAt(t, k, x);
+          const v = valueOf(trace, x);
+          sum += 2 * area * w * (Array.isArray(v) ? dot(v, z) : v * z);
+        }
+      }
+    }
+    return l === 2 ? this.lowest.faceOrientation(a.r) * sum : sum;
   }
 
   /**
@@ -479,7 +520,6 @@ export class HighOrderBoundary {
     if (this.corrections.has(id)) return this.corrections.get(id);
     const entry = this.catalog(l).list.find((e) => e.dof === dof);
     const star = new Set(entry.faces.map((face) => face.f));
-    const {u, du} = this.basisField(l, dof);
     const out = [];
     for (const a of this.lowestEntities0(l)) {
       let meets = false;
@@ -490,7 +530,7 @@ export class HighOrderBoundary {
         }
       }
       if (!meets) continue;
-      const value = a.alpha(u, du);
+      const value = this.lowestPairing(l, a, dof);
       if (Math.abs(value) > 1e-13) out.push({entity: a.entity, value});
     }
     this.corrections.set(id, out);
@@ -626,9 +666,9 @@ export class HighOrderBoundary {
         const cell = forCell(c);
         if (!cell) return zeroD();
         let total = this.space.derivative(cell.vector, x, c, l);
-        const forms = this.traces.whitneyForms(c, l);
+        const derivatives = this.traces.whitneyDerivatives(c, l);
         for (const {i, w} of cell.entities) {
-          const d = valueOf(differential(forms[i], l), x);
+          const d = valueOf(derivatives[i], x);
           total = sum(total, typeof d === 'number' ? w * d :
             d.map((q) => w * q));
         }
@@ -661,11 +701,11 @@ export class HighOrderBoundary {
       },
       derivative: (x, c) => {
         let total = this.space.derivative(vector, x, c, l);
-        const forms = this.traces.whitneyForms(c, l);
+        const derivatives = this.traces.whitneyDerivatives(c, l);
         entities(c).forEach((entity, i) => {
           const w = whitney.get(entity);
           if (!w) return;
-          const d = valueOf(differential(forms[i], l), x);
+          const d = valueOf(derivatives[i], x);
           total = sum(total, typeof d === 'number' ? w * d :
             d.map((q) => w * q));
         });

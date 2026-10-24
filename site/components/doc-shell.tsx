@@ -18,7 +18,7 @@ function Sidebar({ current }: { current?: string }) {
     <nav aria-label="Documentation" className="space-y-7 text-sm">
       {SECTIONS.map((section) => (
         <div key={section.title}>
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             {section.title}
           </p>
           <ul className="space-y-0.5">
@@ -50,7 +50,7 @@ function Toc({ headings, wide }: { headings: Heading[]; wide: boolean }) {
   if (shown.length < 2) return null;
   return (
     <nav aria-label="On this page" className="text-[13px]">
-      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
         On this page
       </p>
       <ul className="max-h-[70vh] space-y-1 overflow-y-auto border-l border-border/60 pr-2">

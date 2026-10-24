@@ -56,3 +56,5 @@ export async function projectInParallel(job) {
   }
   return (await Promise.all(jobs)).flat();
 }
+
+export {CoefficientPool} from './parallel-pool.js';

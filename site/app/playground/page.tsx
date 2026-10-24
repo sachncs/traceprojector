@@ -35,6 +35,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Toaster } from "@/components/ui/sonner";
 
 import { MeshViewer } from "@/components/mesh-viewer";
+import { OperatorLab } from "@/components/operator-lab";
 import { ConvergenceChart } from "@/components/convergence-chart";
 
 const MeshViewerClient = dynamic(
@@ -64,6 +65,7 @@ export default function PlaygroundPage() {
   const [p, setP] = useState(0);
   const [form, setForm] = useState<0 | 1 | 2 | 3>(0);
   const [showEdges, setShowEdges] = useState(true);
+  const [view, setView] = useState<"operators" | "classic">("operators");
 
   const [pointStr, setPointStr] = useState("0.5, 0.5, 0.5");
 
@@ -75,6 +77,8 @@ export default function PlaygroundPage() {
   const [isBuilding, setIsBuilding] = useState(false);
 
   useEffect(() => {
+    // The classic view builds a projector of its own; the lab does not need it.
+    if (view !== "classic") return;
     setIsBuilding(true);
     try {
       const b = buildProjector(subdivision, quadratureOrder);
@@ -87,7 +91,7 @@ export default function PlaygroundPage() {
     } finally {
       setIsBuilding(false);
     }
-  }, [subdivision, quadratureOrder]);
+  }, [subdivision, quadratureOrder, view]);
 
   const point = useMemo<[number, number, number]>(() => {
     const parts = pointStr.split(",").map((s) => parseFloat(s.trim()));
@@ -146,7 +150,7 @@ export default function PlaygroundPage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {bundleInfo && (
+            {view === "classic" && bundleInfo && (
               <>
                 <Badge variant="secondary" className="font-mono">
                   {bundleInfo.tets.toLocaleString()} tets
@@ -159,7 +163,7 @@ export default function PlaygroundPage() {
             <Badge variant="outline" className="border-primary/30 bg-primary/5 text-primary">
               <Sigma className="mr-1 h-3 w-3" /> Π
             </Badge>
-            {isBuilding && (
+            {view === "classic" && isBuilding && (
               <Badge variant="outline">
                 <RefreshCw className="mr-1 h-3 w-3 animate-spin" /> building
               </Badge>
@@ -168,6 +172,31 @@ export default function PlaygroundPage() {
         </div>
       </div>
 
+      <div className="mx-auto flex w-full max-w-7xl gap-2 px-6 pt-6" role="tablist" aria-label="Playground view">
+        {([
+          ["operators", "Compare operators"],
+          ["classic", "Project a function"],
+        ] as const).map(([id, label]) => (
+          <Button
+            key={id}
+            role="tab"
+            aria-selected={view === id}
+            variant={view === id ? "default" : "outline"}
+            size="sm"
+            onClick={() => setView(id)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+
+      {view === "operators" && (
+        <main className="mx-auto w-full max-w-7xl flex-1 px-6 py-8">
+          <OperatorLab />
+        </main>
+      )}
+
+      {view === "classic" && (
       <main className="mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[320px_1fr]">
         <aside className="space-y-4">
           <Card>
@@ -446,6 +475,7 @@ export default function PlaygroundPage() {
           </Tabs>
         </section>
       </main>
+      )}
 
       <SiteFooter />
     </div>

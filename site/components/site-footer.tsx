@@ -70,7 +70,7 @@ export function SiteFooter() {
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-3 text-xs text-muted-foreground backdrop-blur-md transition-colors hover:border-border hover:text-foreground"
-                aria-label="GitHub"
+                aria-label="Star traceprojector on GitHub"
               >
                 <Star className="h-3.5 w-3.5" />
                 Star
@@ -92,9 +92,9 @@ export function SiteFooter() {
 
           {COLUMNS.map((col) => (
             <div key={col.title} className="lg:col-span-2">
-              <h4 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
                 {col.title}
-              </h4>
+              </h2>
               <ul className="mt-5 space-y-3">
                 {col.links.map((link) => (
                   <li key={link.label}>
@@ -116,9 +116,9 @@ export function SiteFooter() {
           ))}
 
           <div className="lg:col-span-1">
-            <h4 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            <h2 className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
               Legal
-            </h4>
+            </h2>
             <ul className="mt-5 space-y-3">
               <li>
                 <Link

@@ -139,7 +139,7 @@ export const OPERATORS: OperatorInfo[] = [
     id: "stable",
     label: "StableProjector",
     summary:
-      "Bounded interior, exact boundary values; needs finite values on the boundary.",
+      "Bounded interior, exact boundary values; needs finite values on the boundary. Commutes for fields whose boundary trace is a lowest-order trace.",
     canonical: false,
     cost: "a local solve per entity (seconds)",
   },
@@ -147,7 +147,7 @@ export const OPERATORS: OperatorInfo[] = [
     id: "trace-preserving",
     label: "TracePreservingProjector",
     summary:
-      "The paper's operator: bounded, commuting, keeps the discrete trace.",
+      "The paper's operator: bounded, keeps the discrete trace; commuting is proved for fields whose boundary trace is a discrete trace.",
     canonical: false,
     cost: "the dearest: boundary weights too (seconds to a minute)",
   },

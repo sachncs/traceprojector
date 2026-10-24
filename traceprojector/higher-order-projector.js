@@ -49,7 +49,7 @@ export class HigherOrderProjector {
    *     (number|undefined)}=} options `degree` is p; r = p + 1.
    */
   constructor(vertices, tetrahedra, options = {}) {
-    validateMeshInput(vertices, tetrahedra);
+    validateMeshInput(vertices, tetrahedra, {allowFlipped: true});
     this.weights = new HighOrderWeights(vertices, tetrahedra, options);
     this.boundaryConditions = this.weights.boundaryConditions;
     this.degree = this.weights.degree;

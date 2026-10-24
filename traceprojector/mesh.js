@@ -47,13 +47,15 @@ function sort3(a, b, c) {
  * Checks vertices and tetrahedra and raises a ValidateError naming the first
  * problem: a malformed or non-finite coordinate, an index that is not an
  * integer or does not name a vertex, a repeated vertex, or a tetrahedron with
- * non-positive or degenerate volume. Every constructor that takes the two
- * arrays calls it.
+ * degenerate volume. By default a tetrahedron must also be positively
+ * oriented, as Mesh requires; `allowFlipped` accepts either orientation, for
+ * the operators that sort the vertices of each cell and do not care.
  * @param {!Array<!Array<number>>} vertices
  * @param {!Array<!Array<number>>} tetrahedra
+ * @param {{allowFlipped: (boolean|undefined)}=} options
  */
-export function validateMeshInput(vertices, tetrahedra) {
-  Mesh.validateInput(vertices, tetrahedra);
+export function validateMeshInput(vertices, tetrahedra, options = {}) {
+  Mesh.validateInput(vertices, tetrahedra, options.allowFlipped === true);
 }
 
 export class Mesh {
@@ -126,7 +128,7 @@ export class Mesh {
    * @param {!Array<!Array<number>>} tetrahedra
    * @private
    */
-  static validateInput(vertices, tetrahedra) {
+  static validateInput(vertices, tetrahedra, allowFlipped = false) {
     if (!Array.isArray(vertices) || vertices.length === 0) {
       throw new ValidateError('vertices must be a non-empty array');
     }
@@ -175,9 +177,11 @@ export class Mesh {
       const v2 = vertices[t[2]];
       const v3 = vertices[t[3]];
       const signedVol = tetDeterminant(v0, v1, v2, v3);
-      if (!(relativeVolume([v0, v1, v2, v3]) >= MIN_RELATIVE_VOLUME)) {
+      const volume = relativeVolume([v0, v1, v2, v3]);
+      if (!((allowFlipped ? Math.abs(volume) : volume) >=
+          MIN_RELATIVE_VOLUME)) {
         throw new ValidateError(
-            `Tetrahedron ${i} has non-positive or degenerate volume (signedVol=${signedVol}, ` +
+            `Tetrahedron ${i} has ${allowFlipped ? 'degenerate' : 'non-positive or degenerate'} volume (signedVol=${signedVol}, ` +
             `relative volume ${relativeVolume([v0, v1, v2, v3])} < ${MIN_RELATIVE_VOLUME}). ` +
             'Reorder vertices to satisfy the right-hand rule, or check for collinear/coplanar vertices.',
         );

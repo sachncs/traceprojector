@@ -41,7 +41,9 @@ export class CanonicalProjector {
   constructor(vertices, tetrahedra, options = {}) {
     // AgSpace builds this class on patches of cells whose orientation is of
     // no consequence to it; only a caller's own mesh is checked.
-    if (!options.trusted) validateMeshInput(vertices, tetrahedra);
+    if (!options.trusted) {
+      validateMeshInput(vertices, tetrahedra, {allowFlipped: true});
+    }
     const p = options.degree ?? 0;
     if (!Number.isInteger(p) || p < 0) {
       throw new ValidateError('degree must be a nonnegative integer');

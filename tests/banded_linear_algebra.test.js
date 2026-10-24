@@ -84,6 +84,56 @@ describe('banded linear algebra', () => {
     });
   });
 
+  it('factorColumns equals the fill of a simulated elimination', () => {
+    const random = seeded(21);
+    const n = 40;
+    const adjacency = Array.from({length: n}, () => new Set());
+    for (let e = 0; e < 90; e++) {
+      const a = Math.floor(random() * n);
+      const b = Math.floor(random() * n);
+      if (a !== b) {
+        adjacency[a].add(b);
+        adjacency[b].add(a);
+      }
+    }
+    const {order, columns} = minimumDegreeOrder(adjacency);
+    // Eliminate in that order on an explicit graph.
+    const graph = adjacency.map((s) => new Set(s));
+    order.forEach((v, k) => {
+      const neighbours = [...graph[v]];
+      expect([...columns[k]].sort((x, y) => x - y)).to.deep.equal(
+          neighbours.sort((x, y) => x - y));
+      for (const a of neighbours) {
+        graph[a].delete(v);
+        for (const b of neighbours) if (a !== b) graph[a].add(b);
+      }
+    });
+  });
+
+  it('merges vertices with identical neighbourhoods', () => {
+    // Pairs of twins on a path: the compressed graph is the path.
+    const n = 12;
+    const adjacency = Array.from({length: n}, () => new Set());
+    const link = (a, b) => {
+      adjacency[a].add(b);
+      adjacency[b].add(a);
+    };
+    for (let g = 0; g < n / 2; g++) {
+      link(2 * g, 2 * g + 1);
+      if (g + 1 < n / 2) {
+        for (const a of [2 * g, 2 * g + 1]) {
+          for (const b of [2 * g + 2, 2 * g + 3]) link(a, b);
+        }
+      }
+    }
+    const {order} = minimumDegreeOrder(adjacency);
+    const position = new Int32Array(n);
+    order.forEach((v, k) => (position[v] = k));
+    for (let g = 0; g < n / 2; g++) {
+      expect(Math.abs(position[2 * g] - position[2 * g + 1])).to.equal(1);
+    }
+  });
+
   it('SparseCholesky solves a grid system to roundoff with less fill', () => {
     const k = 10;
     const n = k ** 3;

@@ -398,29 +398,73 @@ export function solveSemidefiniteBanded(matrix, b) {
 }
 
 /**
- * Minimum-degree ordering of a graph by the quotient-graph method: an
- * eliminated vertex becomes an element standing for the clique of its
- * neighbours, so the clique is never formed edge by edge. The degree of a
- * vertex is exact (its variable neighbours plus the variables of its
- * elements). Returns the order and, for every eliminated vertex, its
- * neighbours at the time: the pattern of its column of the Cholesky factor.
- * @param {!Array<!Set<number>>} neighbours - Adjacency, without self loops.
- * @return {{order: !Int32Array, columns: !Array<!Array<number>>}} `order[k]`
- *     is the k-th vertex eliminated; `columns[k]` its neighbours then (old
- *     numbers).
+ * The columns of the Cholesky factor in a given elimination order: for each
+ * vertex, its neighbours at the time of its elimination (old numbers). Built
+ * with the elimination tree: the structure of a column is the part of its
+ * row of the matrix beyond the diagonal, together with the structures of its
+ * children.
+ * @param {!Array<(!Set<number>|!Array<number>)>} neighbours
+ * @param {!Int32Array} order `order[k]` is the k-th vertex eliminated.
+ * @return {!Array<!Array<number>>}
  */
-export function minimumDegreeOrder(neighbours) {
+export function factorColumns(neighbours, order) {
+  const n = order.length;
+  const position = new Int32Array(n);
+  order.forEach((v, k) => (position[v] = k));
+  const children = Array.from({length: n}, () => []);
+  const structure = new Array(n);
+  const mark = new Int32Array(n).fill(-1);
+  for (let j = 0; j < n; j++) {
+    const list = [];
+    mark[j] = j;
+    for (const u of neighbours[order[j]]) {
+      const p = position[u];
+      if (p > j && mark[p] !== j) {
+        mark[p] = j;
+        list.push(p);
+      }
+    }
+    for (const c of children[j]) {
+      for (const p of structure[c]) {
+        if (p !== j && mark[p] !== j) {
+          mark[p] = j;
+          list.push(p);
+        }
+      }
+    }
+    structure[j] = list;
+    if (list.length) {
+      let parent = n;
+      for (const p of list) if (p < parent) parent = p;
+      children[parent].push(j);
+    }
+  }
+  return structure.map((list) => list.map((p) => order[p]));
+}
+
+/**
+ * The elimination order of the minimum-degree method on a weighted graph, by
+ * the quotient-graph method: an eliminated vertex becomes an element standing
+ * for the clique of its neighbours, so the clique is never formed edge by
+ * edge; degrees are approximate external degrees (Amestoy, Davis and Duff)
+ * counted with the weights of the vertices.
+ * @private
+ */
+function weightedMinimumDegree(neighbours, weight) {
   const n = neighbours.length;
   const variables = neighbours.map((s) => Array.from(s));
   const elementsOf = Array.from({length: n}, () => []);
   const members = new Array(n).fill(null);
+  const memberWeight = new Float64Array(n);
   const alive = new Uint8Array(n).fill(1);
-  const degree = new Int32Array(n);
+  const degree = new Float64Array(n);
   const seen = new Int32Array(n);
   const inside = new Int32Array(n);
   const counted = new Int32Array(n);
-  const outside = new Int32Array(n);
+  const outside = new Float64Array(n);
   let stamp = 0;
+  let remaining = 0;
+  for (let v = 0; v < n; v++) remaining += weight[v];
   // Binary min-heap of [degree, vertex] with stale entries skipped.
   const heap = [];
   const less = (x, y) => x[0] < y[0] || (x[0] === y[0] && x[1] < y[1]);
@@ -453,11 +497,12 @@ export function minimumDegreeOrder(neighbours) {
     return top;
   };
   for (let v = 0; v < n; v++) {
-    degree[v] = variables[v].length;
-    push(degree[v], v);
+    let d = 0;
+    for (const u of variables[v]) d += weight[u];
+    degree[v] = d;
+    push(d, v);
   }
   const order = new Int32Array(n);
-  const columns = [];
   for (let k = 0; k < n; k++) {
     let v;
     for (;;) {
@@ -472,10 +517,12 @@ export function minimumDegreeOrder(neighbours) {
     stamp++;
     seen[v] = stamp;
     const reach = [];
+    let reachWeight = 0;
     for (const u of variables[v]) {
       if (alive[u] && seen[u] !== stamp) {
         seen[u] = stamp;
         reach.push(u);
+        reachWeight += weight[u];
       }
     }
     for (const e of elementsOf[v]) {
@@ -484,14 +531,16 @@ export function minimumDegreeOrder(neighbours) {
         if (alive[u] && seen[u] !== stamp) {
           seen[u] = stamp;
           reach.push(u);
+          reachWeight += weight[u];
         }
       }
       members[e] = null;
     }
     alive[v] = 0;
+    remaining -= weight[v];
     order[k] = v;
-    columns.push(reach);
     members[v] = reach;
+    memberWeight[v] = reachWeight;
     variables[v] = null;
     elementsOf[v] = null;
     for (const u of reach) inside[u] = k + 1;
@@ -503,30 +552,68 @@ export function minimumDegreeOrder(neighbours) {
       kept.push(v);
       elementsOf[u] = kept;
     }
-    // |L_e minus L_v| for every element e that meets the new one: start from
-    // |L_e| and subtract one for each member of L_v.
+    // The weight of every other element that lies outside the new one.
     for (const u of reach) {
       for (const e of elementsOf[u]) {
         if (e === v) continue;
         if (counted[e] !== k + 1) {
           counted[e] = k + 1;
-          outside[e] = members[e].length;
+          outside[e] = memberWeight[e];
         }
-        outside[e]--;
+        outside[e] -= weight[u];
       }
     }
-    // Approximate external degree (Amestoy, Davis and Duff): variable
-    // neighbours, the rest of the new element, and the parts of the other
-    // elements that lie outside it.
     for (const u of reach) {
-      let d = variables[u].length + reach.length - 1;
+      let d = reachWeight - weight[u];
+      for (const x of variables[u]) d += weight[x];
       for (const e of elementsOf[u]) if (e !== v) d += outside[e];
-      d = Math.min(d, n - k - 2);
+      d = Math.min(d, remaining - weight[u]);
       degree[u] = d;
       push(d, u);
     }
   }
-  return {order, columns};
+  return order;
+}
+
+/**
+ * Minimum-degree ordering of a graph. Vertices with identical closed
+ * neighbourhoods (the degrees of freedom of one mesh entity, typically) are
+ * merged and eliminated together, which shrinks the graph the ordering has to
+ * work on several times over; the columns of the factor come from the final
+ * order.
+ * @param {!Array<!Set<number>>} neighbours - Adjacency, without self loops.
+ * @return {{order: !Int32Array, columns: !Array<!Array<number>>}} `order[k]`
+ *     is the k-th vertex eliminated; `columns[k]` its neighbours then (old
+ *     numbers).
+ */
+export function minimumDegreeOrder(neighbours) {
+  const n = neighbours.length;
+  const groupOf = new Int32Array(n);
+  const byKey = new Map();
+  const groups = [];
+  for (let v = 0; v < n; v++) {
+    const key = [...neighbours[v], v].sort((p, q) => p - q).join(',');
+    let g = byKey.get(key);
+    if (g === undefined) {
+      g = groups.length;
+      byKey.set(key, g);
+      groups.push([]);
+    }
+    groups[g].push(v);
+    groupOf[v] = g;
+  }
+  const compressed = groups.map((members, g) => {
+    const set = new Set();
+    for (const u of neighbours[members[0]]) {
+      if (groupOf[u] !== g) set.add(groupOf[u]);
+    }
+    return set;
+  });
+  const weight = Float64Array.from(groups, (members) => members.length);
+  const groupOrder = weightedMinimumDegree(compressed, weight);
+  const order = Int32Array.from(
+      Array.from(groupOrder).flatMap((g) => groups[g]));
+  return {order, columns: factorColumns(neighbours, order)};
 }
 
 /**

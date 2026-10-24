@@ -444,6 +444,10 @@ geometry and fuzz suites for acceptance, not for the stability constant, and
 the bump shrinks relative to the stretched cells, so the test is not a worst
 case.
 
+## Coverage
+
+`npm run test:coverage` (c8, unit suite only, not `validation/`): 83.9% of statements, **95.4% of branches**, 79.7% of functions. The files under 80% of statements are `parallel-worker.js` (50%, runs in worker threads that c8 does not see in this setup), `parallel.js` (73%) and `whitney.js` (76%). Branch coverage measures that a branch ran, not that a test would notice if it were wrong; the mutation score above is the measure of the latter.
+
 ## Known gaps
 
 - **Stability of the operator above the lowest order is not measured.**

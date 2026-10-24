@@ -24,7 +24,7 @@ export class ZeroTraceProjector {
    *   false drops the zero-trace condition (see {@link LocalWeights}).
    */
   constructor(vertices, tetrahedra, options = {}) {
-    validateMeshInput(vertices, tetrahedra);
+    validateMeshInput(vertices, tetrahedra, {allowFlipped: true});
     this.weights = new LocalWeights(vertices, tetrahedra, {
       boundaryConditions: options.boundaryConditions,
     });

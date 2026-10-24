@@ -658,19 +658,26 @@ For interior faces the orientation is arbitrary.
 ### `validateMeshInput`
 
 ```ts
-function validateMeshInput(vertices: number[][], tetrahedra: number[][]): void
+function validateMeshInput(
+  vertices: number[][],
+  tetrahedra: number[][],
+  options?: { allowFlipped?: boolean },
+): void
 ```
 
 Checks vertices and tetrahedra and throws a ValidateError naming the first
 problem: a malformed or non-finite coordinate, an index that is not an
 integer or does not name a vertex, a repeated vertex, or a tetrahedron with
-non-positive or degenerate volume. Every constructor that takes the two
-arrays calls it, so use it to check a mesh without building anything.
+degenerate volume. By default a tetrahedron must also be positively
+oriented, as `Mesh` and `Projector` require. The operators that take vertices
+and tetrahedra call it with `allowFlipped` because they give the same answer
+for either orientation.
 
 **Parameters**
 
 - `vertices`: Vertex coordinates.
 - `tetrahedra`: Four vertex numbers per tetrahedron.
+- `options.allowFlipped`: Accept negatively oriented tetrahedra (default false).
 
 ### `Whitney`
 

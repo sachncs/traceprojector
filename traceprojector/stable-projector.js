@@ -38,7 +38,7 @@ export class StableProjector {
    *   zero-trace projector on the same mesh, to share its computed weights.
    */
   constructor(vertices, tetrahedra, options = {}) {
-    validateMeshInput(vertices, tetrahedra);
+    validateMeshInput(vertices, tetrahedra, {allowFlipped: true});
     this.interior =
       options.interior ?? new ZeroTraceProjector(vertices, tetrahedra, options);
     this.weights = this.interior.weights;

@@ -31,7 +31,7 @@ export class TracePreservingProjector {
    * @param {{quadratureOrder: (number|undefined)}=} options
    */
   constructor(vertices, tetrahedra, options = {}) {
-    validateMeshInput(vertices, tetrahedra);
+    validateMeshInput(vertices, tetrahedra, {allowFlipped: true});
     this.degree = options.degree ?? 0;
     if (!Number.isInteger(this.degree) || this.degree < 0) {
       throw new ValidateError('degree must be a nonnegative integer');

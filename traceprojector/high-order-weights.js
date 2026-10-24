@@ -53,7 +53,7 @@ import {
   translateForm,
   zeroLike,
 } from './physical-forms.js';
-import {Polynomial} from './polynomial-forms.js';
+import {Polynomial, monomialValues} from './polynomial-forms.js';
 
 const dot = (a, b) => (typeof a === 'number' ? a * b :
   a.reduce((s, q, i) => s + q * b[i], 0));
@@ -66,14 +66,23 @@ const dot = (a, b) => (typeof a === 'number' ? a * b :
  * @return {{values: !Array<!Float64Array>, size: number}}
  */
 function sampled(forms, points) {
+  let top = 0;
+  for (const form of forms) {
+    for (const p of Array.isArray(form) ? form : [form]) {
+      top = Math.max(top, p.degree);
+    }
+  }
+  // The monomials of each point once, shared by all forms.
+  const rows = points.map(({x}) => monomialValues(x, top));
   let size = 1;
   const values = forms.map((form) => {
-    const rows = points.map(({x}) => evaluateForm(form, x));
-    size = typeof rows[0] === 'number' ? 1 : rows[0].length;
+    const components = Array.isArray(form) ? form : [form];
+    size = components.length;
     const flat = new Float64Array(rows.length * size);
     rows.forEach((row, q) => {
-      if (size === 1) flat[q] = row;
-      else for (let k = 0; k < size; k++) flat[q * size + k] = row[k];
+      for (let k = 0; k < size; k++) {
+        flat[q * size + k] = components[k].dot(row);
+      }
     });
     return flat;
   });
@@ -114,6 +123,21 @@ export class HighOrderWeights {
     // functions of degree r with a bubble exactly.
     this.exactOrder = this.r + 3;
     this.boundaryConditions = options.boundaryConditions === true;
+    // Test hook: also solve every minimum-norm problem densely and keep the
+    // discrepancy in `checks`.
+    this.crossCheck = options.crossCheck === true;
+    this.checks = [];
+    // One record per minimum-norm solve: size, time, certificate.
+    this.stats = [];
+    // Element matrices by the geometry of their cell: a cell shared by the
+    // stars of many entities has its matrices computed once.
+    this.blocks = new Map();
+    this.blockDoubles = 0;
+    this.blockLimit = options.blockCacheDoubles ?? 16 * 1024 * 1024;
+    this.formBank = new Map();
+    this.formBankLimit = options.formBankEntries ?? 1024;
+    this.blockHits = 0;
+    this.blockMisses = 0;
     this.topology = new LocalWeights(vertices, tetrahedra, {
       boundaryConditions: this.boundaryConditions,
     });
@@ -260,6 +284,72 @@ export class HighOrderWeights {
     return {vertices: coordinates, tetrahedra: tets, centroids, baseVertex};
   }
 
+  /**
+   * Physical forms of every local basis function of a cell. They depend on
+   * the element and the corner coordinates only, so they are shared by every
+   * space and every weight that meets the cell (in a bounded bank, oldest
+   * evicted first).
+   */
+  basisForms(space, c, l) {
+    if (!this.formCache.has(space)) this.formCache.set(space, new Map());
+    const cache = this.formCache.get(space);
+    const id = `${c}:${l}`;
+    if (!cache.has(id)) {
+      const frame = space.frame(c);
+      const key = `${this.r}|${l}|${frame.points.map((p) => p.join(','))
+          .join(';')}`;
+      let forms = this.formBank.get(key);
+      if (forms) {
+        this.formBank.delete(key);
+      } else {
+        forms = space.element(l).basis.map(
+            (psi) => physicalForm(psi, l, frame));
+        if (this.formBank.size >= this.formBankLimit) {
+          this.formBank.delete(this.formBank.keys().next().value);
+        }
+      }
+      this.formBank.set(key, forms);
+      cache.set(id, forms);
+    }
+    return cache.get(id);
+  }
+
+  // ---------------------------------------------------------------------
+  // Patches.
+
+  /** A compact tetrahedral mesh of some cells, with the base numbers. */
+  patch(cells, split) {
+    const ids = new Map();
+    const coordinates = [];
+    const baseVertex = [];
+    const vertex = (key, point) => {
+      if (!ids.has(key)) {
+        ids.set(key, coordinates.length);
+        coordinates.push(point);
+        baseVertex.push(key[0] === 'v' ? Number(key.slice(1)) : -1);
+      }
+      return ids.get(key);
+    };
+    const tets = [];
+    const centroids = [];
+    for (const c of cells) {
+      const corners = this.base.cells[c];
+      const points = this.base.geometry(c).points;
+      if (!split) {
+        tets.push(corners.map((v, i) => vertex(`v${v}`, points[i])));
+        continue;
+      }
+      const centre = vertex(`c${c}`, points[0].map(
+          (_, d) => points.reduce((s, q) => s + q[d], 0) / 4));
+      centroids.push(centre);
+      const ring = corners.map((v, i) => vertex(`v${v}`, points[i]));
+      for (let k = 0; k < 4; k++) {
+        tets.push([...ring.filter((_, i) => i !== k), centre]);
+      }
+    }
+    return {vertices: coordinates, tetrahedra: tets, centroids, baseVertex};
+  }
+
   /** Physical forms of every local basis function of a cell, cached. */
   basisForms(space, c, l) {
     if (!this.formCache.has(space)) this.formCache.set(space, new Map());
@@ -355,13 +445,33 @@ export class HighOrderWeights {
     // solve is the fallback for a system the banded one cannot factor or
     // converge on.
     let solved;
+    const started = performance.now();
+    let method = 'banded';
     try {
       solved = minimumNormSolveBanded(constraints, mass, target0);
     } catch (error) {
       solved = null;
     }
-    if (!solved || !(solved.residual <= 1e-9 * Math.max(solved.scale, 1))) {
+    if (!solved || !(solved.residual <= 1e-9 * Math.max(solved.scale, 1) &&
+        solved.stationarity <= 1e-8)) {
       solved = minimumNormSolveDense(constraints, mass, target0);
+      method = 'dense';
+    }
+    this.stats.push({
+      l,
+      method,
+      unknowns: free.length,
+      constraints: constraints.rows,
+      milliseconds: performance.now() - started,
+      iterations: solved.iterations ?? 0,
+      entries: solved.entries ?? 0,
+      residual: solved.residual / Math.max(solved.scale, 1e-300),
+      stationarity: solved.stationarity ?? 0,
+      dualityGap: solved.dualityGap ?? 0,
+    });
+    if (this.crossCheck) {
+      this.recordCrossCheck(l, constraints, mass, target0,
+          solved);
     }
     if (!(solved.residual <= 1e-9 * Math.max(solved.scale, 1))) {
       throw new SingularError(
@@ -489,6 +599,41 @@ export class HighOrderWeights {
     };
   }
 
+  /**
+   * @private Compares a minimum-norm solution with the dense one and keeps
+   * the discrepancy in `this.checks` (only when `crossCheck` is set). Both
+   * solutions satisfy the constraints; the minimizer has the smaller energy
+   * x'Mx, and the banded solver's own certificate (stationarity and duality
+   * gap) says how close to the minimizer it is.
+   */
+  recordCrossCheck(l, constraints, mass, rhs, solved) {
+    const dense = minimumNormSolveDense(constraints, mass, rhs);
+    const diff = Float64Array.from(solved.x, (q, i) => q - dense.x[i]);
+    const energy = (v) => {
+      const mv = mass.multiply(v);
+      return Math.sqrt(v.reduce((acc, q, i) => acc + q * mv[i], 0));
+    };
+    let largest = 0;
+    let scale = 0;
+    diff.forEach((q, i) => {
+      largest = Math.max(largest, Math.abs(q));
+      scale = Math.max(scale, Math.abs(dense.x[i]));
+    });
+    this.checks.push({
+      l,
+      unknowns: mass.rows,
+      constraints: constraints.rows,
+      relativeMax: largest / Math.max(scale, 1e-300),
+      relativeEnergy: energy(diff) / Math.max(energy(dense.x), 1e-300),
+      energyRatio: energy(solved.x) / Math.max(energy(dense.x), 1e-300),
+      residual: solved.residual / Math.max(solved.scale, 1e-300),
+      denseResidual: dense.residual / Math.max(dense.scale, 1e-300),
+      stationarity: solved.stationarity,
+      dualityGap: solved.dualityGap,
+      iterations: solved.iterations,
+    });
+  }
+
   /** @private The dofs of degree l that are not excluded, and their place. */
   freeDofs(space, l, excluded) {
     const size = space.size(l);
@@ -558,27 +703,61 @@ export class HighOrderWeights {
       dimension === 2 ? sets.faces.has(baseFace(entity)) : false));
   }
 
+  /**
+   * An element matrix, from the cache or computed. The key is the kind of
+   * matrix, the degrees and the corner coordinates in cell order, so equal
+   * geometry gives equal matrices (to the last bit).
+   * @private
+   */
+  block(kind, l, points, compute) {
+    const key = `${kind}|${this.r}|${l}|${points.map((p) => p.join(',')).join(';')}`;
+    const found = this.blocks.get(key);
+    if (found) {
+      this.blockHits++;
+      this.blocks.delete(key);
+      this.blocks.set(key, found);
+      return found;
+    }
+    this.blockMisses++;
+    const block = compute();
+    this.blocks.set(key, block);
+    this.blockDoubles += block.length;
+    for (const [oldest, value] of this.blocks) {
+      if (this.blockDoubles <= this.blockLimit || oldest === key) break;
+      this.blocks.delete(oldest);
+      this.blockDoubles -= value.length;
+    }
+    return block;
+  }
+
   /** Sparse L2 mass matrix of the free dofs of degree l. */
   massMatrix(space, l, free, position) {
     const entries = free.map(() => new Map());
     space.complex.cells.forEach((_, c) => {
-      const forms = this.basisForms(space, c, l);
+      const cellPoints = space.complex.geometry(c).points;
       const dofs = space.cellDofs(c, l);
-      const rule = tetrahedronRule(space.complex.geometry(c).points,
-          this.exactOrder);
-      const {values, size} = sampled(forms, rule);
-      const weights = Float64Array.from(rule, ({weight}) => weight);
+      const n = dofs.length;
+      const block = this.block('mass', l, cellPoints, () => {
+        const forms = this.basisForms(space, c, l);
+        const rule = tetrahedronRule(cellPoints, this.exactOrder);
+        const {values, size} = sampled(forms, rule);
+        const weights = Float64Array.from(rule, ({weight}) => weight);
+        const out = new Float64Array(n * n);
+        for (let i = 0; i < n; i++) {
+          for (let j = i; j < n; j++) {
+            const sum = inner(values[i], values[j], weights, size);
+            out[i * n + j] = sum;
+            out[j * n + i] = sum;
+          }
+        }
+        return out;
+      });
       dofs.forEach((a, i) => {
         if (position[a] < 0) return;
+        const row = entries[position[a]];
         dofs.forEach((b, j) => {
-          if (position[b] < 0 || j < i) return;
-          const sum = inner(values[i], values[j], weights, size);
-          const row = entries[position[a]];
-          row.set(position[b], (row.get(position[b]) ?? 0) + sum);
-          if (j !== i) {
-            const mirror = entries[position[b]];
-            mirror.set(position[a], (mirror.get(position[a]) ?? 0) + sum);
-          }
+          if (position[b] < 0) return;
+          row.set(position[b], (row.get(position[b]) ?? 0) + block[i * n + j]);
         });
       });
     });
@@ -606,27 +785,56 @@ export class HighOrderWeights {
       }
       return derivativeForms.get(c);
     };
+    // The stiffness of mu d psi_a . d psi_b depends on the cell alone (mu is
+    // the bump of its own centroid), so it is cached per cell.
+    const stiffness = new Map();
+    const cellStiffness = (c) => {
+      if (!stiffness.has(c)) {
+        const cellPoints = space.complex.geometry(c).points;
+        const n = space.cellDofs(c, l).length;
+        stiffness.set(c, this.block('potential', l, cellPoints, () => {
+          const out = new Float64Array(n * n);
+          const derived = dForms(c);
+          for (let k = 0; k < 4; k++) {
+            const s = 4 * c + k;
+            const points = rule(s);
+            const weights = Float64Array.from(
+                points, ({x, weight}) => weight * mu[s].evaluate(x));
+            const dv = sampled(derived, points);
+            for (let i = 0; i < n; i++) {
+              for (let j = i; j < n; j++) {
+                const sum = inner(dv.values[i], dv.values[j], weights, dv.size);
+                out[i * n + j] += sum;
+                if (j !== i) out[j * n + i] += sum;
+              }
+            }
+          }
+          return out;
+        }));
+      }
+      return stiffness.get(c);
+    };
+    for (let c = 0; c < cells.length; c++) {
+      const block = cellStiffness(c);
+      const dofs = space.cellDofs(c, l);
+      const n = dofs.length;
+      dofs.forEach((a, i) => {
+        dofs.forEach((b, j) => {
+          entries[a].set(b, (entries[a].get(b) ?? 0) + block[i * n + j]);
+        });
+      });
+    }
     splitSpace.complex.cells.forEach((_, s) => {
       const {cell} = subCell(s);
       const c = cells.indexOf(cell);
       const forms = this.basisForms(space, c, l);
-      const derived = dForms(c);
       const dofs = space.cellDofs(c, l);
       const points = rule(s);
       const quadrature = Float64Array.from(points, ({weight}) => weight);
-      const weights = Float64Array.from(
-          points, ({x, weight}) => weight * mu[s].evaluate(x));
-      const dv = sampled(derived, points);
       const v = sampled(forms, points);
       const etaValues = sampled([eta[s]], points).values[0];
       dofs.forEach((a, i) => {
         rhs[a] -= inner(etaValues, v.values[i], quadrature, v.size);
-        dofs.forEach((b, j) => {
-          if (j < i) return;
-          const sum = inner(dv.values[i], dv.values[j], weights, dv.size);
-          entries[a].set(b, (entries[a].get(b) ?? 0) + sum);
-          if (j !== i) entries[b].set(a, (entries[b].get(a) ?? 0) + sum);
-        });
       });
     });
     // phi_sigma(psi_a): the lowest-order degree of freedom of the basis

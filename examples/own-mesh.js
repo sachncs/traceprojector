@@ -27,11 +27,18 @@ attempt('a NaN coordinate', () => new Mesh([[0, 0, 0], [1, 0, 0], [0, 1, 0],
   [NaN, 0, 1]], [[0, 1, 2, 3]]));
 attempt('a vertex that is missing', () => new Mesh(vertices, [[0, 1, 2, 9]]));
 
-// To check a mesh without building anything, call validateMeshInput. Every
-// projector does the same when you construct it.
+// To check a mesh without building anything, call validateMeshInput.
 attempt('validateMeshInput', () => validateMeshInput(vertices, tetrahedra));
+
+// Every projector checks its mesh when you construct it, and raises the same
+// errors for a NaN, a repeated or missing vertex and a flat tetrahedron. They
+// do not insist on the orientation: they sort the vertices of each cell and
+// give the same answer either way, so a Gmsh or TetGen mesh that mixes the two
+// works as it is. Mesh and Projector, which use the sign, do insist.
 attempt('projector, flipped', () => new StableProjector(vertices,
     [[0, 2, 1, 3]]));
+attempt('projector, flat', () => new StableProjector([[0, 0, 0], [1, 0, 0],
+  [0, 1, 0], [1, 1, 0]], [[0, 1, 2, 3]]));
 
 // Once the mesh is good, find the tetrahedron that contains a point.
 const mesh = new Mesh(vertices, tetrahedra);

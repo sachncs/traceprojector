@@ -156,7 +156,6 @@ export class BandedCholesky {
 
 const TARGET_RESIDUAL = 1e-14;
 const MAX_PASSES = 200;
-const MAX_PENALTY_STEPS = 6;
 
 /** K = M + gamma C^T C as column-to-value maps. */
 function penalized(constraints, mass, gamma) {
@@ -183,76 +182,160 @@ function penalized(constraints, mass, gamma) {
   return rows;
 }
 
+/** The rows of a sparse matrix as column-to-value maps. */
+function rowMaps(matrix) {
+  return Array.from({length: matrix.rows}, (_, i) => {
+    const row = new Map();
+    for (let k = matrix.offsets[i]; k < matrix.offsets[i + 1]; k++) {
+      row.set(matrix.indices[k], (row.get(matrix.indices[k]) ?? 0) +
+        matrix.values[k]);
+    }
+    return row;
+  });
+}
+
+const dotProduct = (a, b) => {
+  let sum = 0;
+  for (let i = 0; i < a.length; i++) sum += a[i] * b[i];
+  return sum;
+};
+
+/** Passes of conjugate gradients, and restarts from the true residual. */
+const MAX_CG = 400;
+const MAX_RESTARTS = 4;
+
 /**
- * Minimum-norm solution of C x = r in the metric M (minimizes x^T M x) by the
- * method of multipliers: each pass solves the banded system
- * (M + gamma C^T C) x = C^T (gamma r - lambda) and updates the multipliers
- * with the true constraint residual. The penalty gamma grows until the
- * residual falls steadily; the answer is the exact minimizer, not a penalty
- * approximation, because the multipliers absorb the penalty error.
+ * Minimum-norm solution of C x = r in the metric M (minimizes x^T M x): the
+ * solution x = M^-1 C^T lambda of the dual problem S lambda = r with the
+ * Schur complement S = C M^-1 C^T, found by preconditioned conjugate
+ * gradients on lambda.
+ *
+ * S is applied with a banded Cholesky factorization of M alone, which is well
+ * conditioned, so x = M^-1 C^T lambda satisfies the optimality condition
+ * M x = C^T lambda to rounding error at every iterate: the iteration only has
+ * to drive the constraint residual down. The preconditioner is the proximal
+ * map gamma (I + gamma S)^-1 = gamma (I - gamma C K^-1 C^T) with
+ * K = M + gamma C^T C, which is accurate for the eigenvalues of S above
+ * 1 / gamma and needs no accuracy of its own. Rank-deficient C is fine: the
+ * multipliers stay in the range of C and x is unique. The iteration keeps its
+ * best iterate and restarts from the true residual if rounding stalls it.
  *
  * @param {!SparseMatrix} constraints - C, m x n.
  * @param {!SparseMatrix} mass - M, n x n, symmetric positive definite.
  * @param {!Float64Array} r - Length m, in the range of C.
  * @return {{x: !Float64Array, residual: number, scale: number,
- *     iterations: number}}
+ *     iterations: number, stationarity: number, dualityGap: number,
+ *     entries: number}} The solution and its certificate: `residual` is
+ *     |Cx - r|, `stationarity` the relative size of M x - C' lambda for the
+ *     returned multipliers, `dualityGap` the relative gap between the
+ *     objective and the dual bound they give, and `entries` the number of
+ *     stored factor entries. A feasible x with small stationarity is the
+ *     minimizer.
  */
 export function minimumNormSolveBanded(constraints, mass, r) {
   const n = mass.rows;
   const m = constraints.rows;
-  let rNorm = 0;
-  for (let i = 0; i < m; i++) rNorm += r[i] * r[i];
-  rNorm = Math.sqrt(rNorm);
-  const x = new Float64Array(n);
-  if (rNorm === 0) return {x, residual: 0, scale: 0, iterations: 0};
-
+  const rNorm = Math.sqrt(dotProduct(r, r));
+  const zero = new Float64Array(n);
+  if (rNorm === 0) {
+    return {x: zero, residual: 0, scale: 0, iterations: 0, stationarity: 0,
+      dualityGap: 0, entries: 0};
+  }
+  const massFactor = new SparseCholesky(rowMaps(mass));
   let massScale = 0;
   for (const d of mass.diagonal()) massScale += d;
   massScale /= n;
   let constraintScale = 0;
   for (const v of constraints.values) constraintScale += v * v;
   constraintScale = Math.max(constraintScale / Math.max(m, 1), 1e-300);
+  const gamma = massScale / constraintScale;
+  const penaltyFactor = new SparseCholesky(
+      penalized(constraints, mass, gamma));
 
-  let gamma = massScale / constraintScale;
-  let order;
-  let best = x;
-  let bestResidual = rNorm;
+  const lift = (lambda) => massFactor.solve(
+      constraints.multiplyTranspose(lambda, new Float64Array(n)));
+  const apply = (p) => constraints.multiply(lift(p));
+  const precondition = (rho) => {
+    const w = penaltyFactor.solve(
+        constraints.multiplyTranspose(rho, new Float64Array(n)));
+    const cw = constraints.multiply(w);
+    return Float64Array.from(rho, (q, i) => gamma * (q - gamma * cw[i]));
+  };
+  const residualOf = (lambda) => {
+    const cy = constraints.multiply(lift(lambda));
+    return Float64Array.from(r, (q, i) => q - cy[i]);
+  };
+
+  let lambda = new Float64Array(m);
+  let best = lambda;
+  let residual = Float64Array.from(r);
+  let bestNorm = rNorm;
   let iterations = 0;
-  const work = new Float64Array(n);
-  for (let step = 0; step < MAX_PENALTY_STEPS; step++) {
-    const factor = new BandedCholesky(penalized(constraints, mass, gamma),
-        order);
-    order = factor.order;
-    const lambda = new Float64Array(m);
-    const rhs = new Float64Array(m);
-    let previous = Infinity;
-    for (let pass = 0; pass < MAX_PASSES; pass++) {
+  for (let restart = 0; restart <= MAX_RESTARTS; restart++) {
+    residual = residualOf(best);
+    const start = Math.sqrt(dotProduct(residual, residual));
+    bestNorm = start;
+    if (start <= TARGET_RESIDUAL * rNorm) break;
+    lambda = Float64Array.from(best);
+    let z = precondition(residual);
+    const p = Float64Array.from(z);
+    let rz = dotProduct(residual, z);
+    let improved = false;
+    for (let pass = 0; pass < MAX_CG; pass++) {
       iterations++;
-      for (let i = 0; i < m; i++) rhs[i] = gamma * r[i] - lambda[i];
-      constraints.multiplyTranspose(rhs, work);
-      const y = factor.solve(work);
-      const cy = constraints.multiply(y);
-      let norm = 0;
+      const sp = apply(p);
+      const curvature = dotProduct(p, sp);
+      if (!(curvature > 0)) break;
+      const alpha = rz / curvature;
       for (let i = 0; i < m; i++) {
-        const miss = r[i] - cy[i];
-        norm += miss * miss;
-        lambda[i] -= gamma * miss;
+        lambda[i] += alpha * p[i];
+        residual[i] -= alpha * sp[i];
       }
-      norm = Math.sqrt(norm);
-      if (norm < bestResidual) {
-        bestResidual = norm;
-        best = y;
+      const norm = Math.sqrt(dotProduct(residual, residual));
+      if (norm < bestNorm) {
+        bestNorm = norm;
+        best = Float64Array.from(lambda);
+        improved = true;
       }
-      if (norm <= TARGET_RESIDUAL * rNorm) {
-        return {x: best, residual: bestResidual, scale: rNorm, iterations};
-      }
-      // Too slow a fall: a larger penalty converges faster per pass.
-      if (pass >= 3 && norm > 0.5 * previous) break;
-      previous = norm;
+      if (norm <= TARGET_RESIDUAL * rNorm || norm > 1e3 * bestNorm) break;
+      z = precondition(residual);
+      const next = dotProduct(residual, z);
+      const beta = next / rz;
+      rz = next;
+      for (let i = 0; i < m; i++) p[i] = z[i] + beta * p[i];
     }
-    gamma *= 100;
+    if (!improved) break;
   }
-  return {x: best, residual: bestResidual, scale: rNorm, iterations};
+
+  const x = lift(best);
+  const cx = constraints.multiply(x);
+  let miss = 0;
+  for (let i = 0; i < m; i++) miss += (r[i] - cx[i]) ** 2;
+  // Certificate with the multipliers lambda: M x - C' lambda should vanish.
+  const mx = mass.multiply(x);
+  const ctl = constraints.multiplyTranspose(best, new Float64Array(n));
+  let stationary = 0;
+  let size = 0;
+  let energy = 0;
+  let eDotX = 0;
+  for (let i = 0; i < n; i++) {
+    const e = mx[i] - ctl[i];
+    stationary += e * e;
+    size += mx[i] * mx[i];
+    energy += x[i] * mx[i];
+    eDotX += e * x[i];
+  }
+  let pairing = 0;
+  for (let i = 0; i < m; i++) pairing += best[i] * (r[i] - cx[i]);
+  return {
+    x,
+    residual: Math.sqrt(miss),
+    scale: rNorm,
+    iterations,
+    stationarity: Math.sqrt(stationary / Math.max(size, 1e-300)),
+    dualityGap: Math.abs(pairing - eDotX) / Math.max(energy, 1e-300),
+    entries: massFactor.entries + penaltyFactor.entries,
+  };
 }
 
 /**
@@ -286,7 +369,7 @@ export function solveSemidefiniteBanded(matrix, b) {
     }
     rows[i].set(i, (rows[i].get(i) ?? 0) + shift);
   }
-  const factor = new BandedCholesky(rows);
+  const factor = new SparseCholesky(rows);
   const residual = Float64Array.from(b);
   let best = bNorm;
   let iterations = 0;
@@ -312,4 +395,259 @@ export function solveSemidefiniteBanded(matrix, b) {
     best = Math.min(best, norm);
   }
   return {x, residual: best, scale: bNorm, iterations};
+}
+
+/**
+ * Minimum-degree ordering of a graph by the quotient-graph method: an
+ * eliminated vertex becomes an element standing for the clique of its
+ * neighbours, so the clique is never formed edge by edge. The degree of a
+ * vertex is exact (its variable neighbours plus the variables of its
+ * elements). Returns the order and, for every eliminated vertex, its
+ * neighbours at the time: the pattern of its column of the Cholesky factor.
+ * @param {!Array<!Set<number>>} neighbours - Adjacency, without self loops.
+ * @return {{order: !Int32Array, columns: !Array<!Array<number>>}} `order[k]`
+ *     is the k-th vertex eliminated; `columns[k]` its neighbours then (old
+ *     numbers).
+ */
+export function minimumDegreeOrder(neighbours) {
+  const n = neighbours.length;
+  const variables = neighbours.map((s) => Array.from(s));
+  const elementsOf = Array.from({length: n}, () => []);
+  const members = new Array(n).fill(null);
+  const alive = new Uint8Array(n).fill(1);
+  const degree = new Int32Array(n);
+  const seen = new Int32Array(n);
+  const inside = new Int32Array(n);
+  const counted = new Int32Array(n);
+  const outside = new Int32Array(n);
+  let stamp = 0;
+  // Binary min-heap of [degree, vertex] with stale entries skipped.
+  const heap = [];
+  const less = (x, y) => x[0] < y[0] || (x[0] === y[0] && x[1] < y[1]);
+  const push = (d, v) => {
+    heap.push([d, v]);
+    let i = heap.length - 1;
+    while (i > 0) {
+      const parent = (i - 1) >> 1;
+      if (!less(heap[i], heap[parent])) break;
+      [heap[parent], heap[i]] = [heap[i], heap[parent]];
+      i = parent;
+    }
+  };
+  const pop = () => {
+    const top = heap[0];
+    const last = heap.pop();
+    if (heap.length) {
+      heap[0] = last;
+      let i = 0;
+      for (;;) {
+        const l = 2 * i + 1;
+        let best = i;
+        if (l < heap.length && less(heap[l], heap[best])) best = l;
+        if (l + 1 < heap.length && less(heap[l + 1], heap[best])) best = l + 1;
+        if (best === i) break;
+        [heap[best], heap[i]] = [heap[i], heap[best]];
+        i = best;
+      }
+    }
+    return top;
+  };
+  for (let v = 0; v < n; v++) {
+    degree[v] = variables[v].length;
+    push(degree[v], v);
+  }
+  const order = new Int32Array(n);
+  const columns = [];
+  for (let k = 0; k < n; k++) {
+    let v;
+    for (;;) {
+      const [d, candidate] = pop();
+      if (alive[candidate] && degree[candidate] === d) {
+        v = candidate;
+        break;
+      }
+    }
+    // The neighbours of v: its variables and the variables of its elements,
+    // which are absorbed into the new element v.
+    stamp++;
+    seen[v] = stamp;
+    const reach = [];
+    for (const u of variables[v]) {
+      if (alive[u] && seen[u] !== stamp) {
+        seen[u] = stamp;
+        reach.push(u);
+      }
+    }
+    for (const e of elementsOf[v]) {
+      if (members[e] === null) continue;
+      for (const u of members[e]) {
+        if (alive[u] && seen[u] !== stamp) {
+          seen[u] = stamp;
+          reach.push(u);
+        }
+      }
+      members[e] = null;
+    }
+    alive[v] = 0;
+    order[k] = v;
+    columns.push(reach);
+    members[v] = reach;
+    variables[v] = null;
+    elementsOf[v] = null;
+    for (const u of reach) inside[u] = k + 1;
+    for (const u of reach) {
+      // Edges inside the new clique, and absorbed elements, are redundant.
+      variables[u] = variables[u].filter(
+          (x) => alive[x] && inside[x] !== k + 1);
+      const kept = elementsOf[u].filter((e) => members[e] !== null);
+      kept.push(v);
+      elementsOf[u] = kept;
+    }
+    // |L_e minus L_v| for every element e that meets the new one: start from
+    // |L_e| and subtract one for each member of L_v.
+    for (const u of reach) {
+      for (const e of elementsOf[u]) {
+        if (e === v) continue;
+        if (counted[e] !== k + 1) {
+          counted[e] = k + 1;
+          outside[e] = members[e].length;
+        }
+        outside[e]--;
+      }
+    }
+    // Approximate external degree (Amestoy, Davis and Duff): variable
+    // neighbours, the rest of the new element, and the parts of the other
+    // elements that lie outside it.
+    for (const u of reach) {
+      let d = variables[u].length + reach.length - 1;
+      for (const e of elementsOf[u]) if (e !== v) d += outside[e];
+      d = Math.min(d, n - k - 2);
+      degree[u] = d;
+      push(d, u);
+    }
+  }
+  return {order, columns};
+}
+
+/**
+ * Sparse Cholesky factorization K = P' L L' P with a minimum-degree
+ * permutation P: compressed-column storage of L, the elimination tree, and an
+ * up-looking numeric phase (Davis, Direct Methods for Sparse Linear Systems,
+ * Alg. 4.2). The factor has the fill of the ordering and nothing else, which
+ * for the local problems is a small fraction of a skyline's profile.
+ */
+export class SparseCholesky {
+  /**
+   * @param {!Array<!Map<number, number>>} rows - Both triangles of K.
+   */
+  constructor(rows) {
+    const n = rows.length;
+    this.n = n;
+    const adjacency = rows.map((row, i) => new Set(
+        [...row.keys()].filter((j) => j !== i)));
+    const {order, columns} = minimumDegreeOrder(adjacency);
+    this.order = order;
+    const position = new Int32Array(n);
+    order.forEach((old, k) => (position[old] = k));
+    // Column structure of L from the elimination, in new numbers.
+    const parent = new Int32Array(n).fill(-1);
+    this.pointers = new Int32Array(n + 1);
+    for (let k = 0; k < n; k++) {
+      let first = n;
+      for (const old of columns[k]) first = Math.min(first, position[old]);
+      parent[k] = first === n ? -1 : first;
+      this.pointers[k + 1] = this.pointers[k] + 1 + columns[k].length;
+    }
+    this.parent = parent;
+    this.rowIndex = new Int32Array(this.pointers[n]);
+    this.values = new Float64Array(this.pointers[n]);
+    // The upper triangle of the permuted matrix, by column.
+    const upper = Array.from({length: n}, () => []);
+    const diagonal = new Float64Array(n);
+    rows.forEach((row, old) => {
+      const i = position[old];
+      for (const [oldColumn, value] of row) {
+        const j = position[oldColumn];
+        if (j === i) diagonal[i] += value;
+        else if (i < j) upper[j].push([i, value]);
+      }
+    });
+    this.factor(upper, diagonal);
+  }
+
+  /** @private Up-looking numeric factorization. */
+  factor(upper, diagonal) {
+    const {n, parent, pointers: lp, rowIndex: li, values: lx} = this;
+    const filled = new Int32Array(n);
+    for (let k = 0; k < n; k++) filled[k] = lp[k];
+    const x = new Float64Array(n);
+    const mark = new Int32Array(n).fill(-1);
+    const stack = new Int32Array(n);
+    const path = new Int32Array(n);
+    for (let k = 0; k < n; k++) {
+      // Pattern of row k of L, in topological order, and the scattered
+      // column k of K.
+      let top = n;
+      mark[k] = k;
+      x[k] = diagonal[k];
+      for (const [i0, value] of upper[k]) {
+        x[i0] += value;
+        let length = 0;
+        let i = i0;
+        while (mark[i] !== k) {
+          path[length++] = i;
+          mark[i] = k;
+          i = parent[i];
+        }
+        while (length > 0) stack[--top] = path[--length];
+      }
+      let d = x[k];
+      x[k] = 0;
+      for (; top < n; top++) {
+        const i = stack[top];
+        const lki = x[i] / lx[lp[i]];
+        x[i] = 0;
+        for (let p = lp[i] + 1; p < filled[i]; p++) {
+          x[li[p]] -= lx[p] * lki;
+        }
+        d -= lki * lki;
+        const p = filled[i]++;
+        li[p] = k;
+        lx[p] = lki;
+      }
+      if (!(d > 0)) throw new SingularError('matrix is not positive definite');
+      const p = filled[k]++;
+      li[p] = k;
+      lx[p] = Math.sqrt(d);
+    }
+  }
+
+  /** The number of stored entries of L. */
+  get entries() {
+    return this.values.length;
+  }
+
+  /**
+   * Solves K x = b.
+   * @param {!Float64Array} b
+   * @return {!Float64Array}
+   */
+  solve(b) {
+    const {n, order, pointers: lp, rowIndex: li, values: lx} = this;
+    const y = new Float64Array(n);
+    for (let k = 0; k < n; k++) y[k] = b[order[k]];
+    for (let j = 0; j < n; j++) {
+      y[j] /= lx[lp[j]];
+      const yj = y[j];
+      for (let p = lp[j] + 1; p < lp[j + 1]; p++) y[li[p]] -= lx[p] * yj;
+    }
+    for (let j = n - 1; j >= 0; j--) {
+      let sum = y[j];
+      for (let p = lp[j] + 1; p < lp[j + 1]; p++) sum -= lx[p] * y[li[p]];
+      y[j] = sum / lx[lp[j]];
+    }
+    const x = new Float64Array(n);
+    for (let k = 0; k < n; k++) x[order[k]] = y[k];
+    return x;
+  }
 }

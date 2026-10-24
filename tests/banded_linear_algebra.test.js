@@ -1,10 +1,15 @@
 import {expect} from 'chai';
 import {
   BandedCholesky,
+  SparseCholesky,
+  minimumDegreeOrder,
   minimumNormSolveBanded,
   reverseCuthillMcKee,
 } from '../traceprojector/banded-linear-algebra.js';
-import {SparseMatrix} from '../traceprojector/sparse-linear-algebra.js';
+import {
+  SparseMatrix,
+  minimumNormSolveDense,
+} from '../traceprojector/sparse-linear-algebra.js';
 import {minimumNormSolve} from '../traceprojector/dense-linear-algebra.js';
 
 function seeded(seed) {
@@ -63,6 +68,60 @@ describe('banded linear algebra', () => {
     expect(worst).to.be.below(1e-12);
   });
 
+  it('minimumDegreeOrder returns a permutation and the column patterns', () => {
+    const rows = grid(9);
+    const adjacency = rows.map(
+        (row, i) => new Set([...row.keys()].filter((j) => j !== i)));
+    const {order, columns} = minimumDegreeOrder(adjacency);
+    expect([...order].sort((a, b) => a - b)).to.deep.equal(
+        Array.from({length: 81}, (_, i) => i));
+    expect(columns).to.have.length(81);
+    // Every neighbour of a column is eliminated later.
+    const when = new Int32Array(81);
+    order.forEach((v, k) => (when[v] = k));
+    columns.forEach((column, k) => {
+      column.forEach((u) => expect(when[u]).to.be.above(k));
+    });
+  });
+
+  it('SparseCholesky solves a grid system to roundoff with less fill', () => {
+    const k = 10;
+    const n = k ** 3;
+    const rows = Array.from({length: n}, () => new Map());
+    const id = (i, j, l) => (i * k + j) * k + l;
+    for (let i = 0; i < k; i++) {
+      for (let j = 0; j < k; j++) {
+        for (let l = 0; l < k; l++) {
+          const a = id(i, j, l);
+          rows[a].set(a, 6.5);
+          for (const [di, dj, dl] of [[1, 0, 0], [0, 1, 0], [0, 0, 1]]) {
+            if (i + di < k && j + dj < k && l + dl < k) {
+              const b = id(i + di, j + dj, l + dl);
+              rows[a].set(b, -1);
+              rows[b].set(a, -1);
+            }
+          }
+        }
+      }
+    }
+    const b = Float64Array.from({length: n}, (_, i) => Math.sin(i));
+    const sparse = new SparseCholesky(rows);
+    const x = sparse.solve(b);
+    let worst = 0;
+    rows.forEach((row, i) => {
+      let sum = 0;
+      for (const [j, v] of row) sum += v * x[j];
+      worst = Math.max(worst, Math.abs(sum - b[i]));
+    });
+    expect(worst).to.be.below(1e-12);
+    expect(sparse.entries).to.be.below(new BandedCholesky(rows).values.length);
+  });
+
+  it('SparseCholesky rejects an indefinite matrix', () => {
+    const rows = [new Map([[0, 1], [1, 2]]), new Map([[0, 2], [1, 1]])];
+    expect(() => new SparseCholesky(rows)).to.throw('positive definite');
+  });
+
   it('BandedCholesky rejects an indefinite matrix', () => {
     const rows = [new Map([[0, 1], [1, 2]]), new Map([[0, 2], [1, 1]])];
     expect(() => new BandedCholesky(rows)).to.throw('positive definite');
@@ -111,6 +170,54 @@ describe('banded linear algebra', () => {
       }
       expect(worst).to.be.below(1e-9);
       expect(banded.residual).to.be.below(1e-10 * (1 + banded.scale));
+    });
+  }
+
+  // More constraints than unknowns with a null space: the case in which the
+  // n x n normal equations are singular and a basic solution is not the
+  // minimum-norm one.
+  for (const [k, m, seed] of [[6, 90, 11], [8, 150, 12]]) {
+    it(`solvers agree and certify optimality when C has a null space (n=${
+      k * k}, m=${m})`, () => {
+      const random = seeded(seed);
+      const n = k * k;
+      const massRows = grid(k);
+      const rowEntries = [];
+      for (let i = 0; i < m; i++) {
+        const entries = new Map();
+        // Differences of neighbouring unknowns: many rows, a null space.
+        const a = Math.floor(random() * (n - 1));
+        entries.set(a, 1);
+        entries.set(a + 1, -1);
+        rowEntries.push(entries);
+      }
+      const constraints = new SparseMatrix(m, n, rowEntries);
+      const mass = new SparseMatrix(n, n, massRows);
+      const x0 = Float64Array.from({length: n}, () => random() - 0.5);
+      const r = constraints.multiply(x0);
+      const denseRows = rowEntries.map((entries) => {
+        const row = new Float64Array(n);
+        for (const [j, v] of entries) row[j] += v;
+        return row;
+      });
+      const denseMass = new Float64Array(n * n);
+      massRows.forEach((row, i) => {
+        for (const [j, v] of row) denseMass[i * n + j] = v;
+      });
+      const banded = minimumNormSolveBanded(constraints, mass, r);
+      const reference = minimumNormSolve(denseRows, denseMass, n, r);
+      const sparseDense = minimumNormSolveDense(constraints, mass, r);
+      const energy = (x) => {
+        const mx = mass.multiply(x);
+        return x.reduce((acc, q, i) => acc + q * mx[i], 0);
+      };
+      expect(banded.residual).to.be.below(1e-10 * (1 + banded.scale));
+      expect(banded.stationarity).to.be.below(1e-10);
+      expect(banded.dualityGap).to.be.below(1e-10);
+      expect(energy(banded.x)).to.be.closeTo(
+          energy(reference.x), 1e-9 * energy(reference.x));
+      expect(energy(sparseDense.x)).to.be.closeTo(
+          energy(reference.x), 1e-9 * energy(reference.x));
     });
   }
 

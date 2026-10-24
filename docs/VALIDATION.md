@@ -482,7 +482,13 @@ case.
   and 2.08; `l = 3` 0.72, 0.75 and 0.47. The values do not grow with `n` (they
   repeat to three digits for each parity), which is again what self-similar
   meshes give. They are lower bounds for the constants, not estimates, and
-  degraded meshes and `p = 2` are not covered.
+  `p = 2` is not covered. On meshes that are not self-similar the same ratio for
+  `l = 0` (interior vertices jittered by 0.2`h` and 0.35`h` with a fixed
+  pseudo-random sequence, `n = 6` and `8`) is 0.66 and 0.67 (0.2) and 0.55 and
+  0.61 (0.35) in the interior, and 0.63 and 0.54 (0.2) and 0.64 and 0.48 (0.35)
+  near the boundary: the same size as on the regular mesh and no growth, from
+  two mesh sizes and one random draw per case. Strongly stretched or sliver
+  meshes were not tried at `p = 1`.
 - **Commuting above the lowest order is tested on cubes** (`p = 1` for all
   form degrees, `p = 2` for 0-forms) and on one mesh size; no convergence rate
   is claimed.

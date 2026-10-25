@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import "@/lib/quiet-three";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -236,7 +237,6 @@ export function HeroMesh() {
         powerPreference: "high-performance",
       }}
     >
-      <color attach="background" args={["#00000000"]} />
       <ambientLight intensity={0.55} />
       <directionalLight position={[3, 4, 3]} intensity={1.4} color={AURORA_A} />
       <directionalLight

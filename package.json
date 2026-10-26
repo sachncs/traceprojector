@@ -113,7 +113,7 @@
     "@stryker-mutator/core": "^10.0.0",
     "c8": "^12.0.0",
     "chai": "^6.3.0",
-    "eslint": "^8.57.1",
+    "eslint": "^10.13.0",
     "eslint-config-google": "^0.14.0",
     "fast-check": "^4.10.2",
     "globals": "^17.13.0",
